@@ -1,0 +1,70 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://northroot.dev/schemas/reasoning_shape.schema.json",
+    "title": "ReasoningShapePayload",
+    "type": "object",
+    "required": [
+        "intent_hash",
+        "dag_hash",
+        "node_refs"
+    ],
+    "properties": {
+        "intent_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "dag_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "node_refs": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "required": [
+                    "node_id",
+                    "operator_ref"
+                ],
+                "properties": {
+                    "node_id": {
+                        "type": "string"
+                    },
+                    "operator_ref": {
+                        "type": "string"
+                    },
+                    "pox_ref": {
+                        "type": ["string", "null"]
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "policy_ref": {
+            "type": ["string", "null"]
+        },
+        "quality": {
+            "type": ["object", "null"],
+            "properties": {
+                "success_score": {
+                    "type": ["number", "null"],
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "eval_method": {
+                    "type": ["string", "null"]
+                },
+                "review_hash": {
+                    "type": ["string", "null"],
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "confidence": {
+                    "type": ["number", "null"],
+                    "minimum": 0,
+                    "maximum": 1
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

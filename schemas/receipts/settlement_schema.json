@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://northroot.dev/schemas/settlement.schema.json",
+    "title": "SettlementPayload",
+    "type": "object",
+    "required": [
+        "wur_refs",
+        "net_positions",
+        "rules_ref"
+    ],
+    "properties": {
+        "wur_refs": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "string"
+            }
+        },
+        "net_positions": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "number"
+            }
+        },
+        "rules_ref": {
+            "type": "string"
+        },
+        "cash_instr": {
+            "type": ["object", "null"]
+        }
+    },
+    "additionalProperties": false
+}

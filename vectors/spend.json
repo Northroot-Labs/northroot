@@ -1,0 +1,54 @@
+{
+  "rid": "00000000-0000-0000-0000-000000000005",
+  "version": "0.3.0",
+  "kind": "spend",
+  "dom": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d",
+  "cod": "sha256:dd06220b9b4521452dea8c603219d0b549aa07357835d26519cc03bdb2dbefd7",
+  "links": [
+    "00000000-0000-0000-0000-000000000004"
+  ],
+  "ctx": {
+    "policy_ref": "pol:standard-v1",
+    "timestamp": "2025-11-06T12:00:00.000Z",
+    "nonce": null,
+    "determinism": "strict",
+    "identity_ref": "did:key:zNorthroot"
+  },
+  "payload": {
+    "meter": {
+      "vcpu_sec": 0.1,
+      "gpu_sec": null,
+      "gb_sec": 0.02,
+      "requests": 2.0,
+      "energy_kwh": null
+    },
+    "unit_prices": {
+      "vcpu_sec": 0.05,
+      "gpu_sec": null,
+      "gb_sec": 0.01,
+      "requests": 0.001,
+      "energy_kwh": null
+    },
+    "currency": "USD",
+    "pricing_policy_ref": "price:std-v1",
+    "total_value": 0.0072,
+    "pointers": {
+      "trace_id": "tr_demo_001",
+      "span_ids": [
+        "sp-0001",
+        "sp-0002"
+      ]
+    },
+    "justification": {
+      "overlap_j": 0.9,
+      "alpha": 0.9,
+      "c_id": 0.0005,
+      "c_comp": 0.01,
+      "decision": "reuse",
+      "layer": "data"
+    }
+  },
+  "attest": null,
+  "sig": null,
+  "hash": "sha256:f48dae8f229a7cf63c9ef49c2d4d74053bce8bba6d52589669d9b254584baa3b"
+}

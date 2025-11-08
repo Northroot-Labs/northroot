@@ -1,0 +1,139 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://northroot.dev/schemas/spend.schema.json",
+    "title": "SpendPayload",
+    "type": "object",
+    "required": [
+        "meter",
+        "unit_prices",
+        "currency",
+        "total_value",
+        "pointers"
+    ],
+    "properties": {
+        "meter": {
+            "type": "object",
+            "properties": {
+                "vcpu_sec": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "gpu_sec": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "gb_sec": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "requests": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "energy_kwh": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                }
+            },
+            "additionalProperties": false
+        },
+        "unit_prices": {
+            "type": "object",
+            "properties": {
+                "vcpu_sec": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "gpu_sec": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "gb_sec": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "requests": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "energy_kwh": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                }
+            },
+            "additionalProperties": false
+        },
+        "currency": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+        },
+        "pricing_policy_ref": {
+            "type": ["string", "null"]
+        },
+        "total_value": {
+            "type": "number"
+        },
+        "pointers": {
+            "type": "object",
+            "required": [
+                "trace_id"
+            ],
+            "properties": {
+                "trace_id": {
+                    "type": "string"
+                },
+                "span_ids": {
+                    "type": ["array", "null"],
+                    "items": {
+                        "type": "string"
+                    },
+                    "minItems": 1
+                }
+            },
+            "additionalProperties": false
+        },
+        "justification": {
+            "type": ["object", "null"],
+            "properties": {
+                "overlap_j": {
+                    "type": ["number", "null"],
+                    "minimum": 0,
+                    "maximum": 1
+                },
+                "alpha": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "c_id": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "c_comp": {
+                    "type": ["number", "null"],
+                    "minimum": 0
+                },
+                "decision": {
+                    "type": ["string", "null"],
+                    "enum": [
+                        "reuse",
+                        "recompute",
+                        "hybrid"
+                    ]
+                },
+                "layer": {
+                    "type": ["string", "null"],
+                    "enum": [
+                        "data",
+                        "method",
+                        "reasoning",
+                        "execution"
+                    ],
+                    "description": "Layer (delta evaluation scope): semantic level of shape equivalence for reuse decision"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

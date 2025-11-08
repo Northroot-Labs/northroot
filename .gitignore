@@ -1,0 +1,63 @@
+# Rust/Cargo
+# Match target/ directories at any level (workspace or individual crates)
+target/
+**/target/
+**/*.rs.bk
+# Cargo.lock policy:
+# - Root Cargo.lock: committed (for binaries/apps)
+# - Library crates: no Cargo.lock (per Rust convention)
+# - Binaries in apps/ and tools/: commit their own Cargo.lock
+# Do NOT commit Cargo.lock for library crates in crates/
+crates/**/Cargo.lock
+*.pdb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Test artifacts
+*.test
+test-results/
+coverage/
+
+# Documentation builds
+/book/
+/doc/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Policy registry (if local)
+policies/local/
+policies/*.local.json
+
+# Test data (if generated)
+testdata/generated/
+vectors/generated/
+

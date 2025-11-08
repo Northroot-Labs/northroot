@@ -1,0 +1,19 @@
+[package]
+name = "northroot-ops"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Operator and method manifests: schemas, examples, and validators"
+keywords = ["operator", "method", "manifest", "schema"]
+categories = ["algorithms", "data-structures"]
+publish = false
+
+[dependencies]
+northroot-commons = { path = "../northroot-commons" }
+northroot-receipts = { path = "../northroot-receipts" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+

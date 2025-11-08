@@ -1,0 +1,17 @@
+[package]
+name = "northroot-commons"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Shared utilities and cross-cutting concerns for Northroot"
+keywords = ["utilities", "common", "shared"]
+categories = ["development-tools"]
+publish = false
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+

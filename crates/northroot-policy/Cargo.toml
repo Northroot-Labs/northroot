@@ -1,0 +1,19 @@
+[package]
+name = "northroot-policy"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Policies and strategies: cost models, reuse thresholds, allow/deny rules, FP tolerances"
+keywords = ["policy", "strategy", "cost", "threshold"]
+categories = ["algorithms"]
+publish = false
+
+[dependencies]
+northroot-commons = { path = "../northroot-commons" }
+northroot-receipts = { path = "../northroot-receipts" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+

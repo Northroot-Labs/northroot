@@ -1,0 +1,67 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://schemas.northroot.dev/operator.v1.schema.json",
+    "title": "Operator Manifest v1",
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+        "schema_version",
+        "tool_id",
+        "tool_version",
+        "param_schema",
+        "input_shape",
+        "output_shape"
+    ],
+    "properties": {
+        "schema_version": {
+            "type": "string",
+            "const": "operator.v1"
+        },
+        "tool_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_.-]+(\\.[a-z0-9_.-]+)*$",
+            "description": "Fully-qualified operator identifier, e.g. acme.frame.inc_sum"
+        },
+        "tool_version": {
+            "type": [
+                "string",
+                "integer"
+            ],
+            "description": "Operator version string or integer"
+        },
+        "param_schema": {
+            "$ref": "https://json-schema.org/draft/2020-12/schema",
+            "description": "JSON Schema for operator parameters"
+        },
+        "input_shape": {
+            "type": "object",
+            "description": "Declarative shape of expected inputs"
+        },
+        "output_shape": {
+            "type": "object",
+            "description": "Declarative shape of produced outputs"
+        },
+        "x_io": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Extended I/O policy or hints (e.g. external_io, network)"
+        },
+        "x_numeric": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Numeric determinism pins (fp_mode, overflow, etc.)"
+        },
+        "checker_refs": {
+            "type": "array",
+            "items": {
+                "type": "string"
+            },
+            "description": "List of checker references for verification"
+        },
+        "runtime": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Optional runtime metadata (image digests, fingerprints)"
+        }
+    }
+}

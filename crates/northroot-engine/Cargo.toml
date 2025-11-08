@@ -1,0 +1,24 @@
+[package]
+name = "northroot-engine"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+description = "Proof algebra engine for receipt validation, composition, and commitment computation"
+keywords = ["proof", "algebra", "engine", "validation", "commitment"]
+categories = ["algorithms", "data-structures"]
+publish = false
+
+[dependencies]
+northroot-receipts = { path = "../northroot-receipts" }
+northroot-commons = { path = "../northroot-commons" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+
+[dev-dependencies]
+serde_json = { workspace = true }

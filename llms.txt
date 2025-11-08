@@ -1,0 +1,283 @@
+# Northroot Codebase: LLM-Friendly Navigation Guide
+
+**Quick reference for understanding and navigating the Northroot proof algebra system.**
+
+## Project Overview
+
+Northroot is a **unified proof algebra system** for verifiable compute and value exchange. It provides a canonical data model (receipts) and proof system for expressing, verifying, and composing computational work as typed morphisms over shapes.
+
+**Core innovation**: One algebra, one envelope, multiple kinds (data_shape, method_shape, reasoning_shape, execution, spend, settlement).
+
+## Key Concepts (Glossary)
+
+### Receipts
+**Canonical, signed evidence of computational transformations.**
+
+- **Envelope**: Common structure (`rid`, `version`, `kind`, `dom`/`cod`, `ctx`, `sig`, `hash`)
+- **Payload**: Kind-specific data (one of six kinds)
+- **Composition**: Sequential (cod == dom) and parallel (tensor)
+- **Location**: `receipts/` crate (Rust types + JSON schemas)
+
+### Shapes
+**Typed commitments representing data structures or computational states.**
+
+- **data_shape**: Schema + optional sketches
+- **method_shape**: Operator contracts as multiset/DAG
+- **reasoning_shape**: Decision/plan DAG over tools
+- **execution**: Observable run structure (span commitments, roots)
+- **spend**: Metered resources + pricing
+- **settlement**: Multi-party netting state
+
+### Morphisms
+**Typed transformations over shapes: `f : (S, k) → (S', k')`**
+
+- Sequential: `(g ∘ f)` when `cod(f) == dom(g)`
+- Parallel: `f ⊗ g` (tensor product)
+- Forms a strict symmetric monoidal category
+
+### Delta Compute
+**Incremental recomputation with reuse decisions.**
+
+- **Overlap**: Jaccard similarity `J ∈ [0,1]` on chunk sets
+- **Reuse rule**: `J > C_id / (α · C_comp)`
+- **Merkle Row-Map**: Deterministic state for incremental operators
+- **Policy-driven**: Thresholds controlled by policies
+
+### Operators
+**Atomic, deterministic transformation units.**
+
+- **Manifest**: Tool ID, version, param schema, input/output shapes
+- **Determinism pins**: Numeric rounding, I/O normalization, hashing
+- **Incremental support**: Optional delta mode with state preservation
+- **Location**: `operators/` (manifests), `receipts/schemas/examples/` (examples)
+
+### Methods
+**Composable DAGs of operators.**
+
+- **Structure**: Nodes (operator refs) + edges (DAG)
+- **Shape commitment**: `root_multiset` (sorted span shape hashes)
+- **Incremental-capable**: If operators emit stable partition indices + state
+- **Location**: `methods/` (definitions)
+
+### Policies
+**Strategy control for delta compute and execution constraints.**
+
+- **Identifier**: `pol:<namespace>/<name>@<version>`
+- **Reuse decision**: Defines cost models and overlap thresholds
+- **Determinism constraints**: strict/bounded/observational
+- **Location**: `policies/` (definitions)
+
+### Strategies
+**Composable compute patterns for incremental execution.**
+
+- **Partition**: Stable row-based chunking
+- **Incremental Sum**: State-preserving aggregation
+- **Delta Apply**: Efficient updates to previous state
+- **Location**: `engine/strategies/`
+
+## Directory Structure
+
+```
+northroot/
+├── receipts/              # Data model (Rust crate)
+│   ├── src/lib.rs        # Receipt types (Receipt, Payload, etc.)
+│   ├── schemas/          # JSON schemas for validation
+│   ├── docs/specs/       # Receipt-specific specs
+│   └── tests/            # Validation tests
+│
+├── engine/               # Proof algebra engine
+│   ├── src/
+│   │   └── commitments.rs # SHA-256, JCS, set/seq roots
+│   └── strategies/       # Delta compute strategies
+│
+├── methods/              # Method definitions (DAGs)
+├── operators/            # Operator manifests
+├── policies/             # Policy definitions
+│
+├── docs/specs/           # Project-level specifications
+│   ├── proof_algebra.md  # Unified algebra (START HERE)
+│   ├── incremental_compute.md
+│   ├── delta_compute.md
+│   └── merkle_row_map.md
+│
+└── vectors/              # Test vectors & golden examples
+```
+
+## Navigation Guide
+
+### Understanding the System
+
+1. **Start here**: `docs/specs/proof_algebra.md` — Unified algebra overview
+2. **Data model**: `receipts/docs/specs/data_model.md` — Receipt structure
+3. **Delta compute**: `docs/specs/incremental_compute.md` — Strategy spec
+4. **Formal reuse**: `docs/specs/delta_compute.md` — Decision rule
+
+### Finding Code
+
+- **Receipt types**: `receipts/src/lib.rs` (Receipt, Payload, all kinds)
+- **Hashing/commitments**: `engine/src/commitments.rs` (sha256_prefixed, jcs, roots)
+- **Operator examples**: `receipts/schemas/examples/`
+- **Test vectors**: `vectors/` (JSON examples)
+
+### Understanding Receipts
+
+**Receipt structure** (see `receipts/src/lib.rs`):
+
+```rust
+pub struct Receipt {
+    pub rid: Uuid,              // UUIDv7
+    pub version: String,        // "0.3.0"
+    pub kind: ReceiptKind,      // DataShape | MethodShape | ...
+    pub dom: String,           // sha256:<64hex>
+    pub cod: String,           // sha256:<64hex>
+    pub links: Vec<Uuid>,      // child receipts
+    pub ctx: Context,         // policy, timestamp, determinism
+    pub payload: Payload,      // kind-specific
+    pub sig: Option<Signature>,
+    pub hash: String,          // sha256(canonical body)
+}
+```
+
+**Six kinds** (see `ReceiptKind` enum):
+- `DataShape`: Schema + sketches
+- `MethodShape`: Operator DAG
+- `ReasoningShape`: Plan DAG
+- `Execution`: Span commitments + roots
+- `Spend`: Resources + pricing + justification
+- `Settlement`: Net positions
+
+### Understanding Delta Compute
+
+**Reuse decision rule**:
+```
+Reuse iff J > C_id / (α · C_comp)
+```
+
+Where:
+- `J`: Jaccard overlap [0,1] (chunk sets)
+- `C_id`: Identity/integration cost
+- `C_comp`: Baseline compute cost
+- `α`: Operator incrementality factor [0,1]
+
+**Recorded in**: `SpendPayload.justification` (optional)
+
+**Policy control**: `ctx.policy_ref` → policy JSON → cost models + thresholds
+
+### Understanding Operators
+
+**Operator manifest** (see `operators/operator_v1.md`):
+
+- `tool_id`: Stable identifier (e.g., `acme.frame.inc_sum`)
+- `tool_version`: Version string
+- `param_schema`: JSON Schema for parameters
+- `input_shape`/`output_shape`: I/O contracts
+- `x_numeric`: Numeric pins (rounding, NaN handling)
+- `x_io`: I/O pins (text normalization, line endings)
+
+**Incremental operators**:
+- Support `mode: "delta"` parameter
+- Emit `state_hash` for delta keying
+- Use Merkle Row-Map for deterministic state
+
+### Understanding Methods
+
+**Method shape** (see `methods/README.md`):
+
+- Nodes: `[{id, span_shape_hash}]`
+- Edges: `[{from, to}]` (optional DAG)
+- `root_multiset`: SHA-256(sorted span shape hashes)
+- `dag_hash`: Optional canonical DAG commitment
+
+**Referenced by**: `ExecutionPayload.method_ref`
+
+### Understanding Policies
+
+**Policy structure** (see `policies/README.md`):
+
+- `policy_id`: `pol:<namespace>/<name>@<version>`
+- `overlap.measure`: How to compute J (jaccard:row-hash, sketch:minhash, etc.)
+- `cost_model`: `c_id`, `c_comp`, `alpha` definitions
+- `decision.rule`: Reuse threshold formula
+- `constraints`: Determinism, security, tenancy
+
+**Referenced by**: `Receipt.ctx.policy_ref`
+
+## Common Tasks
+
+### Creating a Receipt
+
+1. Define payload (one of six kinds)
+2. Compute `dom`/`cod` (shape commitments)
+3. Build `Context` (policy_ref, timestamp, determinism)
+4. Serialize to canonical JSON (JCS)
+5. Compute `hash = sha256(canonical body)`
+6. Sign `hash` → `sig`
+7. Construct `Receipt` with all fields
+
+### Validating a Receipt
+
+1. Recompute `hash` from canonical body → must match `receipt.hash`
+2. Verify `sig` over `hash` (if present)
+3. Validate payload against kind-specific schema
+4. Check composition: `cod(R_i) == dom(R_{i+1})` (if chained)
+
+### Implementing Delta Compute
+
+1. Parse input → stable row hashes (`chunk_index`)
+2. Load previous state (via `prev_state_hash`)
+3. Compute overlap `J` (Jaccard on chunk sets)
+4. Load policy (via `ctx.policy_ref`)
+5. Evaluate rule: `J > C_id / (α · C_comp)`
+6. If reuse: Apply delta to state; else: Full recompute
+7. Record decision in `spend.justification`
+
+### Adding an Operator
+
+1. Define manifest (tool_id, version, param_schema, shapes)
+2. Pin determinism (x_numeric, x_io)
+3. If incremental: Support `mode: "delta"`, emit `state_hash`
+4. Add to operator registry
+5. Reference from methods via `operator_ref`
+
+## Key Files Reference
+
+| File | Purpose |
+|------|---------|
+| `receipts/src/lib.rs` | Receipt type definitions (source of truth) |
+| `engine/src/commitments.rs` | Hashing, JCS, set/seq roots |
+| `docs/specs/proof_algebra.md` | Unified algebra specification |
+| `receipts/docs/specs/data_model.md` | Receipt schema details |
+| `docs/specs/incremental_compute.md` | Delta strategy spec |
+| `docs/specs/delta_compute.md` | Formal reuse decision spec |
+| `docs/specs/merkle_row_map.md` | State structure spec |
+| `operators/operator_v1.md` | Operator manifest spec |
+| `vectors/` | Test vectors (golden examples) |
+
+## Design Principles
+
+1. **Canonicalization**: All hashing uses JCS (RFC 8785) for determinism
+2. **Composition**: Sequential (cod == dom) and parallel (tensor)
+3. **Transparency**: All economic decisions in `spend.justification`
+4. **Modularity**: One envelope, multiple kinds (no over-generalization)
+5. **Policy-driven**: Strategies controlled by policies, not hardcoded
+
+## Versioning
+
+- **Envelope version**: Changes only on canonicalization/envelope structure
+- **Kind payloads**: Version in schemas; evolve additively
+- **Receipts MUST validate** against both envelope + kind schema versions
+
+## Testing
+
+- **Test vectors**: `vectors/` (canonical JSON examples)
+- **Validation tests**: `receipts/tests/test_vectors_validate.rs`
+- **Execution tests**: `engine/tests/test_execution_and_method.rs`
+
+## Next Steps
+
+1. Read `docs/specs/proof_algebra.md` for algebra overview
+2. Examine `receipts/src/lib.rs` for type definitions
+3. Review `vectors/` for example receipts
+4. Check `engine/src/commitments.rs` for hashing primitives
+5. Explore `docs/specs/` for detailed specifications
+

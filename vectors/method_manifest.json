@@ -1,0 +1,20 @@
+{
+    "schema_version": "method.v1",
+    "method_id": "com.acme/normalize-ledger",
+    "version": "1.0.0",
+    "method_shape_root": "sha256:a01494edccade55e39cd74ca38709b344295d908e5c83981bb7e23dc7b311c15",
+    "method_dag_hash": "sha256:d01db50cc0ceb288c8c756289f0d4f8ee0f753dd8cf187f07e01164724060d4e",
+    "runtime": {
+        "image_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "method_fingerprint": "git:deadbeef"
+    },
+    "checker_refs": [
+        "chk:ledger-balance@1"
+    ],
+    "default_policy_id": "pol:standard-v1",
+    "publisher_sig": {
+        "alg": "ed25519",
+        "kid": "did:key:zPublisher",
+        "sig": "base64:AAA"
+    }
+}

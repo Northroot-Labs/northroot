@@ -1,0 +1,75 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://northroot.dev/schemas/execution.schema.json",
+    "title": "ExecutionPayload",
+    "type": "object",
+    "required": [
+        "trace_id",
+        "method_ref",
+        "data_shape_hash",
+        "span_commitments",
+        "roots"
+    ],
+    "properties": {
+        "trace_id": {
+            "type": "string",
+            "minLength": 1
+        },
+        "method_ref": {
+            "type": "object",
+            "required": [
+                "method_id",
+                "version",
+                "method_shape_root"
+            ],
+            "properties": {
+                "method_id": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                },
+                "method_shape_root": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+            },
+            "additionalProperties": false
+        },
+        "data_shape_hash": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "span_commitments": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+            }
+        },
+        "roots": {
+            "type": "object",
+            "required": [
+                "trace_set_root",
+                "identity_root"
+            ],
+            "properties": {
+                "trace_set_root": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "identity_root": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                },
+                "trace_seq_root": {
+                    "type": ["string", "null"],
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

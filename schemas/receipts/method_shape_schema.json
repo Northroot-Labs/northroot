@@ -1,0 +1,62 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://northroot.dev/schemas/method_shape.schema.json",
+    "title": "MethodShapePayload",
+    "type": "object",
+    "required": [
+        "nodes",
+        "root_multiset"
+    ],
+    "properties": {
+        "nodes": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+                "type": "object",
+                "required": [
+                    "id",
+                    "span_shape_hash"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "span_shape_hash": {
+                        "type": "string",
+                        "pattern": "^sha256:[0-9a-f]{64}$"
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "edges": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "object",
+                "required": [
+                    "from",
+                    "to"
+                ],
+                "properties": {
+                    "from": {
+                        "type": "string"
+                    },
+                    "to": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": false
+            }
+        },
+        "root_multiset": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "dag_hash": {
+            "type": ["string", "null"],
+            "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+    },
+    "additionalProperties": false
+}

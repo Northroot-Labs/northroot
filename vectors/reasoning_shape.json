@@ -1,0 +1,43 @@
+{
+  "rid": "00000000-0000-0000-0000-000000000003",
+  "version": "0.3.0",
+  "kind": "reasoning_shape",
+  "dom": "sha256:e7880638dcc10d2f2a4a817d8aeb1ea618a2b3f7c6b6d730f4f8c06f586ea81b",
+  "cod": "sha256:fb04389691fdb79ff2df1b9868e10764001991e1ce5342504b80e482e088b6b5",
+  "links": [
+    "00000000-0000-0000-0000-000000000002"
+  ],
+  "ctx": {
+    "policy_ref": "pol:standard-v1",
+    "timestamp": "2025-11-06T12:00:00.000Z",
+    "nonce": null,
+    "determinism": "strict",
+    "identity_ref": "did:key:zNorthroot"
+  },
+  "payload": {
+    "intent_hash": "sha256:40c74ab648736d7f2ec429ac6d72ea87167688af1f803ad02101d6b85f2a0ab4",
+    "dag_hash": "sha256:fb04389691fdb79ff2df1b9868e10764001991e1ce5342504b80e482e088b6b5",
+    "node_refs": [
+      {
+        "node_id": "p1",
+        "operator_ref": "ns.io/read_csv@1",
+        "pox_ref": null
+      },
+      {
+        "node_id": "p2",
+        "operator_ref": "ns.fin/normalize_amount@1",
+        "pox_ref": null
+      }
+    ],
+    "policy_ref": "pol:standard-v1",
+    "quality": {
+      "success_score": null,
+      "eval_method": null,
+      "review_hash": null,
+      "confidence": null
+    }
+  },
+  "attest": null,
+  "sig": null,
+  "hash": "sha256:4318692a6fe02e195581592b4df2e1052152fc9b8a71987222d1b1fd9ce50b61"
+}
