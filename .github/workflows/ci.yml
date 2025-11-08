@@ -16,6 +16,10 @@ jobs:
                   echo "🔍 Checking test vector integrity..."
                   cargo test -p northroot-receipts --test test_vector_integrity -- --nocapture
                   cargo test -p northroot-receipts --test test_drift_detection -- --nocapture
+                  echo "🔍 Checking engine test vector integrity..."
+                  cargo test -p northroot-engine --test test_engine_vector_integrity -- --nocapture
+                  cargo test -p northroot-engine --test test_composition_vector_roundtrip -- --nocapture
+                  cargo test -p northroot-engine --test test_drift_detection -- --nocapture
             - name: Prevent Accidental Vector Regeneration
               run: |
                   echo "🛡️  Checking for accidental vector modifications..."
@@ -39,17 +43,19 @@ jobs:
                       echo "Test vectors are golden files and should not be modified unless:"
                       echo "  1. There's an intentional canonicalization change"
                       echo "  2. You've run: cargo test --test regenerate_vectors -- --ignored --nocapture"
-                      echo "  3. You've updated BASELINE_HASHES in test_drift_detection.rs"
+                      echo "  3. You've updated BASELINE_HASHES in test_drift_detection.rs (receipts)"
+                      echo "  4. You've updated BASELINE_ROOTS in test_drift_detection.rs (engine)"
                       echo ""
                       echo "Modified files:"
                       echo "$MODIFIED_VECTORS"
                       echo ""
                       echo "⚠️  This check will FAIL if:"
                       echo "  - Vector files are modified AND"
-                      echo "  - BASELINE_HASHES in test_drift_detection.rs is NOT updated"
+                      echo "  - BASELINE_HASHES in test_drift_detection.rs (receipts) is NOT updated"
+                      echo "  - BASELINE_ROOTS in test_drift_detection.rs (engine) is NOT updated"
                       echo ""
-                      echo "The drift detection test (run above) will catch hash mismatches."
-                      echo "If vectors are intentionally regenerated, ensure BASELINE_HASHES is updated."
+                      echo "The drift detection tests (run above) will catch hash/root mismatches."
+                      echo "If vectors are intentionally regenerated, ensure baselines are updated."
                       echo ""
                   else
                       echo "✅ No vector file modifications detected"

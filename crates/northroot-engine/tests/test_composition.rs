@@ -1,4 +1,7 @@
 //! Tests for composition operations.
+//!
+//! Note: Root computation baseline values are locked in `test_drift_detection.rs`.
+//! If root computation algorithms change, update `BASELINE_ROOTS` in that file.
 
 use northroot_engine::composition::*;
 use northroot_receipts::{
@@ -50,9 +53,11 @@ fn test_compute_tensor_root_empty() {
 
 #[test]
 fn test_build_sequential_chain() {
+    // Verify all 6 receipt kinds from proof algebra spec are present:
+    // data_shape → method_shape → reasoning_shape → execution → spend → settlement
     let chain = generate_sequential_chain();
     let built = build_sequential_chain(chain.clone()).unwrap();
-    assert_eq!(built.len(), 6); // generate_sequential_chain returns 6 receipts
+    assert_eq!(built.len(), 6); // generate_sequential_chain returns 6 receipts (all kinds)
     assert!(validate_sequential(&built).is_ok());
 }
 

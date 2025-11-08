@@ -20,10 +20,22 @@ use std::path::PathBuf;
 
 #[cfg(feature = "jsonschema")]
 /// Load and compile a JSON schema from the schemas directory.
+///
+/// Schemas are located at the workspace root: `schemas/receipts/`
+/// From the crate manifest directory, we need to go up two levels to reach the workspace root.
 fn load_schema(schema_name: &str) -> Result<JSONSchema, ValidationError> {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
+    // From crates/northroot-receipts/, go up to workspace root, then to schemas/receipts/
     let schema_path = PathBuf::from(manifest_dir)
+        .parent()  // crates/
+        .and_then(|p| p.parent())  // workspace root
+        .ok_or_else(|| {
+            ValidationError::SerializationError(
+                "Failed to resolve workspace root from manifest directory".to_string(),
+            )
+        })?
         .join("schemas")
+        .join("receipts")
         .join(schema_name);
 
     let schema_content = fs::read_to_string(&schema_path).map_err(|e| {

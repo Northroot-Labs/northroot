@@ -2,12 +2,32 @@
 //!
 //! This crate provides the core engine for the Northroot proof algebra system,
 //! including receipt composition, validation, and execution tracking.
+//!
+//! ## Architecture Boundaries
+//!
+//! **What this crate does**: Computation, composition, execution tracking, delta decisions
+//! - Root computations (set, sequence, tensor, Merkle)
+//! - Receipt composition (sequential, parallel)
+//! - Execution state management
+//! - Delta compute (chunking, reuse decisions)
+//! - Signature verification
+//!
+//! **What this crate does NOT do**:
+//! - Policy validation (see `northroot-policy`) - answers "is this allowed?"
+//! - Receipt structure validation (see `northroot-receipts`) - answers "is this well-formed?"
+//! - Operator/manifest definitions (see `northroot-ops`) - answers "what can be run?"
+//!
+//! **Dependencies**:
+//! - Depends on: `commons`, `receipts`, `policy`
+//! - Must NOT be depended on by: `receipts`, `policy` (forbidden by ADR_PLAYBOOK.md)
+//!
+//! **Policy re-exports**: This crate re-exports policy validation functions for convenience,
+//! but policy validation lives in `northroot-policy` to maintain clear boundaries.
 
 pub mod commitments;
 pub mod composition;
 pub mod delta;
 pub mod execution;
-pub mod policy;
 pub mod signature;
 pub mod strategies;
 
@@ -16,7 +36,12 @@ pub use composition::{
     build_sequential_chain, compute_tensor_root, create_identity_receipt, validate_all_links,
     validate_link, validate_sequential, CompositionError,
 };
-pub use policy::{
+// Re-export policy items for convenience.
+// 
+// **Boundary note**: Policy validation lives in `northroot-policy` crate.
+// Engine re-exports these for convenience, but policy validation is NOT part of engine.
+// Policy answers "is this allowed?" (semantic validation), not "how do I compute this?" (engine).
+pub use northroot_policy::{
     load_policy, validate_determinism, validate_policy, validate_policy_ref_format,
     validate_region_constraints, validate_tool_constraints, PolicyError,
 };

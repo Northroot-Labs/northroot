@@ -1,4 +1,24 @@
 //! Validation functions for receipts.
+//!
+//! **Boundary**: This module provides **syntactic validation** (structure, format, schema).
+//! For **semantic validation** (policy compliance, business rules), see `northroot-policy`.
+//!
+//! ## Validation Layers
+//!
+//! 1. **Syntactic (this crate)**: Format checks, schema validation, structure integrity
+//!    - Hash format validation
+//!    - Field format validation (timestamps, UUIDs, policy_ref format)
+//!    - Kind-specific payload structure
+//!    - Composition chain integrity (cod/dom matching)
+//!
+//! 2. **Semantic (northroot-policy)**: Policy compliance, business rules, constraints
+//!    - Policy reference validation (detailed errors)
+//!    - Determinism class enforcement
+//!    - Tool/region constraint checking
+//!    - Policy registry lookups
+//!
+//! **Dependency rule**: `receipts` must NOT depend on `policy` (see ADR_PLAYBOOK.md).
+//! Receipts validation is format-only; policy validation requires policy crate.
 
 use crate::canonical::{compute_hash, validate_hash_format};
 use crate::error::ValidationError;
@@ -40,11 +60,17 @@ fn validate_version_format(version: &str) -> bool {
 
 // UUIDs are validated by the Uuid type itself, so no separate validation needed
 
-/// Validate policy reference format.
+/// Validate policy reference format (syntactic check only).
+///
+/// **Boundary note**: This is a simple format check for receipt structure validation.
+/// For detailed policy validation with error messages, use `northroot_policy::validate_policy_ref_format()`.
 ///
 /// Accepts two formats:
 /// - Strict: `pol:<namespace>/<name>@<semver>` (e.g., "pol:finops/cost-guard@1.2.0")
 /// - Legacy: `pol:<name>-<version>` (e.g., "pol:standard-v1") for backward compatibility
+///
+/// This function is used during receipt payload validation to ensure the policy_ref field
+/// has a valid format. For policy compliance checking, use the policy crate.
 fn validate_policy_ref(policy_ref: &str) -> bool {
     if !policy_ref.starts_with("pol:") {
         return false;

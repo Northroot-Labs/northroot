@@ -1,0 +1,57 @@
+{
+  "description": "Delta compute test scenarios for Jaccard similarity, reuse decisions, and economic delta calculations",
+  "jaccard_similarity": {
+    "description": "Jaccard similarity between two chunk sets",
+    "set1": ["a", "b", "c"],
+    "set2": ["b", "c", "d"],
+    "intersection": ["b", "c"],
+    "union": ["a", "b", "c", "d"],
+    "result": 0.5,
+    "expected": 0.5,
+    "formula": "J(U,V) = |U ∩ V| / |U ∪ V|"
+  },
+  "reuse_decision": {
+    "description": "Reuse decision based on overlap and cost model",
+    "overlap_j": 0.5,
+    "cost_model": {
+      "c_id": 10.0,
+      "c_comp": 100.0,
+      "alpha": 0.9,
+      "reuse_threshold": 0.11111111111111112
+    },
+    "decision": "Reuse",
+    "justification": {
+      "overlap_j": 0.5,
+      "alpha": 0.9,
+      "c_id": 10.0,
+      "c_comp": 100.0,
+      "decision": "reuse"
+    },
+    "formula": "Reuse iff J > C_id / (α · C_comp)"
+  },
+  "economic_delta": {
+    "description": "Economic delta (savings estimate) from reuse decision",
+    "overlap_j": 0.5,
+    "cost_model": {
+      "c_id": 10.0,
+      "c_comp": 100.0,
+      "alpha": 0.9
+    },
+    "result": 35.0,
+    "expected": 35.0,
+    "formula": "ΔC ≈ α · C_comp · J - C_id"
+  },
+  "below_threshold_scenario": {
+    "description": "Scenario where overlap is below reuse threshold",
+    "overlap_j": 0.05,
+    "cost_model": {
+      "c_id": 10.0,
+      "c_comp": 100.0,
+      "alpha": 0.9,
+      "reuse_threshold": 0.11111111111111112
+    },
+    "decision": "Recompute",
+    "economic_delta": -5.5
+  }
+}
+

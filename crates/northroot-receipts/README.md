@@ -20,7 +20,31 @@ The `northroot-receipts` crate is the **source of truth** for receipt structure.
 - **Type definitions**: Rust structs for all receipt kinds
 - **JSON Schemas**: Validation schemas for each payload type
 - **Canonicalization**: Deterministic serialization rules
-- **Composition**: Support for sequential and parallel receipt chains
+- **Syntactic validation**: Format checks, structure validation, schema validation
+
+## Architecture Boundaries
+
+**What this crate does**: Receipt structure, canonicalization, syntactic validation
+- Receipt envelope and payload types
+- Hash computation and canonicalization (JCS)
+- Format validation (timestamps, UUIDs, hash formats, policy_ref format)
+- Schema validation (JSON Schema)
+- Basic composition validation (cod/dom matching)
+
+**What this crate does NOT do**:
+- **Policy validation** (see `northroot-policy`) - answers "is this allowed?" (semantic validation)
+- **Computation logic** (see `northroot-engine`) - answers "how do I compute this?"
+- **Operator definitions** (see `northroot-ops`) - answers "what can be run?"
+
+**Dependencies**:
+- Depends on: `commons` only
+- Must NOT be depended on by: `policy`, `ops` (forbidden by ADR_PLAYBOOK.md)
+- Can be depended on by: `engine`, `policy`, `ops`, `planner`, `sdk/*`, `apps/*`
+
+**Validation layers**:
+1. **Syntactic (this crate)**: Format, structure, schema - "is this well-formed?"
+2. **Semantic (northroot-policy)**: Policy compliance - "is this allowed?"
+3. **Computation (northroot-engine)**: Execution logic - "how do I compute this?"
 
 ## Receipt Structure
 

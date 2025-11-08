@@ -1,4 +1,8 @@
 //! Tests for execution tracking and state management.
+//!
+//! Note: Root computation baseline values for MerkleRowMap and compute_execution_roots
+//! are locked in `test_drift_detection.rs`. If root computation algorithms change,
+//! update `BASELINE_ROOTS` in that file.
 
 use northroot_engine::execution::*;
 use northroot_receipts::{Context, MethodRef};

@@ -16,4 +16,5 @@ northroot-commons = { path = "../northroot-commons" }
 northroot-receipts = { path = "../northroot-receipts" }
 serde = { workspace = true }
 serde_json = { workspace = true }
+uuid = { workspace = true }
 

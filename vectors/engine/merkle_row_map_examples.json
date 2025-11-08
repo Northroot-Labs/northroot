@@ -1,0 +1,47 @@
+{
+  "description": "Merkle Row-Map examples demonstrating RFC-6962 style Merkle tree computation",
+  "empty_map": {
+    "description": "Empty Merkle Row-Map root",
+    "entries": {},
+    "root": "sha256:6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+    "note": "Empty tree root = H(0x00 || \"\")"
+  },
+  "single_entry": {
+    "description": "Single entry Merkle Row-Map",
+    "entries": {
+      "key1": 42
+    },
+    "root": "sha256:86485aab8bba735c846f58e5b6c768f8cb4a44bf526e90da31140f16d59816b4",
+    "note": "Leaf hash = H(0x00 || JCS({k, v}))"
+  },
+  "multiple_entries": {
+    "description": "Multiple entries Merkle Row-Map",
+    "entries": {
+      "key1": 42,
+      "key2": "value",
+      "key3": true
+    },
+    "root": "sha256:9394ea056c013c4d185d56bae350d6874c1653fee1ddaf7aba6a6afb58c82de4",
+    "note": "Parent hash = H(0x01 || left || right), odd nodes promoted upward"
+  },
+  "order_independence": {
+    "description": "Demonstrates order independence (BTreeMap maintains sorted order)",
+    "map1": {
+      "entries": {
+        "a": 1,
+        "b": 2
+      },
+      "root": "sha256:to_be_computed"
+    },
+    "map2": {
+      "entries": {
+        "b": 2,
+        "a": 1
+      },
+      "root": "sha256:to_be_computed"
+    },
+    "roots_match": true,
+    "note": "BTreeMap maintains sorted key order, so insertion order doesn't affect root"
+  }
+}
+

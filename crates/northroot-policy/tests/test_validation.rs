@@ -1,6 +1,6 @@
 //! Tests for policy validation.
 
-use northroot_engine::policy::*;
+use northroot_policy::validation::*;
 use northroot_receipts::{Context, DeterminismClass, Receipt, DataShapePayload, Payload, ReceiptKind};
 use uuid::Uuid;
 

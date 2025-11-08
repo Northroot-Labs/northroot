@@ -1,0 +1,11 @@
+{
+  "description": "Parallel (tensor) composition example with multiple child receipts",
+  "child_receipt_hashes": [
+    "sha256:e58858ad998397eaa1db5642bcca7c0132ef5e0b7c76c6307ad2900cb696bcd7",
+    "sha256:b26a128e7e1fa304a9d43d92c96f3d0fcb9381a91d8fc87d13c1813f42361208",
+    "sha256:4318692a6fe02e195581592b4df2e1052152fc9b8a71987222d1b1fd9ce50b61"
+  ],
+  "tensor_root": "sha256:fab43f3a16f0d6a739fafde827e80616e8e0a22758e4c1eec2c7d50754637f12",
+  "note": "Tensor root is computed using commit_set_root (order-independent). Same hashes in different order produce same root."
+}
+

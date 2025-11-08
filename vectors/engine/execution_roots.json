@@ -1,0 +1,33 @@
+{
+  "description": "Execution root computation examples",
+  "scenarios": [
+    {
+      "name": "empty_span_commitments",
+      "span_commitments": [],
+      "identity_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "trace_set_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "trace_seq_root": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "single_span_commitment",
+      "span_commitments": [
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      ],
+      "identity_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "trace_set_root": "sha256:5d4cc820b37f3d1fd0c6e04ed50a56ead8d497ecfd3c25c749855ed9d852837d",
+      "trace_seq_root": "sha256:5d4cc820b37f3d1fd0c6e04ed50a56ead8d497ecfd3c25c749855ed9d852837d"
+    },
+    {
+      "name": "multiple_span_commitments",
+      "span_commitments": [
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+        "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      ],
+      "identity_root": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+      "trace_set_root": "sha256:1a478d6e1f4552286397eb9f2a86cb56e3f33f082a4613ea55537c819369f2ec",
+      "trace_seq_root": "sha256:1a478d6e1f4552286397eb9f2a86cb56e3f33f082a4613ea55537c819369f2ec",
+      "note": "trace_set_root uses commit_set_root (order-independent), trace_seq_root uses commit_seq_root (order-dependent)"
+    }
+  ]
+}
+

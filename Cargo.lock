@@ -809,6 +809,7 @@ dependencies = [
  "ed25519-dalek",
  "hex",
  "northroot-commons",
+ "northroot-policy",
  "northroot-receipts",
  "serde",
  "serde_json",
@@ -834,6 +835,7 @@ dependencies = [
  "northroot-receipts",
  "serde",
  "serde_json",
+ "uuid",
 ]
 
 [[package]]

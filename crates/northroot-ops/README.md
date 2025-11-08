@@ -21,6 +21,24 @@ The `northroot-ops` crate provides:
 - **Validation**: Runtime validation of operator and method structures
 - **Examples**: Reference implementations and test fixtures
 
+## Architecture Boundaries
+
+**What this crate does**: Operator and method metadata ("what can be run")
+- Operator manifests (schemas, contracts, examples)
+- Method manifests (DAGs of operators)
+- Validation of operator/method structures
+- Reference implementations and test fixtures
+
+**What this crate does NOT do**:
+- **Execution logic** (see `northroot-engine`) - answers "how do I compute this?"
+- **Policy validation** (see `northroot-policy`) - answers "is this allowed?"
+- **Receipt structure** (see `northroot-receipts`) - answers "is this well-formed?"
+
+**Dependencies** (per [ADR Playbook](../../docs/ADR_PLAYBOOK.md)):
+- **Depends on**: `commons`, `receipts`
+- **Must NOT depend on**: `engine`, `policy` (forbidden by playbook)
+- **Can be depended on by**: `engine`, `planner`, `sdk/*`, `apps/*`
+
 ## Status
 
 This crate is currently in development. See the [ADR Playbook](../../docs/ADR_PLAYBOOK.md) for code placement guidance.

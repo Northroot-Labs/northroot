@@ -1,7 +1,24 @@
 //! Policy validation for receipts.
 //!
-//! This module provides policy validation functionality, including policy reference
-//! validation, determinism class enforcement, and constraint checking.
+//! **Boundary**: This module provides **semantic validation** (policy compliance, business rules).
+//! For **syntactic validation** (format, structure, schema), see `northroot-receipts::validation`.
+//!
+//! ## Validation Layers
+//!
+//! 1. **Syntactic (northroot-receipts)**: Format checks, schema validation, structure integrity
+//!    - Hash format validation
+//!    - Field format validation (timestamps, UUIDs, basic policy_ref format)
+//!    - Kind-specific payload structure
+//!    - Composition chain integrity (cod/dom matching)
+//!
+//! 2. **Semantic (this module)**: Policy compliance, business rules, constraints
+//!    - Policy reference validation (detailed errors, authoritative)
+//!    - Determinism class enforcement
+//!    - Tool/region constraint checking
+//!    - Policy registry lookups
+//!
+//! **Dependency rule**: `policy` depends on `receipts` but NOT on `engine` (see ADR_PLAYBOOK.md).
+//! Policy validation answers "is this allowed?" not "how do I compute this?"
 
 use northroot_receipts::{Context, DeterminismClass, Receipt};
 
@@ -71,7 +88,10 @@ impl std::fmt::Display for PolicyError {
 
 impl std::error::Error for PolicyError {}
 
-/// Validate policy reference format.
+/// Validate policy reference format (authoritative, detailed validation).
+///
+/// **Boundary note**: This is the authoritative policy reference validator with detailed errors.
+/// The `northroot-receipts` crate has a simpler format check for syntactic validation only.
 ///
 /// Accepts two formats:
 /// - Strict: `pol:<namespace>/<name>@<semver>` (e.g., "pol:finops/cost-guard@1.2.0")
@@ -83,7 +103,13 @@ impl std::error::Error for PolicyError {}
 ///
 /// # Returns
 ///
-/// `Ok(())` if the format is valid, or `PolicyError` if invalid.
+/// `Ok(())` if the format is valid, or `PolicyError` with detailed reason if invalid.
+///
+/// # Usage
+///
+/// Use this function for policy compliance checking. For simple format checks during
+/// receipt structure validation, `northroot-receipts` uses a simpler boolean check
+/// to avoid circular dependencies.
 pub fn validate_policy_ref_format(policy_ref: &str) -> Result<(), PolicyError> {
     if !policy_ref.starts_with("pol:") {
         return Err(PolicyError::InvalidPolicyRef {
@@ -331,7 +357,7 @@ pub fn validate_region_constraints(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use northroot_receipts::{Context, DataShapePayload, Payload, ReceiptKind};
+    use northroot_receipts::{Context, DeterminismClass};
     use uuid::Uuid;
 
     #[test]

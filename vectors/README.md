@@ -29,6 +29,17 @@ Test vectors serve as:
 - `method_manifest.json`: Method manifest example
 - `operators.json`: Operator manifest examples
 
+### Engine Test Vectors
+
+The `engine/` subdirectory contains test vectors for engine operations:
+
+- `composition_chain_valid.json`: Valid sequential chain with all 6 receipt kinds (data_shape → method_shape → reasoning_shape → execution → spend → settlement) with matching cod/dom
+- `composition_chain_invalid.json`: Invalid chain with mismatched cod/dom (for negative tests)
+- `tensor_composition.json`: Parallel composition example with multiple child receipts
+- `delta_compute_scenarios.json`: Delta compute test cases (Jaccard similarity, reuse decisions, economic delta)
+- `execution_roots.json`: Execution root computation examples
+- `merkle_row_map_examples.json`: Merkle Row-Map examples demonstrating RFC-6962 style Merkle tree computation
+
 ## Validation Requirements
 
 All vectors must:
@@ -176,6 +187,29 @@ Vectors validate against schemas in `receipts/schemas/`:
 - `execution_schema.json`
 - `spend_schema.json`
 - `settlement_schema.json`
+
+## Engine Vector Validation
+
+Engine test vectors are validated by:
+
+- `test_engine_vector_integrity`: Validates all engine vectors produce expected results
+- `test_composition_vector_roundtrip`: Verifies composition vectors work correctly
+- `test_drift_detection`: Ensures root computation algorithms haven't changed
+
+### Root Computation Baselines
+
+Engine root computation functions have locked baseline values in `crates/northroot-engine/tests/test_drift_detection.rs`:
+
+- `commit_set_root()`: Order-independent set root computation
+- `commit_seq_root()`: Order-dependent sequence root computation
+- `compute_tensor_root()`: Parallel composition root
+- `MerkleRowMap::compute_root()`: RFC-6962 Merkle tree root
+- `compute_execution_roots()`: Execution root combination
+
+To update baselines after intentional algorithm changes:
+1. Run `cargo test -p northroot-engine --test test_drift_detection -- --nocapture`
+2. Update `BASELINE_ROOTS` in `test_drift_detection.rs` with new values
+3. Document the change in commit message
 
 ## Documentation
 

@@ -14,6 +14,7 @@ publish = false
 [dependencies]
 northroot-receipts = { path = "../northroot-receipts" }
 northroot-commons = { path = "../northroot-commons" }
+northroot-policy = { path = "../northroot-policy" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }

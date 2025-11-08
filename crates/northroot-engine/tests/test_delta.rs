@@ -1,4 +1,8 @@
 //! Tests for delta compute operations.
+//!
+//! Note: Test vectors for delta compute scenarios (Jaccard similarity, reuse decisions,
+//! economic delta) are in `vectors/engine/delta_compute_scenarios.json` and validated
+//! by `test_engine_vector_integrity.rs`.
 
 use northroot_engine::delta::*;
 use std::collections::HashSet;

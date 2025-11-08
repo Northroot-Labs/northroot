@@ -5,5 +5,9 @@
 
 #![deny(missing_docs)]
 
-// Placeholder for policy and strategy types
-// TODO: Add policy types, cost models, threshold validators, etc.
+pub mod validation;
+
+pub use validation::{
+    load_policy, validate_determinism, validate_policy, validate_policy_ref_format,
+    validate_region_constraints, validate_tool_constraints, PolicyError,
+};
