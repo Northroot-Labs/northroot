@@ -1,0 +1,30 @@
+[package]
+name = "northroot-receipts"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Canonical data model for the Northroot proof algebra system"
+repository = "https://github.com/Northroot-Labs/northroot"
+documentation = "https://docs.rs/northroot-receipts"
+keywords = ["receipt", "proof", "algebra", "verification", "canonical", "merkle"]
+categories = ["algorithms", "data-structures", "encoding"]
+rust-version = "1.86"
+publish = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+uuid = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+jsonschema = { version = "0.18", optional = true }
+
+[dev-dependencies]
+jsonschema = "0.18"
+serde_json = { workspace = true }
+
+[features]
+default = []
+jsonschema = ["dep:jsonschema"]
+builders = []
