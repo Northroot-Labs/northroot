@@ -1,0 +1,153 @@
+# northroot_research_task_v0.1.yaml
+version: 0.1
+namespace: northroot.research.delta_compute
+
+task:
+  name: "Delta & Incremental Compute Research"
+  description: >
+    Explore, analyze, and map the frontier of delta and incremental compute,
+    focusing on reusable computation, proof-based verification, and near-term
+    FinOps and data-engineering applications. Produce actionable findings that
+    guide Northroot's engineering and pilot rollout priorities.
+
+context:
+  organization: "Northroot Labs"
+  framework: "Proof Geometry / Receipts / Delta Compute"
+  summary: >
+    Northroot builds a verifiable execution substrate where compute steps emit
+    canonical receipts. The goal of delta compute is to reuse previously verified
+    work across runs and record economic justification (J, α, C_id, C_comp)
+    in proofs. The research agent will identify where this concept can deliver
+    measurable savings, which operators and domains yield the highest ROI,
+    and what mathematical, technical, and market research supports it.
+
+objectives:
+  conceptual:
+    - "Identify mathematical strategies for partial computation reuse (monoids, semirings, differential dataflow)."
+    - "Define operator incrementality (α) and economic break-even thresholds for reuse decisions."
+    - "Study algebraic or probabilistic overlap metrics (Jaccard, MinHash, weighted similarity)."
+  technical:
+    - "Survey open-source frameworks for incremental compute and DAG caching (Bazel, DVC, Dagster, Ray, Differential Dataflow, Delta Lake)."
+    - "Benchmark chunking and sketching algorithms (Rabin, FastCDC, MinHash, HLL)."
+    - "Evaluate canonicalization efficiency (JSON vs CBOR) for receipt and proof storage."
+    - "Identify operators best suited for delta reuse: group-by, join, partition, aggregate."
+  applied:
+    - "Find high-ROI domains for delta compute (FinOps, ETL, AI agent pipelines, ML feature stores)."
+    - "Quantify potential compute/time/cost savings per domain (target 25–40% reduction)."
+    - "Map integration paths: SDK hooks, MCP client embedding, trace observation."
+  market:
+    - "Estimate market size and spend for FinOps and ETL workflows."
+    - "Survey competitors and adjacent systems; identify white-space for verifiable reuse proofs."
+  frontier:
+    - "Explore cross-organizational delta compute and privacy-preserving reuse mechanisms (MPC, federated, ZK)."
+    - "Assess viability of AI-driven delta strategy selection (learned cost models)."
+    - "Evaluate feasibility of verifiable compute proofs in TEEs or ZKP systems."
+
+deliverables:
+  - name: "landscape_brief"
+    type: "markdown"
+    description: "Overview of delta/incremental compute research, frameworks, and trends."
+  - name: "applied_use_case_sheets"
+    type: "markdown"
+    description: "One-pager per target domain outlining pain points, reuse opportunities, expected ROI."
+  - name: "operator_strategy_table"
+    type: "table"
+    description: "Operators ranked by incrementality factor α and economic savings potential."
+  - name: "integration_notes"
+    type: "markdown"
+    description: "Recommended SDK/API integration strategies for real-world systems."
+  - name: "proof_synergy_memo"
+    type: "markdown"
+    description: "How proof geometry complements and verifies reuse in delta compute."
+  - name: "white_space_matrix"
+    type: "table"
+    description: "2×2 grid of (market pain vs. reuse potential) to highlight near-term opportunities."
+  - name: "bibliography"
+    type: "markdown"
+    description: "Cited papers, repos, and references used during research."
+
+methodology:
+  - "Perform literature review and open-source analysis."
+  - "Collect quantitative metrics from case studies (FinOps, ETL, ML)."
+  - "Prototype delta-aware workloads and measure overlap J and α."
+  - "Document proofs emitted by prototype for reproducibility."
+  - "Benchmark canonicalization (JSON vs CBOR) for performance and determinism."
+  - "Record findings as receipts with metadata linking to operator shapes."
+
+key_terms:
+  - delta_compute
+  - incremental_compute
+  - overlap_J
+  - alpha_incrementality
+  - spend_justification
+  - proof_receipt
+  - canonicalization
+  - chunking
+  - sketching
+  - reuse_economics
+  - FinOps
+  - ETL
+  - federated_compute
+  - proof_of_reuse
+
+priorities:
+  short_term:
+    - "FinOps delta compute pilot: cost attribution reuse receipts."
+    - "ETL refresh optimization: partition-based reuse."
+    - "Proof-bound economics: record delta savings in receipts."
+  medium_term:
+    - "Canonical schema alignment for heterogeneous data reuse."
+    - "Performance baselines for canonicalization and chunking."
+  long_term:
+    - "Cross-org compute netting and compute credit markets."
+    - "AI-driven delta decision agents."
+
+success_metrics:
+  - name: "domain_coverage"
+    target: 5
+    description: "At least 5 documented domains with clear pain points and reuse potential."
+  - name: "high_alpha_operators"
+    target: 6
+    description: "Operators with measured α ≥ 0.7 and positive ΔC savings."
+  - name: "cost_savings_projection"
+    target: "25-40%"
+    description: "Validated range of potential compute/time savings."
+  - name: "open_source_refs"
+    target: 15
+    description: "Referenced OSS systems or academic papers."
+  - name: "new_white_space_areas"
+    target: 3
+    description: "Distinct underexplored opportunity zones identified."
+  - name: "validated_proof_extensions"
+    target: 100
+    unit: "percent"
+    description: "Receipts model remains type-safe and schema-consistent."
+
+reporting:
+  format: "markdown"
+  frequency: "biweekly"
+  guidelines:
+    - "Summaries ≤1000 words per topic."
+    - "Include explicit citations and URLs."
+    - "Flag promising areas for prototype implementation."
+    - "Reference spec sections or engine components influenced."
+  outputs_dir: "/reports/research/delta_compute/"
+  versioning: "git-tracked, reviewed before merge"
+
+agent_guidance:
+  tone: "Analytical, concise, evidence-driven."
+  depth: "Graduate-level technical rigor, focus on application value."
+  bias: "Neutral; prefer practical verifiability over theoretical novelty."
+  avoid:
+    - "Marketing claims without data"
+    - "Unverifiable performance statements"
+  prioritize:
+    - "Empirical cost models"
+    - "Open reproducible references"
+    - "Actionable next steps for engineering"
+
+ultimate_goal: >
+  Produce a clear, evidence-backed roadmap showing where verifiable delta
+  compute can deliver immediate, provable efficiency gains, identify the most
+  promising operators and domains for early adoption, and define the research
+  direction for cross-org, auditable compute reuse.

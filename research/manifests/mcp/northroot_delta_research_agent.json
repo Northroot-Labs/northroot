@@ -1,0 +1,170 @@
+{
+    "name": "northroot-delta-research-agent",
+    "version": "0.1.0",
+    "description": "Research agent for delta/incremental compute and verifiable reuse economics.",
+    "capabilities": [
+        "tasks",
+        "http",
+        "fs"
+    ],
+    "endpoints": [
+        {
+            "path": "/task/start",
+            "method": "POST",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "config_json": {
+                        "type": "object"
+                    },
+                    "focus_domains": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "default": [
+                            "FinOps",
+                            "ETL"
+                        ]
+                    }
+                },
+                "required": [
+                    "config_json"
+                ]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "task_id": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "task_id",
+                    "status"
+                ]
+            }
+        },
+        {
+            "path": "/task/status",
+            "method": "GET",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "task_id": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "task_id"
+                ]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "task_id": {
+                        "type": "string"
+                    },
+                    "progress": {
+                        "type": "number"
+                    },
+                    "artifacts": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "description": "paths/URIs to generated deliverables"
+                        }
+                    }
+                },
+                "required": [
+                    "task_id",
+                    "progress"
+                ]
+            }
+        },
+        {
+            "path": "/report/generate",
+            "method": "POST",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "artifact": {
+                        "type": "string",
+                        "enum": [
+                            "landscape_brief",
+                            "applied_use_case_sheets",
+                            "operator_strategy_table",
+                            "integration_notes",
+                            "proof_synergy_memo",
+                            "white_space_matrix",
+                            "bibliography"
+                        ]
+                    },
+                    "format": {
+                        "type": "string",
+                        "enum": [
+                            "markdown",
+                            "table"
+                        ],
+                        "default": "markdown"
+                    }
+                },
+                "required": [
+                    "artifact"
+                ]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "path": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "path",
+                    "status"
+                ]
+            }
+        },
+        {
+            "path": "/proof/link",
+            "method": "POST",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "receipt_rid": {
+                        "type": "string"
+                    },
+                    "artifact_path": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "receipt_rid",
+                    "artifact_path"
+                ]
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {
+                    "linked": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "linked"
+                ]
+            }
+        }
+    ],
+    "defaults": {
+        "outputs_dir": "/reports/research/delta_compute/",
+        "receipts_media_type": "application/vnd.northroot.receipt+json"
+    }
+}
