@@ -31,7 +31,10 @@ pub mod execution;
 pub mod signature;
 pub mod strategies;
 
-pub use commitments::{commit_seq_root, commit_set_root, jcs, sha256_prefixed};
+pub use commitments::{
+    cbor_deterministic, cbor_hash, commit_seq_root, commit_set_root, jcs, sha256_prefixed,
+    validate_cbor_deterministic,
+};
 pub use composition::{
     build_sequential_chain, compute_tensor_root, create_identity_receipt, validate_all_links,
     validate_link, validate_sequential, CompositionError,
@@ -67,3 +70,23 @@ pub use strategies::{
     default_registry, ExecutionMode, IncrementalSumStrategy, PartitionStrategy, Strategy,
     StrategyError, StrategyRegistry,
 };
+
+// Re-export delta module items for ReuseIndexed trait
+pub use delta::OverlapMetric;
+
+/// Trait for strategies that can compute overlap metrics for reuse decisions.
+///
+/// This trait enables strategies to expose overlap information (Jaccard similarity,
+/// chunk counts) without requiring double passes over the data. Strategies implement
+/// this trait to provide reuse metadata alongside their execution results.
+pub trait ReuseIndexed {
+    /// Compute overlap metric between current and previous execution states.
+    ///
+    /// This method should compute Jaccard similarity and related statistics
+    /// based on the strategy's internal state and previous state (if available).
+    ///
+    /// # Returns
+    ///
+    /// `OverlapMetric` containing Jaccard similarity and chunk counts
+    fn overlap(&self) -> OverlapMetric;
+}

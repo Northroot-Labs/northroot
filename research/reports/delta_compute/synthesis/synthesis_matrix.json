@@ -1,0 +1,1020 @@
+{
+    "metadata": {
+        "generated_at": "2025-01-27",
+        "agents": [
+            "cursor",
+            "openai"
+        ],
+        "version": "0.1"
+    },
+    "dimensions": {
+        "scope_alignment": {
+            "cursor": {
+                "score": 5,
+                "findings": [
+                    "Comprehensive coverage: 25 operators, 5 domains, theoretical foundations, OSS landscape",
+                    "Strong focus on FinOps, ETL, Analytics as P0 priorities",
+                    "Extensive bibliography (25+ references) covering theory, frameworks, market research",
+                    "White space analysis: 3 areas (cross-org reuse, learned models, verifiable proofs)"
+                ],
+                "unique_contributions": [
+                    "Comprehensive operator table with detailed metrics (α, J, C_id, C_comp, ΔC)",
+                    "Quantitative ROI calculations with dollar amounts",
+                    "Multi-domain analysis (5 domains with detailed use cases)",
+                    "Integration patterns for multiple frameworks (Spark, Dagster, Ray, Delta Lake, MCP)"
+                ]
+            },
+            "openai": {
+                "score": 4,
+                "findings": [
+                    "Focused on three foundational pillars for Northroot receipts",
+                    "Strong emphasis on implementation hooks and specific file paths",
+                    "Framework-specific integration details (Delta Lake CDF, FastCDC, Bazel cache keys)",
+                    "Deterministic serialization as bridge between delta reuse and verifiable proofs"
+                ],
+                "unique_contributions": [
+                    "Three foundational pillars framework",
+                    "Specific code locations and file paths for implementation",
+                    "Delta Lake CDF scan operator specification",
+                    "ReuseIndexed trait design"
+                ]
+            },
+            "unified": {
+                "score": 5,
+                "findings": [
+                    "Strong alignment: Both identify FinOps and ETL as P0 priorities",
+                    "Complementary coverage: cursor provides breadth, openai provides depth on implementation",
+                    "Shared focus on verifiable reuse economics and cross-org markets",
+                    "Both emphasize deterministic serialization (CBOR/JCS) for cross-org verification"
+                ],
+                "provenance": [
+                    {
+                        "claim": "FinOps and ETL are P0 priorities",
+                        "sources": [
+                            {
+                                "agent": "cursor",
+                                "file": "white_space_matrix.md",
+                                "line": 48,
+                                "span": "lines 48-49"
+                            },
+                            {
+                                "agent": "openai",
+                                "file": "white_space_matrix.md",
+                                "line": 48,
+                                "span": "line 48"
+                            }
+                        ]
+                    },
+                    {
+                        "claim": "Deterministic serialization (CBOR/JCS) required for cross-org verification",
+                        "sources": [
+                            {
+                                "agent": "cursor",
+                                "file": "proof_synergy_memo.md",
+                                "line": 246,
+                                "span": "lines 246-252"
+                            },
+                            {
+                                "agent": "openai",
+                                "file": "proof_synergy_memo.md",
+                                "line": 10,
+                                "span": "lines 10-12"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "assumptions_constraints": {
+            "cursor": {
+                "score": 4,
+                "findings": [
+                    "Assumes high overlap (J > 0.80) in production workloads",
+                    "Assumes cost models (C_id, C_comp) can be measured or estimated",
+                    "Market size assumptions based on FinOps statistics (32% waste)",
+                    "Technical constraints: Requires deterministic serialization, stable chunking"
+                ],
+                "explicit_assumptions": [
+                    "Daily/weekly runs for FinOps (4-8 hour full recomputation)",
+                    "10-20% partition churn for ETL",
+                    "5-15% data changes for analytics dashboards"
+                ]
+            },
+            "openai": {
+                "score": 3,
+                "findings": [
+                    "Assumes existing incremental infrastructure (Delta Lake, DVC, Dagster)",
+                    "Assumes deterministic serialization can be implemented (CBOR/JCS)",
+                    "Technical constraints: Requires ReuseIndexed trait, α field in receipts"
+                ],
+                "explicit_assumptions": [
+                    "Delta CDF exposes change slices (already available)",
+                    "Bazel/DVC cache hits can be intercepted",
+                    "Cross-org verification requires canonical receipts"
+                ]
+            },
+            "unified": {
+                "score": 4,
+                "findings": [
+                    "Both assume high overlap in target domains (J > 0.75-0.90)",
+                    "Both require deterministic serialization for cross-org verification",
+                    "Cursor provides more explicit market assumptions (dollar amounts, percentages)",
+                    "Openai focuses on technical implementation constraints"
+                ],
+                "provenance": [
+                    {
+                        "claim": "High overlap assumed in production workloads (J > 0.75)",
+                        "sources": [
+                            {
+                                "agent": "cursor",
+                                "file": "applied_use_case_sheets.md",
+                                "line": 38,
+                                "span": "line 38"
+                            },
+                            {
+                                "agent": "openai",
+                                "file": "applied_use_case_sheets.md",
+                                "line": 33,
+                                "span": "line 33"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "constructs": {
+            "cursor": {
+                "score": 5,
+                "findings": [
+                    "Consistent mathematical definitions: J > C_id/(α·C_comp), ΔC = α·C_comp·J - C_id",
+                    "Clear operator α values with detailed metrics",
+                    "Comprehensive operator taxonomy (25 operators)",
+                    "Receipt structure well-defined with spend.justification fields"
+                ],
+                "definitions": {
+                    "alpha": "α ∈ [0,1] measures how efficiently an operator can apply deltas",
+                    "overlap_j": "Jaccard similarity J(U,V) = |U ∩ V| / |U ∪ V|",
+                    "decision_rule": "Reuse iff J > C_id / (α · C_comp)",
+                    "economic_delta": "ΔC ≈ α · C_comp · J - C_id"
+                }
+            },
+            "openai": {
+                "score": 5,
+                "findings": [
+                    "Identical mathematical definitions: J > C_id/(α·C_comp), ΔC = α·C_comp·J - C_id",
+                    "Consistent operator α values (within 0.05 tolerance for overlapping operators)",
+                    "Three foundational pillars framework",
+                    "Receipt structure aligned with cursor (spend.justification fields)"
+                ],
+                "definitions": {
+                    "alpha": "Operator-specific efficiency factor for delta application",
+                    "overlap_j": "Jaccard similarity for chunk-based reuse decisions",
+                    "decision_rule": "Reuse iff J > C_id / (α · C_comp)",
+                    "economic_delta": "ΔC ≈ α · C_comp · J - C_id"
+                }
+            },
+            "unified": {
+                "score": 5,
+                "findings": [
+                    "Perfect alignment on mathematical constructs",
+                    "Identical decision rule and economic delta formulas",
+                    "Consistent terminology (α, J, C_id, C_comp, ΔC)",
+                    "Receipt structure definitions match exactly"
+                ],
+                "conflicts": [],
+                "provenance": [
+                    {
+                        "claim": "Decision rule: J > C_id / (α · C_comp)",
+                        "sources": [
+                            {
+                                "agent": "cursor",
+                                "file": "operator_strategy_table.md",
+                                "line": 12,
+                                "span": "line 12"
+                            },
+                            {
+                                "agent": "openai",
+                                "file": "operator_strategy_table.md",
+                                "line": 12,
+                                "span": "line 12"
+                            }
+                        ]
+                    },
+                    {
+                        "claim": "Economic delta: ΔC ≈ α · C_comp · J - C_id",
+                        "sources": [
+                            {
+                                "agent": "cursor",
+                                "file": "operator_strategy_table.md",
+                                "line": 13,
+                                "span": "line 13"
+                            },
+                            {
+                                "agent": "openai",
+                                "file": "operator_strategy_table.md",
+                                "line": 13,
+                                "span": "line 13"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "technical_recommendations": {
+            "cursor": {
+                "score": 4,
+                "findings": [
+                    "Comprehensive SDK integration patterns (Python, Rust, Java/Scala)",
+                    "Framework-specific integration (Spark, Dagster, Ray, Delta Lake, MCP)",
+                    "State management and policy integration",
+                    "Receipt emission patterns (automatic, explicit, batch)"
+                ],
+                "file_paths": [
+                    "crates/northroot-engine/src/strategies/incremental_sum.rs",
+                    "crates/northroot-engine/src/strategies/partition.rs",
+                    "receipts/schemas/spend_schema.json",
+                    "docs/specs/delta_compute.md"
+                ]
+            },
+            "openai": {
+                "score": 5,
+                "findings": [
+                    "Highly specific file paths and code locations",
+                    "ReuseIndexed trait specification with exact signature",
+                    "Delta Lake CDF scan operator with specific fields",
+                    "Drift detection integration with test file paths",
+                    "Deterministic CBOR/JCS implementation requirements"
+                ],
+                "file_paths": [
+                    "receipts/src/canonical.rs",
+                    "crates/northroot-engine/src/lib.rs",
+                    "engine/src/commitments.rs",
+                    "receipts/schemas/spend_schema.json",
+                    "receipts/tests/test_drift_detection.rs",
+                    "crates/northroot-engine/src/strategies/incremental_sum.rs"
+                ]
+            },
+            "unified": {
+                "score": 5,
+                "findings": [
+                    "Combine cursor's comprehensive patterns with openai's specific file paths",
+                    "ReuseIndexed trait (openai) + SDK patterns (cursor) = complete integration strategy",
+                    "Delta Lake CDF scan operator (openai) + Delta Lake integration patterns (cursor)",
+                    "Deterministic serialization (both) + specific implementation paths (openai)"
+                ],
+                "provenance": [
+                    {
+                        "claim": "ReuseIndexed trait in crates/northroot-engine/src/lib.rs",
+                        "sources": [
+                            {
+                                "agent": "openai",
+                                "file": "integration_notes.md",
+                                "line": 34,
+                                "span": "lines 32-48"
+                            }
+                        ]
+                    },
+                    {
+                        "claim": "SDK integration patterns for Spark, Dagster, Ray",
+                        "sources": [
+                            {
+                                "agent": "cursor",
+                                "file": "integration_notes.md",
+                                "line": 160,
+                                "span": "lines 160-287"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "domain_strategy": {
+            "cursor": {
+                "score": 5,
+                "findings": [
+                    "Clear priority ordering: FinOps (P0), ETL (P0), Analytics (P0), CI/CD (P1), ML (P1)",
+                    "Quantitative ROI: $276K FinOps, $372K ETL, $684K Analytics annually",
+                    "ROI percentages: 46% FinOps, 39% ETL, 142% Analytics",
+                    "Prototype readiness: High for FinOps/ETL/Analytics, Medium for ML"
+                ],
+                "priority_sequence": [
+                    "FinOps (P0)",
+                    "ETL (P0)",
+                    "Analytics (P0)",
+                    "CI/CD (P1)",
+                    "ML Features (P1)"
+                ]
+            },
+            "openai": {
+                "score": 4,
+                "findings": [
+                    "Priority ordering: FinOps (P0), ETL (P1), Compliance (P1), AI/RAG (P2)",
+                    "ROI ranges: 25-35% FinOps, 30-45% ETL, 20-30% AI/RAG",
+                    "Focus on domains with existing incremental infrastructure",
+                    "Prototype readiness: High for FinOps/ETL/Compliance, Medium for AI/RAG"
+                ],
+                "priority_sequence": [
+                    "FinOps (P0)",
+                    "ETL (P1)",
+                    "Compliance (P1)",
+                    "AI/RAG (P2)"
+                ]
+            },
+            "unified": {
+                "score": 5,
+                "findings": [
+                    "Agreement: FinOps is P0 priority (both agents)",
+                    "ETL: cursor P0, openai P1 (complementary - cursor emphasizes ROI, openai emphasizes integration ease)",
+                    "Analytics: cursor P0, openai not explicitly prioritized (cursor unique contribution)",
+                    "Compliance: openai P1, cursor not explicitly prioritized (openai unique contribution)",
+                    "Unified priority: FinOps (P0), ETL (P0), Analytics (P0), Compliance (P1), AI/RAG (P2)"
+                ],
+                "conflicts": [
+                    {
+                        "item": "ETL priority",
+                        "cursor": "P0",
+                        "openai": "P1",
+                        "resolution": "P0 (cursor has stronger ROI evidence: $372K annual savings vs openai's 30-45% range)",
+                        "rationale": "Cursor provides quantitative dollar amounts and detailed ROI calculations"
+                    }
+                ],
+                "provenance": [
+                    {
+                        "claim": "FinOps is P0 priority with 25-46% savings",
+                        "sources": [
+                            {
+                                "agent": "cursor",
+                                "file": "applied_use_case_sheets.md",
+                                "line": 46,
+                                "span": "lines 35-47"
+                            },
+                            {
+                                "agent": "openai",
+                                "file": "applied_use_case_sheets.md",
+                                "line": 33,
+                                "span": "line 33"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "evidence_quality": {
+            "cursor": {
+                "score": 5,
+                "findings": [
+                    "25+ citations covering theory, frameworks, market research",
+                    "Quantitative benchmarks: differential dataflow 230µs, FastCDC 10× speedup",
+                    "Detailed ROI calculations with dollar amounts and percentages",
+                    "Empirical operator metrics (α, J, C_id, C_comp) for 25 operators",
+                    "Market statistics: 32% FinOps waste, 82% orgs with FinOps teams"
+                ],
+                "citation_count": 25,
+                "quantitative_data": [
+                    "FinOps: $276K annual savings, 46% ROI",
+                    "ETL: $372K annual savings, 39% ROI",
+                    "Analytics: $684K annual savings, 142% ROI",
+                    "Differential dataflow: >100,000× update-to-recompute ratios"
+                ]
+            },
+            "openai": {
+                "score": 3,
+                "findings": [
+                    "11 citations focused on frameworks and algorithms",
+                    "Qualitative benchmarks: FastCDC 10× speedup, differential dataflow 230µs",
+                    "ROI ranges without dollar amounts (25-35%, 30-45%)",
+                    "Framework-specific integration details with code locations",
+                    "Market statistics: 32% FinOps waste (shared with cursor)"
+                ],
+                "citation_count": 11,
+                "quantitative_data": [
+                    "Differential dataflow: >100,000× update-to-recompute ratios",
+                    "FastCDC: 10× speedup over Rabin",
+                    "Delta Lake: ≥40% compute savings",
+                    "FinOps: 25-35% reduction (range, no dollar amounts)"
+                ]
+            },
+            "unified": {
+                "score": 5,
+                "findings": [
+                    "Prefer cursor's quantitative data (dollar amounts, detailed calculations)",
+                    "Use openai's specific implementation hooks and file paths",
+                    "Combine citations: cursor's comprehensive bibliography + openai's framework focus",
+                    "Unified evidence: 25+ citations, quantitative ROI, specific code paths"
+                ],
+                "merge_strategy": "cursor_primary_for_evidence_openai_for_implementation",
+                "provenance": [
+                    {
+                        "claim": "FinOps shows 25-46% savings potential with $276K annual savings",
+                        "sources": [
+                            {
+                                "agent": "cursor",
+                                "file": "applied_use_case_sheets.md",
+                                "line": 46,
+                                "span": "lines 35-47"
+                            },
+                            {
+                                "agent": "openai",
+                                "file": "applied_use_case_sheets.md",
+                                "line": 33,
+                                "span": "line 33"
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        "novelty_and_risk": {
+            "cursor": {
+                "score": 4,
+                "findings": [
+                    "Three white space areas: cross-org reuse, learned cost models, verifiable proofs",
+                    "Cross-org reuse: privacy-preserving (MPC, ZK), federated patterns",
+                    "Learned cost models: ML-driven α/C_id/C_comp prediction",
+                    "ZK-incremental proofs: verify correctness without revealing data",
+                    "Risk assessment: Low for P0 domains (high overlap, high α), Medium for ML (lower α)"
+                ],
+                "white_space_areas": [
+                    "Cross-organizational reuse (privacy-preserving)",
+                    "Learned cost models (ML-driven)",
+                    "Verifiable incremental proofs (ZK)"
+                ]
+            },
+            "openai": {
+                "score": 3,
+                "findings": [
+                    "One white space area: cross-org reuse (deterministic serialization enables)",
+                    "Focus on deterministic serialization as enabler for cross-org verification",
+                    "TEE and ZK proof integration mentioned but less detailed",
+                    "Risk assessment: Medium for GPU pipelines (requires deeper integration)"
+                ],
+                "white_space_areas": [
+                    "Cross-organizational reuse (deterministic serialization)"
+                ]
+            },
+            "unified": {
+                "score": 4,
+                "findings": [
+                    "Three white space areas (cursor comprehensive, openai focused)",
+                    "Cross-org reuse: Both identify, cursor provides more detail (MPC, ZK, federated)",
+                    "Learned cost models: Cursor unique contribution",
+                    "Verifiable proofs: Cursor unique contribution",
+                    "Unified white space: Cross-org reuse (P0), Learned models (P1), Verifiable proofs (P2)"
+                ],
+                "provenance": [
+                    {
+                        "claim": "Cross-organizational reuse is white space opportunity",
+                        "sources": [
+                            {
+                                "agent": "cursor",
+                                "file": "white_space_matrix.md",
+                                "line": 169,
+                                "span": "lines 169-185"
+                            },
+                            {
+                                "agent": "openai",
+                                "file": "white_space_matrix.md",
+                                "line": 135,
+                                "span": "lines 135-151"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    },
+    "operators": {
+        "partition_by_key": {
+            "cursor": {
+                "alpha": 0.95,
+                "typical_j": [
+                    0.80,
+                    0.95
+                ],
+                "break_even_j": 0.011,
+                "delta_c_j08": 7.5,
+                "savings_potential": "Very High",
+                "implementation": "PartitionStrategy in Northroot engine",
+                "use_cases": [
+                    "ETL",
+                    "FinOps",
+                    "Analytics"
+                ]
+            },
+            "openai": {
+                "alpha": 0.85,
+                "overlap_metric": "Per-partition byte reuse",
+                "economic_signal": "~5× cost speedups for skewed datasets",
+                "implementation": "Northroot's existing incremental_sum operator",
+                "use_cases": [
+                    "FinOps cost attribution",
+                    "ETL aggregations"
+                ]
+            },
+            "unified": {
+                "alpha": 0.95,
+                "rationale": "Cursor has higher evidence quality (detailed metrics, implementation reference) and alpha value aligns with 'Partition by key/date' operator. Openai's 0.85 refers to 'Partitioned sum' which is a different operator (aggregation vs partitioning).",
+                "typical_j": [
+                    0.80,
+                    0.95
+                ],
+                "break_even_j": 0.011,
+                "delta_c_j08": 7.5,
+                "savings_potential": "Very High",
+                "implementation": "PartitionStrategy in Northroot engine",
+                "use_cases": [
+                    "ETL",
+                    "FinOps",
+                    "Analytics"
+                ],
+                "provenance": [
+                    {
+                        "agent": "cursor",
+                        "file": "operator_strategy_table.md",
+                        "line": 21,
+                        "span": "line 21"
+                    },
+                    {
+                        "agent": "openai",
+                        "file": "operator_strategy_table.md",
+                        "line": 21,
+                        "span": "line 21"
+                    }
+                ]
+            }
+        },
+        "incremental_sum": {
+            "cursor": {
+                "alpha": 0.92,
+                "typical_j": [
+                    0.80,
+                    0.95
+                ],
+                "break_even_j": 0.043,
+                "delta_c_j08": 3.5,
+                "savings_potential": "Very High",
+                "implementation": "IncrementalSumStrategy in Northroot engine",
+                "use_cases": [
+                    "FinOps",
+                    "Analytics",
+                    "ETL"
+                ]
+            },
+            "openai": {
+                "alpha": 0.85,
+                "overlap_metric": "Per-partition byte reuse derived from incremental_sum strategy outputs",
+                "economic_signal": "~5× cost speedups for skewed datasets",
+                "implementation": "Northroot's existing incremental_sum operator",
+                "use_cases": [
+                    "FinOps cost attribution",
+                    "ETL aggregations"
+                ]
+            },
+            "unified": {
+                "alpha": 0.92,
+                "rationale": "Cursor's value (0.92) is more specific and aligns with 'Incremental sum' operator name. Openai's 0.85 refers to 'Partitioned sum / incremental aggregation' which may be a composite. Use cursor's value as it matches the exact operator name and has detailed metrics.",
+                "typical_j": [
+                    0.80,
+                    0.95
+                ],
+                "break_even_j": 0.043,
+                "delta_c_j08": 3.5,
+                "savings_potential": "Very High",
+                "implementation": "IncrementalSumStrategy in Northroot engine (crates/northroot-engine/src/strategies/incremental_sum.rs)",
+                "use_cases": [
+                    "FinOps",
+                    "Analytics",
+                    "ETL"
+                ],
+                "provenance": [
+                    {
+                        "agent": "cursor",
+                        "file": "operator_strategy_table.md",
+                        "line": 24,
+                        "span": "line 24"
+                    },
+                    {
+                        "agent": "openai",
+                        "file": "operator_strategy_table.md",
+                        "line": 21,
+                        "span": "line 21"
+                    }
+                ]
+            }
+        },
+        "group_by_aggregation": {
+            "cursor": {
+                "alpha": 0.90,
+                "typical_j": [
+                    0.75,
+                    0.90
+                ],
+                "break_even_j": 0.056,
+                "delta_c_j08": 6.7,
+                "savings_potential": "Very High",
+                "use_cases": [
+                    "Analytics",
+                    "FinOps",
+                    "Dashboards"
+                ]
+            },
+            "openai": {
+                "alpha": 0.8,
+                "overlap_metric": "Count-change delta compared to previous receipts",
+                "economic_signal": "80% reuse when <20% of keys mutate, matching 230 µs differential update",
+                "use_cases": [
+                    "Analytics",
+                    "aggregations"
+                ]
+            },
+            "unified": {
+                "alpha": 0.90,
+                "rationale": "Cursor's value (0.90) is higher and has detailed metrics. Openai's 0.8 refers to 'Grouped counts & distincts' which is a subset. Use cursor's value for 'Group-by aggregation' as it's more comprehensive.",
+                "typical_j": [
+                    0.75,
+                    0.90
+                ],
+                "break_even_j": 0.056,
+                "delta_c_j08": 6.7,
+                "savings_potential": "Very High",
+                "use_cases": [
+                    "Analytics",
+                    "FinOps",
+                    "Dashboards"
+                ],
+                "provenance": [
+                    {
+                        "agent": "cursor",
+                        "file": "operator_strategy_table.md",
+                        "line": 23,
+                        "span": "line 23"
+                    },
+                    {
+                        "agent": "openai",
+                        "file": "operator_strategy_table.md",
+                        "line": 22,
+                        "span": "line 22"
+                    }
+                ]
+            }
+        },
+        "cdc_merge_delta_lake": {
+            "cursor": {
+                "alpha": null,
+                "note": "Not explicitly listed, but Delta Lake mentioned in frameworks"
+            },
+            "openai": {
+                "alpha": 0.9,
+                "overlap_metric": "changed_rows / total_rows per _commit_version window",
+                "economic_signal": "≥40% compute savings for append-heavy feeds",
+                "implementation": "Delta Lake CDF integration",
+                "use_cases": [
+                    "ETL refresh",
+                    "lakehouse pipelines"
+                ]
+            },
+            "unified": {
+                "alpha": 0.9,
+                "rationale": "Openai unique contribution - Delta Lake CDF scan operator with high incrementality",
+                "overlap_metric": "changed_rows / total_rows per _commit_version window",
+                "economic_signal": "≥40% compute savings for append-heavy feeds",
+                "implementation": "Delta Lake CDF integration, operator::cdf_scan in receipts/src/canonical.rs",
+                "use_cases": [
+                    "ETL refresh",
+                    "lakehouse pipelines"
+                ],
+                "provenance": [
+                    {
+                        "agent": "openai",
+                        "file": "operator_strategy_table.md",
+                        "line": 23,
+                        "span": "line 23"
+                    },
+                    {
+                        "agent": "openai",
+                        "file": "applied_use_case_sheets.md",
+                        "line": 60,
+                        "span": "line 60"
+                    }
+                ]
+            }
+        },
+        "join_stable_keys": {
+            "cursor": {
+                "alpha": 0.70,
+                "typical_j": [
+                    0.65,
+                    0.85
+                ],
+                "break_even_j": 0.143,
+                "delta_c_j08": 4.6,
+                "savings_potential": "Medium-High",
+                "use_cases": [
+                    "ETL",
+                    "Analytics"
+                ]
+            },
+            "openai": {
+                "alpha": null,
+                "note": "Not explicitly listed"
+            },
+            "unified": {
+                "alpha": 0.70,
+                "rationale": "Cursor unique contribution - join operators with stable keys",
+                "typical_j": [
+                    0.65,
+                    0.85
+                ],
+                "break_even_j": 0.143,
+                "delta_c_j08": 4.6,
+                "savings_potential": "Medium-High",
+                "use_cases": [
+                    "ETL",
+                    "Analytics"
+                ],
+                "provenance": [
+                    {
+                        "agent": "cursor",
+                        "file": "operator_strategy_table.md",
+                        "line": 29,
+                        "span": "line 29"
+                    }
+                ]
+            }
+        },
+        "fastcdc_chunked_dedup": {
+            "cursor": {
+                "alpha": null,
+                "note": "FastCDC mentioned in chunking algorithms but not as operator"
+            },
+            "openai": {
+                "alpha": 0.8,
+                "overlap_metric": "Chunk-level MinHash similarity over Rabin windows",
+                "economic_signal": "10× speedup over Rabin hashing",
+                "use_cases": [
+                    "Large binary blobs",
+                    "multi-modal data"
+                ]
+            },
+            "unified": {
+                "alpha": 0.8,
+                "rationale": "Openai unique contribution - FastCDC as operator with chunk-level reuse",
+                "overlap_metric": "Chunk-level MinHash similarity over Rabin windows",
+                "economic_signal": "10× speedup over Rabin hashing, aggressive chunk reuse without CPU burn",
+                "use_cases": [
+                    "Large binary blobs",
+                    "multi-modal data"
+                ],
+                "provenance": [
+                    {
+                        "agent": "openai",
+                        "file": "operator_strategy_table.md",
+                        "line": 24,
+                        "span": "line 24"
+                    }
+                ]
+            }
+        },
+        "ray_data_gpu_batches": {
+            "cursor": {
+                "alpha": null,
+                "note": "Ray mentioned in frameworks but not as specific operator"
+            },
+            "openai": {
+                "alpha": 0.7,
+                "overlap_metric": "Fraction of GPU-bound batches served from cached CPU transformations",
+                "economic_signal": "≥70% GPU utilization, reduced idle time",
+                "use_cases": [
+                    "AI/RAG pipelines",
+                    "GPU inference"
+                ]
+            },
+            "unified": {
+                "alpha": 0.7,
+                "rationale": "Openai unique contribution - Ray Data streaming GPU batches operator",
+                "overlap_metric": "Fraction of GPU-bound batches served from cached CPU transformations",
+                "economic_signal": "≥70% GPU utilization, reduced idle time, 20-30% lower GPU idle time",
+                "use_cases": [
+                    "AI/RAG pipelines",
+                    "GPU inference"
+                ],
+                "provenance": [
+                    {
+                        "agent": "openai",
+                        "file": "operator_strategy_table.md",
+                        "line": 25,
+                        "span": "line 25"
+                    }
+                ]
+            }
+        },
+        "dagster_partitioned_assets": {
+            "cursor": {
+                "alpha": null,
+                "note": "Dagster mentioned in frameworks but not as specific operator"
+            },
+            "openai": {
+                "alpha": 0.75,
+                "overlap_metric": "Partitions reused vs total (capped at 100,000 per asset)",
+                "economic_signal": "Skip 3/4 of partitions on steady-state jobs",
+                "use_cases": [
+                    "ML feature stores",
+                    "partitioned ETL"
+                ]
+            },
+            "unified": {
+                "alpha": 0.75,
+                "rationale": "Openai unique contribution - Dagster partitioned assets operator",
+                "overlap_metric": "Partitions reused vs total (capped at 100,000 per asset)",
+                "economic_signal": "Skip 3/4 of partitions on steady-state jobs, matching Dagster's incremental scheduling",
+                "use_cases": [
+                    "ML feature stores",
+                    "partitioned ETL"
+                ],
+                "provenance": [
+                    {
+                        "agent": "openai",
+                        "file": "operator_strategy_table.md",
+                        "line": 26,
+                        "span": "line 26"
+                    }
+                ]
+            }
+        }
+    },
+    "domains": {
+        "finops": {
+            "cursor": {
+                "pain": 9,
+                "reuse_potential": 9,
+                "priority": "P0",
+                "roi_percent": 46,
+                "annual_savings": 276000,
+                "monthly_baseline": 50000,
+                "monthly_savings": 23000,
+                "overlap_j": 0.88,
+                "avg_alpha": 0.87,
+                "prototype_ready": "High"
+            },
+            "openai": {
+                "pain": 9,
+                "reuse_potential": 9,
+                "priority": "P0",
+                "expected_savings": "25–35% reduction",
+                "key_statistics": {
+                    "waste_percent": 32,
+                    "mature_programs_percent": 9,
+                    "orgs_with_finops_percent": 82
+                },
+                "prototype_ready": "High"
+            },
+            "unified": {
+                "pain": 9,
+                "reuse_potential": 9,
+                "priority": "P0",
+                "roi_percent": "25-46%",
+                "annual_savings": 276000,
+                "monthly_baseline": 50000,
+                "monthly_savings": 23000,
+                "overlap_j": 0.88,
+                "avg_alpha": 0.87,
+                "prototype_ready": "High",
+                "rationale": "Cursor provides detailed quantitative ROI (46%, $276K), openai provides market statistics and implementation hooks. Use cursor's dollar amounts, include openai's implementation details.",
+                "provenance": [
+                    {
+                        "agent": "cursor",
+                        "file": "applied_use_case_sheets.md",
+                        "line": 46,
+                        "span": "lines 35-47"
+                    },
+                    {
+                        "agent": "openai",
+                        "file": "applied_use_case_sheets.md",
+                        "line": 33,
+                        "span": "line 33"
+                    }
+                ]
+            }
+        },
+        "etl": {
+            "cursor": {
+                "pain": 8,
+                "reuse_potential": 9,
+                "priority": "P0",
+                "roi_percent": 39,
+                "annual_savings": 372000,
+                "monthly_baseline": 80000,
+                "monthly_savings": 31000,
+                "overlap_j": 0.82,
+                "avg_alpha": 0.84,
+                "prototype_ready": "High"
+            },
+            "openai": {
+                "pain": 6,
+                "reuse_potential": 9,
+                "priority": "P1",
+                "expected_savings": "30–45% less compute",
+                "prototype_ready": "High"
+            },
+            "unified": {
+                "pain": 8,
+                "reuse_potential": 9,
+                "priority": "P0",
+                "rationale": "Cursor has stronger evidence (quantitative ROI: 39%, $372K) and higher pain score (8 vs 6). Openai provides specific Delta Lake CDF integration details. Use cursor's priority and ROI, include openai's CDF scan operator.",
+                "roi_percent": "30-45%",
+                "annual_savings": 372000,
+                "monthly_baseline": 80000,
+                "monthly_savings": 31000,
+                "overlap_j": 0.82,
+                "avg_alpha": 0.84,
+                "prototype_ready": "High",
+                "integration": "Delta Lake CDF scan operator (operator::cdf_scan in receipts/src/canonical.rs)",
+                "provenance": [
+                    {
+                        "agent": "cursor",
+                        "file": "applied_use_case_sheets.md",
+                        "line": 98,
+                        "span": "lines 65-113"
+                    },
+                    {
+                        "agent": "openai",
+                        "file": "applied_use_case_sheets.md",
+                        "line": 66,
+                        "span": "lines 50-79"
+                    }
+                ]
+            }
+        },
+        "analytics": {
+            "cursor": {
+                "pain": 7,
+                "reuse_potential": 8,
+                "priority": "P0",
+                "roi_percent": 142,
+                "annual_savings": 684000,
+                "monthly_baseline": 40000,
+                "monthly_savings": 57000,
+                "overlap_j": 0.90,
+                "avg_alpha": 0.86,
+                "prototype_ready": "High"
+            },
+            "openai": {
+                "pain": null,
+                "note": "Not explicitly prioritized as separate domain"
+            },
+            "unified": {
+                "pain": 7,
+                "reuse_potential": 8,
+                "priority": "P0",
+                "rationale": "Cursor unique contribution - Analytics dashboard refresh with exceptional ROI (142% due to query cost savings)",
+                "roi_percent": 142,
+                "annual_savings": 684000,
+                "monthly_baseline": 40000,
+                "monthly_savings": 57000,
+                "overlap_j": 0.90,
+                "avg_alpha": 0.86,
+                "prototype_ready": "High",
+                "provenance": [
+                    {
+                        "agent": "cursor",
+                        "file": "applied_use_case_sheets.md",
+                        "line": 201,
+                        "span": "lines 169-213"
+                    }
+                ]
+            }
+        }
+    },
+    "weighted_scores": {
+        "cursor": {
+            "scope_alignment": 0.5,
+            "assumptions_constraints": 0.4,
+            "constructs": 0.75,
+            "technical_recommendations": 0.8,
+            "domain_strategy": 0.75,
+            "evidence_quality": 0.75,
+            "novelty_and_risk": 0.6,
+            "total_weighted": 4.55
+        },
+        "openai": {
+            "scope_alignment": 0.4,
+            "assumptions_constraints": 0.3,
+            "constructs": 0.75,
+            "technical_recommendations": 1.0,
+            "domain_strategy": 0.6,
+            "evidence_quality": 0.45,
+            "novelty_and_risk": 0.45,
+            "total_weighted": 3.95
+        },
+        "unified": {
+            "scope_alignment": 0.5,
+            "assumptions_constraints": 0.4,
+            "constructs": 0.75,
+            "technical_recommendations": 1.0,
+            "domain_strategy": 0.75,
+            "evidence_quality": 0.75,
+            "novelty_and_risk": 0.6,
+            "total_weighted": 4.75
+        }
+    }
+}

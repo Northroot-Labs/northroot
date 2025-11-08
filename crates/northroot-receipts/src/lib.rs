@@ -251,6 +251,77 @@ impl Receipt {
     pub fn validate(&self) -> Result<(), ValidationError> {
         self.validate_fast()
     }
+
+    /// Extract the incrementality factor (α) from this receipt.
+    ///
+    /// For spend receipts, this extracts α from `SpendPayload.justification.alpha`.
+    /// For other receipt kinds, returns `None`.
+    ///
+    /// # Returns
+    ///
+    /// `Some(alpha)` if the receipt is a spend receipt with reuse justification containing α,
+    /// `None` otherwise.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use northroot_receipts::Receipt;
+    ///
+    /// // If receipt is a spend receipt with justification.alpha = 0.9
+    /// let alpha = receipt.alpha(); // Some(0.9)
+    /// ```
+    pub fn alpha(&self) -> Option<f64> {
+        if let Payload::Spend(spend) = &self.payload {
+            spend.justification.as_ref().and_then(|j| j.alpha)
+        } else {
+            None
+        }
+    }
+
+    /// Validate that the incrementality factor (α) meets the minimum threshold.
+    ///
+    /// This is used for drift detection and policy enforcement. If the receipt
+    /// is a spend receipt with reuse justification, checks that α >= min_alpha.
+    ///
+    /// # Arguments
+    ///
+    /// * `min_alpha` - Minimum acceptable α value [0,1]
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(())` if α >= min_alpha or if receipt has no α value
+    /// - `Err(ValidationError::InvalidValue)` if α < min_alpha
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use northroot_receipts::Receipt;
+    ///
+    /// // Validate that α >= 0.8
+    /// match receipt.validate_alpha_threshold(0.8) {
+    ///     Ok(()) => println!("α threshold met"),
+    ///     Err(e) => println!("α too low: {}", e),
+    /// }
+    /// ```
+    pub fn validate_alpha_threshold(&self, min_alpha: f64) -> Result<(), ValidationError> {
+        if !(0.0..=1.0).contains(&min_alpha) {
+            return Err(ValidationError::InvalidValue(format!(
+                "min_alpha must be in [0, 1], got {}",
+                min_alpha
+            )));
+        }
+
+        if let Some(alpha) = self.alpha() {
+            if alpha < min_alpha {
+                return Err(ValidationError::InvalidValue(format!(
+                    "α ({}) below minimum threshold ({})",
+                    alpha, min_alpha
+                )));
+            }
+        }
+        // If no α value, validation passes (not all receipts have reuse justification)
+        Ok(())
+    }
 }
 
 impl<'de> serde::Deserialize<'de> for Receipt {
@@ -352,6 +423,20 @@ pub struct ReasoningQuality {
     pub confidence: Option<f32>,
 }
 
+/// Delta Lake Change Data Feed (CDF) metadata.
+///
+/// Tracks Delta Lake change data feed information to enable partition-level
+/// reuse decisions and drift detection.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct CdfMetadata {
+    /// Delta Lake commit version number
+    pub commit_version: i64,
+    /// Change type: "insert", "update", "delete", or "no_change"
+    pub change_type: String,
+    /// Commit timestamp in ISO 8601 format
+    pub commit_timestamp: String,
+}
+
 /// Execution payload: observable run structure capturing "what" and "when".
 ///
 /// Execution receipts record the actual execution of a method over data.
@@ -367,6 +452,8 @@ pub struct ExecutionPayload {
     pub span_commitments: Vec<String>,
     /// Execution roots: Merkle roots for set, identity, and sequence structures
     pub roots: ExecutionRoots,
+    /// Optional Delta Lake Change Data Feed metadata for partition-level reuse tracking
+    pub cdf_metadata: Option<Vec<CdfMetadata>>,
 }
 
 /// Reference to a method (operator plan) used in execution.
@@ -468,6 +555,11 @@ pub struct ReuseJustification {
     ///
     /// Purpose: Audit transparency, policy scoping, economic clarity.
     pub layer: Option<String>,
+    /// MinHash sketch hash: SHA-256 hash of MinHash sketch for billing graph comparison.
+    ///
+    /// Used in FinOps to detect billing graph changes >5% between runs.
+    /// The sketch is computed from resource tuples (account_id, service, region, resource_type).
+    pub minhash_sketch: Option<String>,
 }
 
 /// Settlement payload: multi-party netting and clearing.

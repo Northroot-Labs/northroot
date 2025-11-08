@@ -1,0 +1,59 @@
+{
+  "description": "Golden test vectors for CBOR deterministic encoding (RFC 8949)",
+  "vectors": [
+    {
+      "name": "simple_map",
+      "description": "Simple map with unsorted keys - should be sorted in CBOR",
+      "json": {
+        "a": 1,
+        "m": 2,
+        "z": 3
+      },
+      "expected_cbor_hash": "sha256:81c6d92272d22d877ba4c9ceea30ff1965b5ab0dffccca6b80985a09a8f85fca"
+    },
+    {
+      "name": "nested_map",
+      "description": "Nested map structure",
+      "json": {
+        "outer": {
+          "inner": {
+            "value": 42
+          }
+        }
+      },
+      "expected_cbor_hash": "sha256:94705c9728f603b928fd32069baaad29ab7ff589228227b63d370851b811f20e"
+    },
+    {
+      "name": "array_with_mixed_types",
+      "description": "Array containing mixed types",
+      "json": [1, "string", true, null, 3.14],
+      "expected_cbor_hash": "sha256:f6c375f5722145c2e1df6846729c347f1236e80e230fcc0ce9850ebcffbd77fa"
+    },
+    {
+      "name": "empty_structures",
+      "description": "Empty map and array",
+      "json": {
+        "empty_array": [],
+        "empty_map": {}
+      },
+      "expected_cbor_hash": "sha256:f2fa9f0685028cda908e1825900677c8b1ea9a906b19eaf0e4fbe8ff708b38b9"
+    },
+    {
+      "name": "receipt_like_structure",
+      "description": "Structure similar to receipt payload",
+      "json": {
+        "kind": "spend",
+        "payload": {
+          "currency": "USD",
+          "meter": {
+            "gb_sec": 0.02,
+            "vcpu_sec": 0.1
+          }
+        },
+        "rid": "00000000-0000-0000-0000-000000000001",
+        "version": "0.3.0"
+      },
+      "expected_cbor_hash": "sha256:65acbb9e999f08748081bd10b843063a18f32fa6aff49bd166a6a7a23d87d5c2"
+    }
+  ]
+}

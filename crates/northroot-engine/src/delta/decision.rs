@@ -133,6 +133,7 @@ pub fn decide_reuse(overlap_j: f64, cost_model: &CostModel) -> (ReuseDecision, R
             ReuseDecision::Hybrid => "hybrid".to_string(),
         }),
         layer: None, // Caller should set layer based on context
+        minhash_sketch: None, // Caller should set minhash_sketch for FinOps use cases
     };
 
     (decision, justification)

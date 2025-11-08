@@ -194,6 +194,7 @@ fn test_execution_without_trace_seq_root() {
                         .to_string(),
                 trace_seq_root: None, // Optional field missing
             },
+            cdf_metadata: None,
         }),
         attest: None,
         sig: None,

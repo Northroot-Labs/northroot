@@ -122,6 +122,7 @@ impl ExecutionReceiptBuilder {
             data_shape_hash: data_shape_hash.clone(),
             span_commitments: self.span_commitments,
             roots,
+            cdf_metadata: None,
         });
         let receipt = Receipt {
             rid,

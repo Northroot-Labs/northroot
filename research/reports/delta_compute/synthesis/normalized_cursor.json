@@ -1,0 +1,343 @@
+{
+    "agent": "cursor",
+    "date": "2025-01-27",
+    "version": "0.1",
+    "operators": [
+        {
+            "name": "Partition by key/date",
+            "alpha": 0.95,
+            "typical_j": [
+                0.80,
+                0.95
+            ],
+            "c_id_rel": "Low (0.1)",
+            "c_comp_rel": "High (10)",
+            "break_even_j": 0.011,
+            "delta_c_j08": 7.5,
+            "savings_potential": "Very High",
+            "use_cases": [
+                "ETL",
+                "FinOps",
+                "Analytics"
+            ],
+            "implementation": "PartitionStrategy in Northroot engine",
+            "receipt_fields": [
+                "chunk_index",
+                "state_hash"
+            ]
+        },
+        {
+            "name": "Filter unchanged",
+            "alpha": 0.98,
+            "typical_j": [
+                0.85,
+                0.95
+            ],
+            "c_id_rel": "Low (0.1)",
+            "c_comp_rel": "Medium (5)",
+            "break_even_j": 0.020,
+            "delta_c_j08": 3.8,
+            "savings_potential": "Very High",
+            "use_cases": [
+                "ETL",
+                "Data Cleaning"
+            ]
+        },
+        {
+            "name": "Group-by aggregation",
+            "alpha": 0.90,
+            "typical_j": [
+                0.75,
+                0.90
+            ],
+            "c_id_rel": "Medium (0.5)",
+            "c_comp_rel": "High (10)",
+            "break_even_j": 0.056,
+            "delta_c_j08": 6.7,
+            "savings_potential": "Very High",
+            "use_cases": [
+                "Analytics",
+                "FinOps",
+                "Dashboards"
+            ]
+        },
+        {
+            "name": "Incremental sum",
+            "alpha": 0.92,
+            "typical_j": [
+                0.80,
+                0.95
+            ],
+            "c_id_rel": "Low (0.2)",
+            "c_comp_rel": "Medium (5)",
+            "break_even_j": 0.043,
+            "delta_c_j08": 3.5,
+            "savings_potential": "Very High",
+            "use_cases": [
+                "FinOps",
+                "Analytics",
+                "ETL"
+            ],
+            "implementation": "IncrementalSumStrategy in Northroot engine"
+        },
+        {
+            "name": "Join (stable keys)",
+            "alpha": 0.70,
+            "typical_j": [
+                0.65,
+                0.85
+            ],
+            "c_id_rel": "High (1.0)",
+            "c_comp_rel": "High (10)",
+            "break_even_j": 0.143,
+            "delta_c_j08": 4.6,
+            "savings_potential": "Medium-High",
+            "use_cases": [
+                "ETL",
+                "Analytics"
+            ]
+        }
+    ],
+    "domains": [
+        {
+            "name": "FinOps: Cost Attribution",
+            "pain": 9,
+            "reuse_potential": 9,
+            "priority": "P0",
+            "roi_percent": 46,
+            "annual_savings": 276000,
+            "monthly_baseline": 50000,
+            "monthly_savings": 23000,
+            "overlap_j": 0.88,
+            "avg_alpha": 0.87,
+            "c_id": 500,
+            "c_comp": 1667,
+            "break_even_j": 0.345,
+            "prototype_ready": "High"
+        },
+        {
+            "name": "ETL: Partition-Based Pipelines",
+            "pain": 8,
+            "reuse_potential": 9,
+            "priority": "P0",
+            "roi_percent": 39,
+            "annual_savings": 372000,
+            "monthly_baseline": 80000,
+            "monthly_savings": 31000,
+            "overlap_j": 0.82,
+            "avg_alpha": 0.84,
+            "c_id": 800,
+            "c_comp": 2667,
+            "break_even_j": 0.357,
+            "prototype_ready": "High"
+        },
+        {
+            "name": "Analytics: Dashboard Refresh",
+            "pain": 7,
+            "reuse_potential": 8,
+            "priority": "P0",
+            "roi_percent": 142,
+            "annual_savings": 684000,
+            "monthly_baseline": 40000,
+            "monthly_savings": 57000,
+            "overlap_j": 0.90,
+            "avg_alpha": 0.86,
+            "prototype_ready": "High"
+        },
+        {
+            "name": "AI/ML: Feature Store Updates",
+            "pain": 7,
+            "reuse_potential": 7,
+            "priority": "P1",
+            "roi_percent": 27,
+            "annual_savings": 192000,
+            "monthly_baseline": 60000,
+            "monthly_savings": 16000,
+            "overlap_j": 0.78,
+            "avg_alpha": 0.72,
+            "prototype_ready": "Medium"
+        },
+        {
+            "name": "CI/CD: Incremental Builds",
+            "pain": 6,
+            "reuse_potential": 8,
+            "priority": "P1",
+            "roi_percent": 45,
+            "annual_savings": 108000,
+            "monthly_baseline": 20000,
+            "monthly_savings": 9000,
+            "overlap_j": 0.85,
+            "avg_alpha": 0.93,
+            "prototype_ready": "High"
+        }
+    ],
+    "mathematical_principles": {
+        "decision_rule": "J > C_id / (α · C_comp)",
+        "economic_delta": "ΔC ≈ α · C_comp · J - C_id",
+        "jaccard_similarity": "J(U,V) = |U ∩ V| / |U ∪ V|",
+        "weighted_overlap": "J_w(U,V) = Σ(c∈U∩V) w(c) / Σ(c∈U∪V) w(c)"
+    },
+    "oss_frameworks": [
+        {
+            "name": "Bazel",
+            "strengths": [
+                "Content-addressable storage",
+                "Incremental builds",
+                "Deterministic builds"
+            ],
+            "gaps": [
+                "No economic cost model",
+                "No verifiable proof of reuse economics"
+            ]
+        },
+        {
+            "name": "Delta Lake",
+            "strengths": [
+                "ACID transactions",
+                "Time travel",
+                "Incremental processing",
+                "Change data feed"
+            ],
+            "gaps": [
+                "No verifiable proof of reuse economics"
+            ]
+        },
+        {
+            "name": "Dagster",
+            "strengths": [
+                "Asset-based pipelines",
+                "Incremental materialization",
+                "Software-defined assets"
+            ],
+            "gaps": [
+                "No verifiable receipts",
+                "No cross-org economics"
+            ]
+        },
+        {
+            "name": "Ray",
+            "strengths": [
+                "Distributed execution",
+                "Object store caching",
+                "High-performance"
+            ],
+            "gaps": [
+                "No verifiable reuse proofs",
+                "No economic justification"
+            ]
+        },
+        {
+            "name": "DVC",
+            "strengths": [
+                "Git-based data versioning",
+                "Pipeline dependency tracking"
+            ],
+            "gaps": [
+                "No cross-org reuse",
+                "No verifiable economics"
+            ]
+        }
+    ],
+    "chunking_algorithms": [
+        {
+            "name": "FastCDC",
+            "performance": "10× faster than Rabin-based CDC",
+            "dedup_ratio": "Same as Rabin",
+            "relevance": "Chunk-level reuse for large binary blobs"
+        },
+        {
+            "name": "Rabin",
+            "performance": "Baseline",
+            "relevance": "Content-defined chunking"
+        },
+        {
+            "name": "MinHash",
+            "performance": "Fast Jaccard estimation",
+            "relevance": "Overlap estimation for large datasets"
+        },
+        {
+            "name": "HyperLogLog (HLL)",
+            "performance": "Cardinality estimation",
+            "relevance": "Overlap estimation for large sets"
+        }
+    ],
+    "technical_recommendations": [
+        {
+            "type": "SDK Integration",
+            "file_paths": [
+                "Python SDK",
+                "Rust SDK",
+                "Java/Scala SDK"
+            ],
+            "patterns": [
+                "Decorator-based",
+                "Context manager",
+                "Operator wrapper"
+            ],
+            "frameworks": [
+                "Spark",
+                "Dagster",
+                "Ray",
+                "Delta Lake"
+            ]
+        },
+        {
+            "type": "Receipt Schema",
+            "file_paths": [
+                "receipts/schemas/spend_schema.json"
+            ],
+            "fields": [
+                "overlap_j",
+                "alpha",
+                "c_id",
+                "c_comp",
+                "decision"
+            ]
+        },
+        {
+            "type": "Engine Integration",
+            "file_paths": [
+                "crates/northroot-engine/src/strategies/incremental_sum.rs",
+                "crates/northroot-engine/src/strategies/partition.rs"
+            ],
+            "components": [
+                "IncrementalSumStrategy",
+                "PartitionStrategy"
+            ]
+        }
+    ],
+    "citations": {
+        "count": 25,
+        "categories": {
+            "theoretical_foundations": 5,
+            "overlap_metrics": 4,
+            "oss_frameworks": 10,
+            "stream_processing": 2,
+            "verifiable_computation": 2,
+            "content_addressing": 2,
+            "market_research": 2,
+            "northroot_specific": 3,
+            "additional_resources": 2
+        }
+    },
+    "white_space_areas": [
+        {
+            "name": "Cross-Organizational Reuse",
+            "pain": 8,
+            "reuse_potential": 7,
+            "description": "Privacy-preserving overlap detection (MPC, ZK), cross-org settlement receipts, compute credit markets"
+        },
+        {
+            "name": "Learned Cost Models",
+            "pain": 6,
+            "reuse_potential": 8,
+            "description": "ML models to predict α, C_id, C_comp from historical receipts, adaptive thresholds"
+        },
+        {
+            "name": "Verifiable Incremental Proofs",
+            "pain": 7,
+            "reuse_potential": 6,
+            "description": "ZK-SNARKs/STARKs for incremental recomputation, privacy-preserving verification"
+        }
+    ]
+}

@@ -69,6 +69,31 @@
                 }
             },
             "additionalProperties": false
+        },
+        "cdf_metadata": {
+            "type": ["array", "null"],
+            "items": {
+                "type": "object",
+                "required": [
+                    "commit_version",
+                    "change_type",
+                    "commit_timestamp"
+                ],
+                "properties": {
+                    "commit_version": {
+                        "type": "integer"
+                    },
+                    "change_type": {
+                        "type": "string",
+                        "enum": ["insert", "update", "delete", "no_change"]
+                    },
+                    "commit_timestamp": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "additionalProperties": false
+            }
         }
     },
     "additionalProperties": false

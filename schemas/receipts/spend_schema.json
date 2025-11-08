@@ -130,6 +130,11 @@
                         "execution"
                     ],
                     "description": "Layer (delta evaluation scope): semantic level of shape equivalence for reuse decision"
+                },
+                "minhash_sketch": {
+                    "type": ["string", "null"],
+                    "pattern": "^sha256:[0-9a-f]{64}$",
+                    "description": "SHA-256 hash of MinHash sketch for billing graph comparison. Used in FinOps to detect billing graph changes >5% between runs."
                 }
             },
             "additionalProperties": false

@@ -136,11 +136,12 @@
         "trace_set_root": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d",
         "identity_root": "sha256:74d02dd16c5439737b4ca10ae20cf2c62086c0629e46a876e09e415aaeb29728",
         "trace_seq_root": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d"
-      }
+      },
+      "cdf_metadata": null
     },
     "attest": null,
     "sig": null,
-    "hash": "sha256:1c5c123f8d6fe6356acb3557d8feb51c84c9804b68473f1c6bdbf887b63f59bb"
+    "hash": "sha256:e7e308474c36ab0da3e19c921aacf92d612a95bceb3f992dc44c9b678f254f40"
   },
   {
     "rid": "00000000-0000-0000-0000-000000000005",
@@ -189,12 +190,13 @@
         "c_id": 0.0005,
         "c_comp": 0.01,
         "decision": "reuse",
-        "layer": "data"
+        "layer": "data",
+        "minhash_sketch": null
       }
     },
     "attest": null,
     "sig": null,
-    "hash": "sha256:f48dae8f229a7cf63c9ef49c2d4d74053bce8bba6d52589669d9b254584baa3b"
+    "hash": "sha256:5daf3ddb440d6ecf7977ce0fbc038c984c62894d3d2aa11befa7c78df527a2ad"
   },
   {
     "rid": "00000000-0000-0000-0000-000000000006",

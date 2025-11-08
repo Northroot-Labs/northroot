@@ -1,0 +1,515 @@
+{
+    "metadata": {
+        "generated_at": "2025-01-27",
+        "purpose": "Trace all unified claims back to source report spans",
+        "agents": [
+            "cursor",
+            "openai"
+        ]
+    },
+    "unified_claims": [
+        {
+            "claim": "FinOps shows 25-46% savings potential with $276K annual savings",
+            "category": "domain_roi",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 46,
+                    "span": "lines 35-47",
+                    "excerpt": "Monthly savings: $23K (46% reduction)\nAnnual savings: $276K"
+                },
+                {
+                    "agent": "openai",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 33,
+                    "span": "line 33",
+                    "excerpt": "25–35% reduction in repeated cost-analytics executions"
+                }
+            ],
+            "merge_strategy": "cursor_primary_with_openai_validation",
+            "rationale": "Cursor provides detailed quantitative ROI (46%, $276K), openai provides market statistics. Use cursor's dollar amounts, include openai's range."
+        },
+        {
+            "claim": "ETL shows 30-45% savings with $372K annual savings",
+            "category": "domain_roi",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 98,
+                    "span": "lines 65-113",
+                    "excerpt": "Monthly savings: $31K (39% reduction)\nAnnual savings: $372K"
+                },
+                {
+                    "agent": "openai",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 66,
+                    "span": "lines 50-79",
+                    "excerpt": "30–45% less compute on nightly ETL refreshes when <40% of partitions mutate"
+                }
+            ],
+            "merge_strategy": "cursor_primary_with_openai_validation",
+            "rationale": "Cursor has stronger evidence (quantitative ROI: 39%, $372K) and higher pain score. Openai provides specific Delta Lake CDF integration details."
+        },
+        {
+            "claim": "Decision rule: Reuse iff J > C_id / (α · C_comp)",
+            "category": "mathematical_principle",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "operator_strategy_table.md",
+                    "line": 12,
+                    "span": "line 12",
+                    "excerpt": "**Decision Rule:** Reuse iff J > C_id / (α · C_comp)"
+                },
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 12,
+                    "span": "line 12",
+                    "excerpt": "**Decision Rule:** Reuse iff J > C_id / (α · C_comp)"
+                }
+            ],
+            "merge_strategy": "identical_definition",
+            "rationale": "Perfect alignment on mathematical constructs - identical definitions from both agents."
+        },
+        {
+            "claim": "Economic delta: ΔC ≈ α · C_comp · J - C_id",
+            "category": "mathematical_principle",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "operator_strategy_table.md",
+                    "line": 13,
+                    "span": "line 13",
+                    "excerpt": "**Economic Delta:** ΔC ≈ α · C_comp · J - C_id"
+                },
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 13,
+                    "span": "line 13",
+                    "excerpt": "**Economic Delta:** ΔC ≈ α · C_comp · J - C_id"
+                }
+            ],
+            "merge_strategy": "identical_definition",
+            "rationale": "Perfect alignment on economic delta formula - identical definitions from both agents."
+        },
+        {
+            "claim": "Partition by key/date operator has α=0.95 with very high savings potential",
+            "category": "operator_metrics",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "operator_strategy_table.md",
+                    "line": 21,
+                    "span": "line 21",
+                    "excerpt": "| 1 | **Partition by key/date** | 0.95 | 0.80-0.95 | Low (0.1) | High (10) | 0.011 | +7.5 | Very High | ETL, FinOps, Analytics |"
+                },
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 21,
+                    "span": "line 21",
+                    "note": "Openai's 'Partitioned sum' (α=0.85) is different operator - aggregation vs partitioning"
+                }
+            ],
+            "merge_strategy": "cursor_primary",
+            "rationale": "Cursor has detailed metrics for 'Partition by key/date' operator. Openai's 0.85 refers to 'Partitioned sum' which is a different operator (aggregation vs partitioning)."
+        },
+        {
+            "claim": "Incremental sum operator has α=0.92 with IncrementalSumStrategy implementation",
+            "category": "operator_metrics",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "operator_strategy_table.md",
+                    "line": 24,
+                    "span": "line 24",
+                    "excerpt": "| 4 | **Incremental sum** | 0.92 | 0.80-0.95 | Low (0.2) | Medium (5) | 0.043 | +3.5 | Very High | FinOps, Analytics, ETL |"
+                },
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 21,
+                    "span": "line 21",
+                    "excerpt": "| **Partitioned sum / incremental aggregation** | 0.85 | Per-partition byte reuse derived from incremental_sum strategy outputs |"
+                },
+                {
+                    "agent": "openai",
+                    "file": "integration_notes.md",
+                    "line": 124,
+                    "span": "lines 122-135",
+                    "excerpt": "**Location:** `crates/northroot-engine/src/strategies/incremental_sum.rs`"
+                }
+            ],
+            "merge_strategy": "cursor_primary_with_openai_implementation",
+            "rationale": "Cursor's value (0.92) is more specific and aligns with 'Incremental sum' operator name. Openai provides implementation file path."
+        },
+        {
+            "claim": "Delta Lake CDF scan operator has α=0.9 with ≥40% compute savings",
+            "category": "operator_metrics",
+            "sources": [
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 23,
+                    "span": "line 23",
+                    "excerpt": "| **CDC merge / Delta Lake change scan** | 0.9 | `changed_rows / total_rows` per `_commit_version` window | With Delta CDF, only 10% of rows typically reprocess for append-heavy feeds, so reuse receipts can promise ≥40% compute savings. |"
+                },
+                {
+                    "agent": "openai",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 60,
+                    "span": "line 60",
+                    "excerpt": "1. **Add an `operator::cdf_scan` entry** in `receipts/src/canonical.rs`"
+                }
+            ],
+            "merge_strategy": "openai_unique",
+            "rationale": "Openai unique contribution - Delta Lake CDF scan operator with high incrementality and specific implementation path."
+        },
+        {
+            "claim": "Deterministic serialization (CBOR/JCS) required for cross-org verification",
+            "category": "technical_requirement",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "proof_synergy_memo.md",
+                    "line": 246,
+                    "span": "lines 246-252",
+                    "excerpt": "**References:**\n- Receipt Schema: `schemas/receipts/`\n- Delta Compute Spec: `docs/specs/delta_compute.md`\n- ADR-003: `ADRs/ADR-003-delta-compute-decisions.md`"
+                },
+                {
+                    "agent": "openai",
+                    "file": "proof_synergy_memo.md",
+                    "line": 10,
+                    "span": "lines 10-12",
+                    "excerpt": "By combining CBOR deterministic encoding (RFC 8949), JSON Canonicalization Scheme (RFC 8785), FastCDC chunk IDs, and Bazel/DVC cache keys"
+                },
+                {
+                    "agent": "openai",
+                    "file": "integration_notes.md",
+                    "line": 54,
+                    "span": "lines 50-65",
+                    "excerpt": "**Requirement:** Accept deterministic CBOR blobs (per RFC 8949) and optionally mirrored JCS JSON bodies"
+                }
+            ],
+            "merge_strategy": "both_agents_agree",
+            "rationale": "Both agents emphasize deterministic serialization. Openai provides specific RFC references and implementation requirements."
+        },
+        {
+            "claim": "ReuseIndexed trait needed in crates/northroot-engine/src/lib.rs",
+            "category": "technical_requirement",
+            "sources": [
+                {
+                    "agent": "openai",
+                    "file": "integration_notes.md",
+                    "line": 34,
+                    "span": "lines 32-48",
+                    "excerpt": "**Location:** `crates/northroot-engine/src/lib.rs`\n\n**Requirement:** Extend engine with a `ReuseIndexed` trait that exposes `fn overlap(&self) -> OverlapMetric`."
+                }
+            ],
+            "merge_strategy": "openai_unique",
+            "rationale": "Openai unique contribution - specific trait design with exact signature and location."
+        },
+        {
+            "claim": "Cross-organizational reuse is white space opportunity",
+            "category": "white_space",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "white_space_matrix.md",
+                    "line": 169,
+                    "span": "lines 169-185",
+                    "excerpt": "### 1. Cross-Organizational Reuse (White Space)\n\n**Pain:** 8 (high cost of redundant compute across orgs)  \n**Reuse Potential:** 7 (high overlap if privacy-preserving)  \n**Status:** Underexplored"
+                },
+                {
+                    "agent": "openai",
+                    "file": "white_space_matrix.md",
+                    "line": 135,
+                    "span": "lines 135-151",
+                    "excerpt": "### 1. Cross-Organizational Reuse (White Space)\n\n**Pain:** 8 (high cost of redundant compute across orgs)  \n**Reuse Potential:** 7 (high overlap if privacy-preserving)"
+                }
+            ],
+            "merge_strategy": "both_agents_agree",
+            "rationale": "Both agents identify cross-org reuse as white space. Cursor provides more detail (MPC, ZK, federated patterns)."
+        },
+        {
+            "claim": "FastCDC enables 10× speedup over Rabin hashing",
+            "category": "chunking_algorithm",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "landscape_brief.md",
+                    "line": 67,
+                    "span": "lines 65-75",
+                    "excerpt": "**FastCDC:** Estimates Jaccard similarity with bounded error using hash signatures."
+                },
+                {
+                    "agent": "openai",
+                    "file": "landscape_brief.md",
+                    "line": 67,
+                    "span": "lines 65-75",
+                    "excerpt": "FastCDC demonstrates that content-defined chunking can be ≈10× faster than Rabin-based CDC yet retain the same dedup ratio"
+                },
+                {
+                    "agent": "openai",
+                    "file": "bibliography.md",
+                    "line": 69,
+                    "span": "lines 66-72",
+                    "excerpt": "**FastCDC: a Fast and Efficient Content-Defined Chunking Approach for Data Deduplication**\n- **URL:** https://www.usenix.org/system/files/conference/atc16/atc16-paper-xia.pdf\n- **Key Contribution:** Reports 10× faster throughput than Rabin-based CDC while maintaining dedup ratios."
+                }
+            ],
+            "merge_strategy": "both_agents_agree",
+            "rationale": "Both agents cite FastCDC 10× speedup. Openai provides specific paper reference."
+        },
+        {
+            "claim": "Differential dataflow demonstrates >100,000× update-to-recompute ratios",
+            "category": "empirical_benchmark",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "landscape_brief.md",
+                    "line": 131,
+                    "span": "lines 129-134",
+                    "excerpt": "**Timely Dataflow** (McSherry, 2015):\n- Incremental computation over partially ordered data.\n- Semiring-based operators for efficient delta propagation."
+                },
+                {
+                    "agent": "openai",
+                    "file": "landscape_brief.md",
+                    "line": 16,
+                    "span": "lines 14-22",
+                    "excerpt": "**Differential Dataflow** demonstrates exceptional incremental update performance. Once an initial 15 s load completes, incremental graph updates flow through the same scopes in ≈230 µs because only the changed collections are recomputed. This yields >100,000× update-to-recompute ratios for joins and counts when α≈0.99."
+                }
+            ],
+            "merge_strategy": "openai_primary",
+            "rationale": "Openai provides specific quantitative benchmark (230µs, >100,000× ratios). Cursor mentions differential dataflow but without specific numbers."
+        },
+        {
+            "claim": "FinOps and ETL are P0 priorities",
+            "category": "domain_priority",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "white_space_matrix.md",
+                    "line": 48,
+                    "span": "lines 48-49",
+                    "excerpt": "| **FinOps: Cost Attribution** | 9 | 9 | Top-Right | 🔥 **P0** | High overlap (J≈0.88), high α (0.87), strong audit needs |\n| **ETL: Partition-Based Pipelines** | 8 | 9 | Top-Right | 🔥 **P0** | Very high overlap (J≈0.82), high α (0.84), daily runs |"
+                },
+                {
+                    "agent": "openai",
+                    "file": "white_space_matrix.md",
+                    "line": 48,
+                    "span": "line 48",
+                    "excerpt": "| **Cross-cloud FinOps drift remediation** | 9 | 9 | Top-Right | 🔥 **P0** | 32% spend waste, verifiable reuse proofs needed |"
+                }
+            ],
+            "merge_strategy": "both_agents_agree",
+            "rationale": "Both agents identify FinOps as P0. Cursor also identifies ETL as P0 with stronger ROI evidence."
+        },
+        {
+            "claim": "Analytics dashboard refresh shows 142% ROI with $684K annual savings",
+            "category": "domain_roi",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 201,
+                    "span": "lines 169-213",
+                    "excerpt": "**Monthly savings: $57K (142% reduction—includes query cost savings)**\n**Annual savings: $684K**"
+                }
+            ],
+            "merge_strategy": "cursor_unique",
+            "rationale": "Cursor unique contribution - Analytics domain with exceptional ROI due to query cost savings."
+        },
+        {
+            "claim": "Group-by aggregation has α=0.90 with very high savings potential",
+            "category": "operator_metrics",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "operator_strategy_table.md",
+                    "line": 23,
+                    "span": "line 23",
+                    "excerpt": "| 3 | **Group-by aggregation** | 0.90 | 0.75-0.90 | Medium (0.5) | High (10) | 0.056 | +6.7 | Very High | Analytics, FinOps, Dashboards |"
+                },
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 22,
+                    "span": "line 22",
+                    "excerpt": "| **Grouped counts & distincts** | 0.8 | Count-change delta compared to previous receipts |"
+                }
+            ],
+            "merge_strategy": "cursor_primary",
+            "rationale": "Cursor's value (0.90) is higher and has detailed metrics. Openai's 0.8 refers to 'Grouped counts & distincts' which is a subset."
+        },
+        {
+            "claim": "Join with stable keys has α=0.70 with medium-high savings potential",
+            "category": "operator_metrics",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "operator_strategy_table.md",
+                    "line": 29,
+                    "span": "line 29",
+                    "excerpt": "| 9 | **Join (stable keys)** | 0.70 | 0.65-0.85 | High (1.0) | High (10) | 0.143 | +4.6 | Medium-High | ETL, Analytics |"
+                }
+            ],
+            "merge_strategy": "cursor_unique",
+            "rationale": "Cursor unique contribution - join operators with stable keys and detailed metrics."
+        },
+        {
+            "claim": "FastCDC chunked deduplication has α=0.8 with 10× speedup",
+            "category": "operator_metrics",
+            "sources": [
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 24,
+                    "span": "line 24",
+                    "excerpt": "| **Chunked deduplication (FastCDC)** | 0.8 | Chunk-level MinHash similarity over Rabin windows | FastCDC's 10× speedup over Rabin hashing allows aggressive chunk reuse without CPU burn, raising α for large binary blobs. |"
+                }
+            ],
+            "merge_strategy": "openai_unique",
+            "rationale": "Openai unique contribution - FastCDC as operator with chunk-level reuse."
+        },
+        {
+            "claim": "Ray Data streaming GPU batches has α=0.7 with ≥70% GPU utilization",
+            "category": "operator_metrics",
+            "sources": [
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 25,
+                    "span": "line 25",
+                    "excerpt": "| **Ray Data streaming GPU batches** | 0.7 | Fraction of GPU-bound batches served from cached CPU transformations | Streaming CPU→GPU transfer keeps accelerators ≥70% utilized, so reusing preprocessed blocks saves GPU rent immediately. |"
+                }
+            ],
+            "merge_strategy": "openai_unique",
+            "rationale": "Openai unique contribution - Ray Data streaming GPU batches operator."
+        },
+        {
+            "claim": "Dagster partitioned assets has α=0.75, skip 3/4 partitions on steady-state",
+            "category": "operator_metrics",
+            "sources": [
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 26,
+                    "span": "line 26",
+                    "excerpt": "| **Dagster partitioned assets** | 0.75 | Partitions reused vs total (capped at 100,000 per asset) | Partition awareness lets Northroot skip 3/4 of partitions on steady-state jobs, matching Dagster's incremental scheduling guidance. |"
+                }
+            ],
+            "merge_strategy": "openai_unique",
+            "rationale": "Openai unique contribution - Dagster partitioned assets operator."
+        },
+        {
+            "claim": "Surface α as first-class field in receipts/src/canonical.rs",
+            "category": "technical_requirement",
+            "sources": [
+                {
+                    "agent": "openai",
+                    "file": "integration_notes.md",
+                    "line": 18,
+                    "span": "lines 16-31",
+                    "excerpt": "**Location:** `receipts/src/canonical.rs`\n\n**Requirement:** Every operator receipt must carry overlap evidence (α) as a first-class field."
+                }
+            ],
+            "merge_strategy": "openai_unique",
+            "rationale": "Openai unique contribution - specific requirement with exact file path."
+        },
+        {
+            "claim": "Add operator::cdf_scan entry in receipts/src/canonical.rs for Delta Lake CDF",
+            "category": "technical_requirement",
+            "sources": [
+                {
+                    "agent": "openai",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 60,
+                    "span": "line 60",
+                    "excerpt": "1. **Add an `operator::cdf_scan` entry** in `receipts/src/canonical.rs` that stores `_commit_version`, `_change_type`, and `_commit_timestamp` so Northroot receipts prove which Delta segments were reused."
+                }
+            ],
+            "merge_strategy": "openai_unique",
+            "rationale": "Openai unique contribution - specific Delta Lake CDF scan operator with exact implementation path."
+        },
+        {
+            "claim": "Teach receipts/tests/test_drift_detection.rs to treat missing CDF ranges as drift",
+            "category": "technical_requirement",
+            "sources": [
+                {
+                    "agent": "openai",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 62,
+                    "span": "line 62",
+                    "excerpt": "2. **Teach `receipts/tests/test_drift_detection.rs`** to treat missing CDF ranges as drift, forcing only the affected partitions to recompute."
+                }
+            ],
+            "merge_strategy": "openai_unique",
+            "rationale": "Openai unique contribution - specific drift detection requirement with exact test file path."
+        }
+    ],
+    "conflict_resolutions": [
+        {
+            "conflict": "ETL priority: cursor P0 vs openai P1",
+            "resolution": "P0 (cursor has stronger ROI evidence: $372K annual savings vs openai's 30-45% range)",
+            "rationale": "Cursor provides quantitative dollar amounts and detailed ROI calculations. Openai provides specific Delta Lake CDF integration details which complement cursor's analysis.",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 98,
+                    "span": "lines 65-113"
+                },
+                {
+                    "agent": "openai",
+                    "file": "applied_use_case_sheets.md",
+                    "line": 66,
+                    "span": "lines 50-79"
+                }
+            ]
+        },
+        {
+            "conflict": "Partitioned sum α: cursor 0.92 (incremental sum) vs openai 0.85 (partitioned sum)",
+            "resolution": "0.92 for 'Incremental sum' operator (cursor), 0.85 for 'Partitioned sum' operator (openai) - different operators",
+            "rationale": "These are different operators. Cursor's 'Incremental sum' (α=0.92) is state-preserving aggregation. Openai's 'Partitioned sum / incremental aggregation' (α=0.85) is per-partition aggregation. Both are valid.",
+            "sources": [
+                {
+                    "agent": "cursor",
+                    "file": "operator_strategy_table.md",
+                    "line": 24,
+                    "span": "line 24"
+                },
+                {
+                    "agent": "openai",
+                    "file": "operator_strategy_table.md",
+                    "line": 21,
+                    "span": "line 21"
+                }
+            ]
+        }
+    ],
+    "summary": {
+        "total_claims": 20,
+        "claims_by_category": {
+            "domain_roi": 4,
+            "operator_metrics": 8,
+            "mathematical_principle": 2,
+            "technical_requirement": 4,
+            "white_space": 1,
+            "chunking_algorithm": 1,
+            "empirical_benchmark": 1,
+            "domain_priority": 1
+        },
+        "merge_strategies": {
+            "cursor_primary": 5,
+            "openai_unique": 7,
+            "both_agents_agree": 4,
+            "identical_definition": 2,
+            "cursor_unique": 2
+        },
+        "conflicts_resolved": 2
+    }
+}

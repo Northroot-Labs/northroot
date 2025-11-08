@@ -1,0 +1,148 @@
+id: northroot.synthesis.v0_1
+title: "Third-Agent Synthesis: Unify Two Research Reports into ADR-007"
+mission: >
+  Compare, reconcile, and unify two prior agent reports into one architecture-grounding
+  output. Produce a traceable synthesis matrix, a provenance map, and a concise ADR
+  that informs core implementation steps (delta/incremental compute + proof geometry).
+
+inputs:
+  reports:
+    - id: agent_A
+      title: "Report A"
+      path: repo://research/agent_A.md
+      focus: [theory, algorithms, OSS-landscape, operator-alpha, chunking]
+      date_hint: 2025-11-08
+    - id: agent_B
+      title: "Report B"
+      path: repo://research/agent_B.md
+      focus: [domains, finops-roi, market, roadmap, risk]
+      date_hint: 2025-11-08
+  # Optional: attach raw notes / appendices to help the synthesizer
+  attachments:
+    - id: defs
+      path: repo://specs/primitives.md
+      note: "Receipts, PAC keys, α/J, spend.justification, settlement receipts"
+
+normalization:
+  # Convert both reports to a canonical JSON IR so we can do structural comparisons.
+  steps:
+    - type: parse_markdown_to_ir
+      options:
+        section_headings: true
+        code_fences: preserve
+        tables_as: "rows"
+    - type: extract_entities
+      fields:
+        [
+          operators,
+          cost_models,
+          α_estimates,
+          J_measures,
+          domains,
+          tools,
+          datasets,
+        ]
+    - type: normalize_terms
+      glossary:
+        alpha: ["α", "incrementality", "operator efficiency"]
+        overlap: ["J", "jaccard", "weighted_overlap"]
+        receipts: ["proofs", "span_receipts", "settlement_receipts"]
+        pac: ["PAC", "proof_addressed_cache_key"]
+    - type: dedupe_citations
+      strategy: key_by_domain_then_year
+
+comparison_rubric:
+  dimensions:
+    - id: scope_alignment
+      prompt: "Where do the two reports overlap or complement?"
+      weight: 0.10
+    - id: assumptions_constraints
+      prompt: "Hidden assumptions, data constraints, tenancy, SLAs?"
+      weight: 0.10
+    - id: constructs
+      prompt: "Shared definitions (receipts, PAC, α/J, cost thresholds)."
+      weight: 0.15
+    - id: technical_recommendations
+      prompt: "Runtime/engine, chunking/sketches, canonicalization."
+      weight: 0.20
+    - id: domain_strategy
+      prompt: "FinOps-first? ETL? AI/Edge as follow-ons?"
+      weight: 0.15
+    - id: evidence_quality
+      prompt: "Citations, benchmarks, empirical grounding."
+      weight: 0.15
+    - id: novelty_and_risk
+      prompt: "New math/methods, risk, complexity."
+      weight: 0.15
+
+scoring:
+  scale: [0, 1, 2, 3, 4, 5] # 0=none, 5=excellent
+  tie_breakers:
+    - evidence_quality
+    - technical_recommendations
+
+merge_policy:
+  - rule: "Prefer content with higher evidence_quality score."
+  - rule: "If equal, prefer guidance with clearer operational acceptance tests."
+  - rule: "If conflict persists, keep both as Option A/B and flag in ADR Consequences."
+  - rule: "All merged statements must be traced to input spans (provenance map)."
+
+conflict_detection:
+  strategies:
+    - type: semantic_diff
+      targets: [definitions, equations, operator_lists, thresholds]
+    - type: numeric_threshold_mismatch
+      fields: [alpha, J, cost_break_even]
+      tolerance:
+        alpha: 0.05
+        J: 0.05
+        cost_pct: 0.05
+    - type: domain_priority_order
+      normalize: [finops, etl, ai_pipelines, security_analytics, edge_iot]
+
+unified_outputs:
+  - id: synthesis_matrix
+    path: repo://analysis/synthesis_matrix.json
+    format: json
+    description: "Side-by-side A vs B vs Unified for each dimension."
+  - id: provenance_map
+    path: repo://analysis/source_map.json
+    format: json
+    description: "Exact span offsets back to original reports per unified claim."
+  - id: adr
+    path: repo://adr/ADR-007.md
+    format: markdown
+    description: "Concise architecture decision record suitable for repo."
+  - id: build_steps
+    path: repo://roadmap/implementation_steps.md
+    format: markdown
+    description: "Concrete steps and acceptance criteria for the next two iterations."
+  - id: proof_ext
+    path: repo://receipts/proof_extensions_v0_1.json
+    format: json
+    description: "Schema fragments for spend.justification and PAC keys."
+
+acceptance_criteria:
+  - "All unified claims link back to at least one input report span (provenance_map)."
+  - "Equations for break-even reuse include variables: J, α, C_id, C_comp (units documented)."
+  - "Operator table includes α target, overlap heuristic, and test dataset notes."
+  - "Implementation_steps has testable exit criteria for each milestone."
+  - "ADR is ≤ 1 page body; decisions and consequences are explicit."
+
+security_integrity:
+  receipts:
+    emit_for: [normalization, comparison, merge]
+    include:
+      - content_hash
+      - canonicalization: CBOR
+      - pac_key_inputs: [span_shape, inputs, method_shape]
+      - spend.justification.delta_decision: [J, alpha, C_id, C_comp, decision]
+  determinism:
+    seed: 17
+    temperature: 0.0
+    top_p: 1.0
+
+execution_notes:
+  runtime: "Rust engine preferred; Python utilities OK for IR parsing."
+  parallelism: "Run normalization in parallel; merge step is serial."
+  review: "Human-in-the-loop signs off ADR before merging to main."

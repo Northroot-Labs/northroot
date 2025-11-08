@@ -1,0 +1,215 @@
+{
+  "agent": "openai",
+  "date": "2025-11-08",
+  "version": "0.1",
+  "operators": [
+    {
+      "name": "Partitioned sum / incremental aggregation",
+      "alpha": 0.85,
+      "overlap_metric": "Per-partition byte reuse derived from incremental_sum strategy outputs",
+      "economic_signal": "~5× cost speedups for skewed datasets",
+      "implementation": "Northroot's existing incremental_sum operator",
+      "use_cases": ["FinOps cost attribution", "ETL aggregations"],
+      "references": ["differential_dataflow_readme"]
+    },
+    {
+      "name": "Grouped counts & distincts",
+      "alpha": 0.8,
+      "overlap_metric": "Count-change delta compared to previous receipts",
+      "economic_signal": "80% reuse when <20% of keys mutate, matching 230 µs differential update",
+      "use_cases": ["Analytics", "aggregations"],
+      "references": ["differential_dataflow_readme"]
+    },
+    {
+      "name": "CDC merge / Delta Lake change scan",
+      "alpha": 0.9,
+      "overlap_metric": "changed_rows / total_rows per _commit_version window",
+      "economic_signal": "≥40% compute savings for append-heavy feeds",
+      "implementation": "Delta Lake CDF integration",
+      "use_cases": ["ETL refresh", "lakehouse pipelines"],
+      "references": ["delta_lake_cdf"]
+    },
+    {
+      "name": "Chunked deduplication (FastCDC)",
+      "alpha": 0.8,
+      "overlap_metric": "Chunk-level MinHash similarity over Rabin windows",
+      "economic_signal": "10× speedup over Rabin hashing",
+      "use_cases": ["Large binary blobs", "multi-modal data"],
+      "references": ["fastcdc_usenix16", "minhash_wiki"]
+    },
+    {
+      "name": "Ray Data streaming GPU batches",
+      "alpha": 0.7,
+      "overlap_metric": "Fraction of GPU-bound batches served from cached CPU transformations",
+      "economic_signal": "≥70% GPU utilization, reduced idle time",
+      "use_cases": ["AI/RAG pipelines", "GPU inference"],
+      "references": ["ray_data_docs"]
+    },
+    {
+      "name": "Dagster partitioned assets",
+      "alpha": 0.75,
+      "overlap_metric": "Partitions reused vs total (capped at 100,000 per asset)",
+      "economic_signal": "Skip 3/4 of partitions on steady-state jobs",
+      "use_cases": ["ML feature stores", "partitioned ETL"],
+      "references": ["dagster_partition_guide"]
+    }
+  ],
+  "domains": [
+    {
+      "name": "FinOps: Cost Attribution & Drift Detection",
+      "pain": 9,
+      "reuse_potential": 9,
+      "priority": "P0",
+      "expected_savings": "25–35% reduction",
+      "key_statistics": {
+        "waste_percent": 32,
+        "mature_programs_percent": 9,
+        "orgs_with_finops_percent": 82
+      },
+      "reuse_hooks": [
+        "Instrument receipts/schemas/spend_schema.json with overlap metrics",
+        "Pair crates/northroot-engine/src/strategies/incremental_sum.rs with cost-allocation adapter"
+      ],
+      "prototype_ready": "High"
+    },
+    {
+      "name": "Lakehouse / ETL Refresh",
+      "pain": 6,
+      "reuse_potential": 9,
+      "priority": "P1",
+      "expected_savings": "30–45% less compute",
+      "reuse_hooks": [
+        "Add operator::cdf_scan entry in receipts/src/canonical.rs",
+        "Teach receipts/tests/test_drift_detection.rs to treat missing CDF ranges as drift"
+      ],
+      "prototype_ready": "High"
+    },
+    {
+      "name": "AI Agent + RAG Data Supply Chains",
+      "pain": 8,
+      "reuse_potential": 7,
+      "priority": "P2",
+      "expected_savings": "20–30% lower GPU idle time",
+      "prototype_ready": "Medium"
+    },
+    {
+      "name": "ML Feature Stores & Training Backfills",
+      "pain": 7,
+      "reuse_potential": 7,
+      "priority": "P1",
+      "expected_savings": "≥25% acceleration",
+      "prototype_ready": "Medium"
+    },
+    {
+      "name": "Compliance, Settlements, and Inter-Org Audit Trails",
+      "pain": 5,
+      "reuse_potential": 6,
+      "priority": "P1",
+      "expected_savings": "Immediate elimination of duplicate compliance reruns",
+      "prototype_ready": "High"
+    }
+  ],
+  "mathematical_principles": {
+    "decision_rule": "J > C_id / (α · C_comp)",
+    "economic_delta": "ΔC ≈ α · C_comp · J - C_id",
+    "jaccard_similarity": "J(U,V) = |U ∩ V| / |U ∪ V|"
+  },
+  "oss_frameworks": [
+    {
+      "name": "Differential Dataflow",
+      "strengths": [">100,000× update-to-recompute ratios", "230 µs incremental updates", "α≈0.99"],
+      "relevance": "Foundation for Northroot's delta compute algebra"
+    },
+    {
+      "name": "Ray Data",
+      "strengths": ["Streaming CPU→GPU transfer", "≥70% GPU utilization", "Multi-modal format support"],
+      "relevance": "AI pipeline optimization"
+    },
+    {
+      "name": "Delta Lake",
+      "strengths": ["Change data feed", "Only 10% rows reprocess", "≥40% compute savings"],
+      "relevance": "Partition-level reuse, ETL refresh"
+    },
+    {
+      "name": "Bazel",
+      "strengths": ["Content-addressable storage", "Deterministic metadata"],
+      "relevance": "Cache key strategies"
+    },
+    {
+      "name": "DVC",
+      "strengths": ["Run only steps impacted by changes", "Cache hit reporting"],
+      "relevance": "Pipeline-level reuse"
+    },
+    {
+      "name": "Dagster",
+      "strengths": ["Partition awareness", "Skip 3/4 partitions", "≤100,000 partitions per asset"],
+      "relevance": "Partition-level reuse, incremental scheduling"
+    }
+  ],
+  "chunking_algorithms": [
+    {
+      "name": "FastCDC",
+      "performance": "≈10× faster than Rabin-based CDC",
+      "dedup_ratio": "Same as Rabin",
+      "relevance": "Chunk-level reuse for large binary blobs, raises α"
+    },
+    {
+      "name": "MinHash",
+      "performance": "Quick overlap comparison",
+      "relevance": "Fast overlap estimation for large datasets"
+    }
+  ],
+  "technical_recommendations": [
+    {
+      "type": "Core Integration",
+      "file_paths": ["receipts/src/canonical.rs", "crates/northroot-engine/src/lib.rs", "engine/src/commitments.rs"],
+      "requirements": [
+        "Surface α as first-class field",
+        "ReuseIndexed trait with overlap() method",
+        "Deterministic CBOR/JCS support"
+      ]
+    },
+    {
+      "type": "Framework Integration",
+      "file_paths": ["receipts/schemas/spend_schema.json", "receipts/tests/test_drift_detection.rs"],
+      "requirements": [
+        "Bazel-style cache keys",
+        "FinOps pilot with MinHash sketches",
+        "Delta Lake CDF scan operator"
+      ]
+    },
+    {
+      "type": "Drift Detection",
+      "file_paths": ["receipts/tests/test_drift_detection.rs"],
+      "requirements": [
+        "CDF range drift detection",
+        "MinHash sketch divergence alerts"
+      ]
+    }
+  ],
+  "citations": {
+    "count": 11,
+    "categories": {
+      "differential_dataflow": 1,
+      "production_frameworks": 5,
+      "chunking_algorithms": 1,
+      "overlap_metrics": 1,
+      "market_research": 1,
+      "deterministic_serialization": 2
+    }
+  },
+  "white_space_areas": [
+    {
+      "name": "Cross-Organizational Reuse",
+      "pain": 8,
+      "reuse_potential": 7,
+      "description": "Deterministic serialization (CBOR/JCS) enables cross-org verification, portable receipts, trustless compute credit markets"
+    }
+  ],
+  "three_pillars": [
+    "Algebraic overlap metrics (J, MinHash) to score reusability",
+    "Operator-aware chunking/caching",
+    "Deterministic serialization so proofs remain comparable across runs"
+  ]
+}
+

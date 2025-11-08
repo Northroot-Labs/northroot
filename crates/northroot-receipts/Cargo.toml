@@ -24,6 +24,7 @@ jsonschema = { version = "0.18", optional = true }
 [dev-dependencies]
 jsonschema = "0.18"
 serde_json = { workspace = true }
+northroot-engine = { path = "../northroot-engine" }
 
 [features]
 default = []
