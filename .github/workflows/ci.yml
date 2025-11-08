@@ -11,3 +11,71 @@ jobs:
                   cargo fmt --all -- --check
                   cargo clippy --all -- -D warnings
                   cargo test --all --all-features
+            - name: Test Vector Integrity
+              run: |
+                  echo "🔍 Checking test vector integrity..."
+                  cargo test -p northroot-receipts --test test_vector_integrity -- --nocapture
+                  cargo test -p northroot-receipts --test test_drift_detection -- --nocapture
+            - name: Prevent Accidental Vector Regeneration
+              run: |
+                  echo "🛡️  Checking for accidental vector modifications..."
+
+                  # For PRs, fetch base branch to compare against
+                  if [ "${{ github.event_name }}" = "pull_request" ]; then
+                      BASE_REF="${{ github.event.pull_request.base.ref }}"
+                      git fetch origin $BASE_REF:$BASE_REF
+                      BASE_SHA="$BASE_REF"
+                  else
+                      # For pushes, compare against previous commit
+                      BASE_SHA="HEAD~1"
+                  fi
+
+                  # Check if any vector files were modified compared to base
+                  MODIFIED_VECTORS=$(git diff --name-only $BASE_SHA HEAD 2>/dev/null | grep "^vectors/" || true)
+
+                  if [ -n "$MODIFIED_VECTORS" ]; then
+                      echo "⚠️  WARNING: Test vectors were modified in this commit/PR!"
+                      echo ""
+                      echo "Test vectors are golden files and should not be modified unless:"
+                      echo "  1. There's an intentional canonicalization change"
+                      echo "  2. You've run: cargo test --test regenerate_vectors -- --ignored --nocapture"
+                      echo "  3. You've updated BASELINE_HASHES in test_drift_detection.rs"
+                      echo ""
+                      echo "Modified files:"
+                      echo "$MODIFIED_VECTORS"
+                      echo ""
+                      echo "⚠️  This check will FAIL if:"
+                      echo "  - Vector files are modified AND"
+                      echo "  - BASELINE_HASHES in test_drift_detection.rs is NOT updated"
+                      echo ""
+                      echo "The drift detection test (run above) will catch hash mismatches."
+                      echo "If vectors are intentionally regenerated, ensure BASELINE_HASHES is updated."
+                      echo ""
+                  else
+                      echo "✅ No vector file modifications detected"
+                  fi
+            - name: Verify Vector Files Exist
+              run: |
+                  echo "📋 Verifying all required vector files exist..."
+                  required_vectors=(
+                      "vectors/data_shape.json"
+                      "vectors/method_shape.json"
+                      "vectors/reasoning_shape.json"
+                      "vectors/execution.json"
+                      "vectors/spend.json"
+                      "vectors/settlement.json"
+                  )
+                  missing=0
+                  for vector in "${required_vectors[@]}"; do
+                      if [ ! -f "$vector" ]; then
+                          echo "❌ Missing required vector: $vector"
+                          missing=1
+                      fi
+                  done
+                  if [ $missing -eq 1 ]; then
+                      echo ""
+                      echo "ERROR: Required test vectors are missing!"
+                      echo "Run: cargo test --test regenerate_vectors -- --ignored --nocapture"
+                      exit 1
+                  fi
+                  echo "✅ All required vector files present"
