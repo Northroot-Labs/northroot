@@ -358,7 +358,6 @@ pub fn validate_region_constraints(
 mod tests {
     use super::*;
     use northroot_receipts::{Context, DeterminismClass};
-    use uuid::Uuid;
 
     #[test]
     fn test_validate_policy_ref_format_strict() {

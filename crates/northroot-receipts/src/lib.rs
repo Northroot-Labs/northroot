@@ -539,7 +539,7 @@ pub struct IdentityRecord {
 ///     },
 /// ];
 ///
-/// let root = identity_root_from_identities(identities.iter());
+/// let root = identity_root_from_identities(identities.into_iter());
 /// ```
 pub fn identity_root_from_identities<I>(identities: I) -> String
 where

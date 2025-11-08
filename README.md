@@ -51,6 +51,13 @@ northroot/
 └── vectors/                    # Test vectors & golden examples
 ```
 
+**📊 Architecture Diagrams**: See [docs/specs/architecture-diagrams.md](docs/specs/architecture-diagrams.md) for visual representations of:
+- Repository structure & dependencies
+- Receipt composition flow
+- Delta compute flow
+- Verified spend flow
+- Unified proof flow
+
 ## Core Concepts
 
 ### Receipts

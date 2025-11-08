@@ -4,7 +4,6 @@
 //! for determining when to reuse previous computation results.
 
 use northroot_receipts::ReuseJustification;
-use std::collections::HashSet;
 
 /// Cost model for reuse decisions.
 ///
@@ -47,7 +46,14 @@ impl CostModel {
     ///
     /// # Returns
     ///
-    /// Reuse threshold in [0, ∞). If denominator is zero, returns infinity.
+    /// Reuse threshold in [0, ∞). If denominator is zero (i.e., `alpha == 0` or
+    /// `c_comp == 0`), returns `f64::INFINITY`, which means reuse is never beneficial
+    /// regardless of overlap (since the operator cannot benefit from incremental computation).
+    ///
+    /// # Note
+    ///
+    /// When threshold is `INFINITY`, the reuse decision will always be `Recompute`,
+    /// as no finite overlap value can exceed infinity.
     pub fn reuse_threshold(&self) -> f64 {
         let denominator = self.alpha * self.c_comp;
         if denominator == 0.0 {
@@ -82,7 +88,7 @@ pub enum ReuseDecision {
 ///
 /// # Arguments
 ///
-/// * `overlap_j` - Jaccard overlap [0,1]
+/// * `overlap_j` - Jaccard overlap [0,1]. Values outside [0,1] are clamped to this range.
 /// * `cost_model` - Cost model parameters
 ///
 /// # Returns
@@ -102,6 +108,9 @@ pub enum ReuseDecision {
 /// // Since 0.15 > 0.111, decision will be Reuse
 /// ```
 pub fn decide_reuse(overlap_j: f64, cost_model: &CostModel) -> (ReuseDecision, ReuseJustification) {
+    // Clamp overlap to valid range [0, 1]
+    let overlap_j = overlap_j.max(0.0).min(1.0);
+    
     let threshold = cost_model.reuse_threshold();
 
     let decision = if overlap_j > threshold {
@@ -138,13 +147,15 @@ pub fn decide_reuse(overlap_j: f64, cost_model: &CostModel) -> (ReuseDecision, R
 ///
 /// # Arguments
 ///
-/// * `overlap_j` - Jaccard overlap [0,1]
+/// * `overlap_j` - Jaccard overlap [0,1]. Values outside [0,1] are clamped to this range.
 /// * `cost_model` - Cost model parameters
 ///
 /// # Returns
 ///
 /// Economic delta (positive = savings, negative = cost)
 pub fn economic_delta(overlap_j: f64, cost_model: &CostModel) -> f64 {
+    // Clamp overlap to valid range [0, 1]
+    let overlap_j = overlap_j.max(0.0).min(1.0);
     cost_model.alpha * cost_model.c_comp * overlap_j - cost_model.c_id
 }
 

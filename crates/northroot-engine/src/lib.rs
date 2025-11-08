@@ -64,5 +64,6 @@ pub use execution::{
 
 // Re-export strategies module items
 pub use strategies::{
-    ExecutionMode, IncrementalSumStrategy, PartitionStrategy, Strategy, StrategyError,
+    default_registry, ExecutionMode, IncrementalSumStrategy, PartitionStrategy, Strategy,
+    StrategyError, StrategyRegistry,
 };

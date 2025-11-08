@@ -5,9 +5,11 @@
 
 pub mod incremental_sum;
 pub mod partition;
+pub mod registry;
 pub mod trait_;
 
 pub use incremental_sum::*;
 pub use partition::*;
+pub use registry::*;
 pub use trait_::*;
 

@@ -4,9 +4,7 @@
 //! If root computation algorithms change, update `BASELINE_ROOTS` in that file.
 
 use northroot_engine::composition::*;
-use northroot_receipts::{
-    generate_sequential_chain, Context, DataShapePayload, Payload, ReceiptKind,
-};
+use northroot_receipts::generate_sequential_chain;
 use uuid::Uuid;
 
 #[test]

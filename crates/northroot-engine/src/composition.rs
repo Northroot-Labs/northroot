@@ -72,6 +72,8 @@ impl std::error::Error for CompositionError {}
 /// This ensures that receipts in a chain form a valid sequential morphism where
 /// the codomain of each receipt matches the domain of the next.
 ///
+/// Also checks for circular dependencies by ensuring no receipt appears twice in the chain.
+///
 /// # Arguments
 ///
 /// * `chain` - Slice of receipts in sequential order
@@ -95,6 +97,18 @@ pub fn validate_sequential(chain: &[Receipt]) -> Result<(), CompositionError> {
         return Ok(()); // Empty or single receipt is trivially valid
     }
 
+    // Check for circular dependencies: no receipt should appear twice
+    let mut seen_rids = std::collections::HashSet::new();
+    for receipt in chain.iter() {
+        if !seen_rids.insert(receipt.rid) {
+            return Err(CompositionError::InvalidChain(format!(
+                "Circular dependency detected: receipt {} appears multiple times in chain",
+                receipt.rid
+            )));
+        }
+    }
+
+    // Validate sequential composition: cod(R_i) == dom(R_{i+1})
     for i in 0..chain.len().saturating_sub(1) {
         let current_cod = &chain[i].cod;
         let next_dom = &chain[i + 1].dom;
@@ -302,7 +316,7 @@ pub fn build_sequential_chain(receipts: Vec<Receipt>) -> Result<Vec<Receipt>, Co
 mod tests {
     use super::*;
     use northroot_receipts::{
-        Context, DataShapePayload, DeterminismClass, Payload, ReceiptKind,
+        Context, DataShapePayload, Payload, ReceiptKind,
     };
     use uuid::Uuid;
 
@@ -421,7 +435,7 @@ mod tests {
 
     #[test]
     fn test_validate_link() {
-        let parent_rid = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
+        let _parent_rid = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
         let child_rid = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
 
         let parent = create_test_receipt(

@@ -44,6 +44,7 @@ const BASELINE_ROOTS: &[(&str, &str)] = &[
     ("compute_execution_roots_multiple_trace_seq", "sha256:1a478d6e1f4552286397eb9f2a86cb56e3f33f082a4613ea55537c819369f2ec"),
 ];
 
+#[allow(dead_code)]
 fn test_commit_set_root_baselines() {
     use northroot_engine::commit_set_root;
 
@@ -75,6 +76,7 @@ fn test_commit_set_root_baselines() {
     println!("commit_set_root three_items: {}", root1);
 }
 
+#[allow(dead_code)]
 fn test_commit_seq_root_baselines() {
     use northroot_engine::commit_seq_root;
 
@@ -101,6 +103,7 @@ fn test_commit_seq_root_baselines() {
     println!("commit_seq_root three_items: {}", root1);
 }
 
+#[allow(dead_code)]
 fn test_compute_tensor_root_baselines() {
     use northroot_engine::compute_tensor_root;
 
@@ -127,6 +130,7 @@ fn test_compute_tensor_root_baselines() {
     println!("compute_tensor_root three_items: {}", root1);
 }
 
+#[allow(dead_code)]
 fn test_merkle_row_map_baselines() {
     use northroot_engine::MerkleRowMap;
 
@@ -163,6 +167,7 @@ fn test_merkle_row_map_baselines() {
     println!("MerkleRowMap multiple: {}", multi_root);
 }
 
+#[allow(dead_code)]
 fn test_compute_execution_roots_baselines() {
     use northroot_engine::compute_execution_roots;
 
@@ -196,7 +201,7 @@ fn test_compute_execution_roots_baselines() {
 #[test]
 fn test_root_computation_baselines() {
     // Build baseline map for easy lookup
-    let baseline_map: std::collections::HashMap<&str, &str> = BASELINE_ROOTS.iter().cloned().collect();
+    let baseline_map: HashMap<&str, &str> = BASELINE_ROOTS.iter().cloned().collect();
     let mut mismatches: Vec<(&str, &str, String)> = Vec::new();
     
     // Test commit_set_root

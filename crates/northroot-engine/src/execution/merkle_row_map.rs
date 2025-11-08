@@ -3,7 +3,6 @@
 //! This module implements a Merkle tree over key-value pairs using RFC-6962
 //! style domain separation for deterministic state commitments.
 
-use crate::commitments::sha256_prefixed;
 use serde_json::Value;
 use std::collections::BTreeMap;
 
@@ -49,6 +48,11 @@ impl MerkleRowMap {
     /// Check if the map is empty.
     pub fn is_empty(&self) -> bool {
         self.entries.is_empty()
+    }
+
+    /// Iterate over entries in the map.
+    pub fn iter(&self) -> impl Iterator<Item = (&String, &Value)> {
+        self.entries.iter()
     }
 
     /// Compute the Merkle root of the Row-Map.
@@ -193,6 +197,17 @@ mod tests {
         assert_eq!(map.len(), 1);
         assert_eq!(map.get("key1"), None);
         assert_eq!(map.get("key2"), Some(&serde_json::json!("value")));
+    }
+
+    #[test]
+    fn test_merkle_row_map_single_entry() {
+        let mut map = MerkleRowMap::new();
+        map.insert("key1".to_string(), serde_json::json!(42));
+        
+        let root = map.compute_root();
+        assert!(root.starts_with("sha256:"));
+        assert_eq!(root.len(), 71);
+        assert_eq!(map.len(), 1);
     }
 }
 

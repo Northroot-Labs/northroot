@@ -52,14 +52,22 @@ impl Strategy for IncrementalSumStrategy {
         mode: ExecutionMode,
         prev_state: Option<&MerkleRowMap>,
     ) -> Result<(Value, MerkleRowMap), StrategyError> {
-        // Parse input as array of rows
+        // Validate input format
         let rows = input
             .as_array()
             .ok_or_else(|| StrategyError::InvalidInput("Input must be an array".to_string()))?;
 
+        // Validate that prev_state is provided in delta mode
+        if matches!(mode, ExecutionMode::Delta) && prev_state.is_none() {
+            return Err(StrategyError::StateMismatch(
+                "Previous state is required for delta mode execution".to_string(),
+            ));
+        }
+
         // Initialize or load previous state
         let mut state = prev_state.cloned().unwrap_or_else(MerkleRowMap::new);
 
+        let mut incremental_sum = 0.0;
         let mut total_sum = 0.0;
 
         // Process each row
@@ -85,15 +93,60 @@ impl Strategy for IncrementalSumStrategy {
                     ))
                 })?;
 
-            // Update state: row_id -> value
-            state.insert(row_id.clone(), Value::Number(serde_json::Number::from_f64(value).unwrap()));
+            // Handle delta mode: only process new/changed rows
+            let is_new_or_changed = match mode {
+                ExecutionMode::Delta => {
+                    // In delta mode, check if row is new or changed
+                    let prev_value = state.get(&row_id)
+                        .and_then(|v| v.as_f64());
+                    prev_value.is_none() || prev_value != Some(value)
+                }
+                ExecutionMode::Full => {
+                    // In full mode, process all rows
+                    true
+                }
+            };
 
+            if is_new_or_changed {
+                // Update state: row_id -> value
+                let prev_value = state.insert(
+                    row_id.clone(),
+                    Value::Number(serde_json::Number::from_f64(value).unwrap())
+                );
+
+                // Track incremental sum (delta mode) or total sum (full mode)
+                match mode {
+                    ExecutionMode::Delta => {
+                        // In delta mode, only sum the change
+                        if let Some(prev) = prev_value.and_then(|v| v.as_f64()) {
+                            incremental_sum += value - prev; // Change in value
+                        } else {
+                            incremental_sum += value; // New row
+                        }
+                    }
+                    ExecutionMode::Full => {
+                        // In full mode, sum all values
+                        incremental_sum += value;
+                    }
+                }
+            }
+
+            // Always track total sum for output
             total_sum += value;
         }
 
+        // In full mode, total_sum is the sum of all rows
+        // In delta mode, output the incremental sum (change) not the total
+        // The test expects the sum of new/changed rows only
+        let output_sum = match mode {
+            ExecutionMode::Full => total_sum,
+            ExecutionMode::Delta => incremental_sum, // Delta mode outputs incremental change
+        };
+
         // Output includes sum and state hash
         let output = serde_json::json!({
-            "sum": total_sum,
+            "sum": output_sum,
+            "incremental_sum": incremental_sum,
             "state_hash": state.state_hash(),
             "row_count": state.len(),
         });
