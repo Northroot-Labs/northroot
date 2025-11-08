@@ -26,6 +26,9 @@ cargo clippy -- -D warnings
 
 # Check for dependency issues
 cargo deny check  # if cargo-deny is installed
+
+# Run integrity checks (before committing)
+bash scripts/check-integrity.sh
 ```
 
 ## Code Organization
@@ -73,7 +76,10 @@ See [docs/ADR_PLAYBOOK.md](docs/ADR_PLAYBOOK.md) for detailed guidance on where 
 3. Add tests for new functionality
 4. Update documentation as needed
 5. Run all checks: `cargo build && cargo test && cargo fmt --check && cargo clippy -- -D warnings`
-6. Create a pull request with a clear description
+6. Run integrity checks: `bash scripts/check-integrity.sh`
+7. Create a pull request with a clear description
+
+**Note:** A pre-commit hook automatically runs integrity checks. See [Integrity Checks](docs/INTEGRITY_CHECKS.md) for details.
 
 ## Testing
 
