@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.northroot.dev/policy/delta_compute.v1.schema.json",
+  "title": "Delta Compute Policy v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "policy_id",
+    "overlap",
+    "cost_model",
+    "decision"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "policy.delta.v1"
+    },
+    "policy_id": {
+      "type": "string",
+      "description": "Policy identifier: namespace/name@version"
+    },
+    "determinism": {
+      "type": "string",
+      "enum": ["strict", "bounded", "observational"],
+      "description": "Determinism requirement"
+    },
+    "overlap": {
+      "type": "object",
+      "required": ["measure", "min_sample", "tolerance"],
+      "properties": {
+        "measure": {
+          "type": "string",
+          "description": "Overlap measurement method: jaccard:row-hash, sketch:minhash:128, etc."
+        },
+        "min_sample": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minimum sample size (0 = exact)"
+        },
+        "tolerance": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Tolerance for overlap comparison"
+        }
+      },
+      "additionalProperties": false
+    },
+    "cost_model": {
+      "type": "object",
+      "required": ["c_id", "c_comp", "alpha"],
+      "properties": {
+        "c_id": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["type", "value"],
+              "properties": {
+                "type": { "const": "constant" },
+                "value": { "type": "number", "minimum": 0 }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": ["type", "per_row", "base"],
+              "properties": {
+                "type": { "const": "linear" },
+                "per_row": { "type": "number", "minimum": 0 },
+                "base": { "type": "number", "minimum": 0 }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "c_comp": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["type", "value"],
+              "properties": {
+                "type": { "const": "constant" },
+                "value": { "type": "number", "minimum": 0 }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": ["type", "per_row", "base"],
+              "properties": {
+                "type": { "const": "linear" },
+                "per_row": { "type": "number", "minimum": 0 },
+                "base": { "type": "number", "minimum": 0 }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "alpha": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": ["type", "value"],
+              "properties": {
+                "type": { "const": "constant" },
+                "value": { "type": "number", "minimum": 0, "maximum": 1 }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": ["type", "per_row", "base"],
+              "properties": {
+                "type": { "const": "linear" },
+                "per_row": { "type": "number" },
+                "base": { "type": "number", "minimum": 0, "maximum": 1 }
+              },
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "decision": {
+      "type": "object",
+      "required": ["rule", "fallback"],
+      "properties": {
+        "rule": {
+          "type": "string",
+          "description": "Decision rule formula (e.g., j > c_id/(alpha*c_comp))"
+        },
+        "fallback": {
+          "type": "string",
+          "enum": ["reuse", "recompute", "hybrid"],
+          "description": "Fallback decision if metrics unavailable"
+        },
+        "bounds": {
+          "type": "object",
+          "properties": {
+            "min_rows": { "type": "integer", "minimum": 0 },
+            "max_rows": { "type": "integer", "minimum": 0 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "forbid_nan": { "type": "boolean" },
+        "header_policy": {
+          "type": "string",
+          "enum": ["require", "optional", "forbid"]
+        },
+        "row_hash_scheme": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  }
+}
+

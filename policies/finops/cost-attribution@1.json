@@ -1,0 +1,26 @@
+{
+  "schema_version": "policy.delta.v1",
+  "policy_id": "finops/cost-attribution@1",
+  "determinism": "strict",
+  "overlap": {
+    "measure": "sketch:minhash:128",
+    "min_sample": 0,
+    "tolerance": 0.05
+  },
+  "cost_model": {
+    "c_id": { "type": "constant", "value": 0.1 },
+    "c_comp": { "type": "constant", "value": 10.0 },
+    "alpha": { "type": "constant", "value": 0.9 }
+  },
+  "decision": {
+    "rule": "j > c_id/(alpha*c_comp)",
+    "fallback": "recompute",
+    "bounds": { "min_rows": 1, "max_rows": 1000000000 }
+  },
+  "constraints": {
+    "forbid_nan": true,
+    "header_policy": "require",
+    "row_hash_scheme": "sha256-per-row"
+  }
+}
+

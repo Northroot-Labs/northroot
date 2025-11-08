@@ -1,0 +1,26 @@
+{
+  "schema_version": "policy.delta.v1",
+  "policy_id": "analytics/dashboard@1",
+  "determinism": "strict",
+  "overlap": {
+    "measure": "jaccard:row-hash",
+    "min_sample": 0,
+    "tolerance": 0.0
+  },
+  "cost_model": {
+    "c_id": { "type": "constant", "value": 0.5 },
+    "c_comp": { "type": "constant", "value": 100.0 },
+    "alpha": { "type": "constant", "value": 0.95 }
+  },
+  "decision": {
+    "rule": "j > c_id/(alpha*c_comp)",
+    "fallback": "recompute",
+    "bounds": { "min_rows": 1, "max_rows": 1000000000 }
+  },
+  "constraints": {
+    "forbid_nan": true,
+    "header_policy": "require",
+    "row_hash_scheme": "sha256-per-row"
+  }
+}
+
