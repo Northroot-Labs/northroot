@@ -138,12 +138,19 @@ fn test_delta_compute_scenarios_integrity() {
     let reuse_data = &scenarios["reuse_decision"];
     let overlap_j = reuse_data["overlap_j"].as_f64().unwrap();
     let cost_data = &reuse_data["cost_model"];
-    let cost_model = delta::CostModel::new(
-        cost_data["c_id"].as_f64().unwrap(),
-        cost_data["c_comp"].as_f64().unwrap(),
-        cost_data["alpha"].as_f64().unwrap(),
-    );
-    let (decision, justification) = delta::decide_reuse(overlap_j, &cost_model);
+    use northroot_policy::{CostModel, CostValue};
+    let cost_model = CostModel {
+        c_id: CostValue::Constant {
+            value: cost_data["c_id"].as_f64().unwrap(),
+        },
+        c_comp: CostValue::Constant {
+            value: cost_data["c_comp"].as_f64().unwrap(),
+        },
+        alpha: CostValue::Constant {
+            value: cost_data["alpha"].as_f64().unwrap(),
+        },
+    };
+    let (decision, justification) = delta::decide_reuse(overlap_j, &cost_model, None);
     let expected_decision = reuse_data["decision"].as_str().unwrap();
     
     assert_eq!(
@@ -159,13 +166,19 @@ fn test_delta_compute_scenarios_integrity() {
     let delta_data = &scenarios["economic_delta"];
     let delta_overlap_j = delta_data["overlap_j"].as_f64().unwrap();
     let delta_cost_data = &delta_data["cost_model"];
-    let delta_cost_model = delta::CostModel::new(
-        delta_cost_data["c_id"].as_f64().unwrap(),
-        delta_cost_data["c_comp"].as_f64().unwrap(),
-        delta_cost_data["alpha"].as_f64().unwrap(),
-    );
+    let delta_cost_model = CostModel {
+        c_id: CostValue::Constant {
+            value: delta_cost_data["c_id"].as_f64().unwrap(),
+        },
+        c_comp: CostValue::Constant {
+            value: delta_cost_data["c_comp"].as_f64().unwrap(),
+        },
+        alpha: CostValue::Constant {
+            value: delta_cost_data["alpha"].as_f64().unwrap(),
+        },
+    };
     let expected_delta = delta_data["expected"].as_f64().unwrap();
-    let computed_delta = delta::economic_delta(delta_overlap_j, &delta_cost_model);
+    let computed_delta = delta::economic_delta(delta_overlap_j, &delta_cost_model, None);
     
     assert!(
         (computed_delta - expected_delta).abs() < 0.0001,

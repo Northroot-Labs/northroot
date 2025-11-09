@@ -3,7 +3,8 @@
 //! This strategy provides incremental aggregation over changing datasets
 //! using Merkle Row-Map for deterministic state.
 
-use crate::delta::{economic_delta, jaccard_similarity, CostModel, OverlapMetric};
+use crate::delta::{economic_delta, jaccard_similarity, OverlapMetric};
+use northroot_policy::CostModel;
 use crate::execution::MerkleRowMap;
 use crate::strategies::trait_::{ExecutionMode, Strategy, StrategyError};
 use crate::ReuseIndexed;
@@ -89,6 +90,7 @@ impl IncrementalSumStrategy {
     /// * `overlap_metric` - Overlap metric with Jaccard similarity
     /// * `cost_model` - Cost model with α, C_comp, C_id
     /// * `partition_id` - Optional partition identifier
+    /// * `row_count` - Optional row count for linear cost evaluation
     ///
     /// # Returns
     ///
@@ -97,8 +99,9 @@ impl IncrementalSumStrategy {
         overlap_metric: &OverlapMetric,
         cost_model: &CostModel,
         partition_id: Option<String>,
+        row_count: Option<usize>,
     ) -> CostAllocation {
-        let delta_c = economic_delta(overlap_metric.jaccard, cost_model);
+        let delta_c = economic_delta(overlap_metric.jaccard, cost_model, row_count);
         CostAllocation {
             delta_c,
             expected_reuse_window: None, // Can be set based on historical data
@@ -238,7 +241,8 @@ impl Strategy for IncrementalSumStrategy {
 
         // Compute cost allocation if cost model is provided
         if let Some(ref cost_model) = self.cost_model {
-            let cost_alloc = Self::compute_cost_allocation(&metric, cost_model, None);
+            let row_count = Some(state.len());
+            let cost_alloc = Self::compute_cost_allocation(&metric, cost_model, None, row_count);
             *self.cost_allocation.write().unwrap() = Some(cost_alloc);
         }
 
@@ -365,7 +369,12 @@ mod tests {
         // With α=0.9, C_comp=100.0, C_id=10.0, J=0.8
         // Expected: ΔC = 0.9 * 100.0 * 0.8 - 10.0 = 72.0 - 10.0 = 62.0
 
-        let cost_model = CostModel::new(10.0, 100.0, 0.9);
+        use northroot_policy::CostValue;
+        let cost_model = CostModel {
+            c_id: CostValue::Constant { value: 10.0 },
+            c_comp: CostValue::Constant { value: 100.0 },
+            alpha: CostValue::Constant { value: 0.9 },
+        };
         let strategy = IncrementalSumStrategy::new().with_cost_model(cost_model.clone());
 
         // Initial state with 5 rows

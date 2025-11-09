@@ -5,7 +5,16 @@
 //! by `test_engine_vector_integrity.rs`.
 
 use northroot_engine::delta::*;
+use northroot_policy::{CostModel, CostValue};
 use std::collections::HashSet;
+
+fn create_test_cost_model(c_id: f64, c_comp: f64, alpha: f64) -> CostModel {
+    CostModel {
+        c_id: CostValue::Constant { value: c_id },
+        c_comp: CostValue::Constant { value: c_comp },
+        alpha: CostValue::Constant { value: alpha },
+    }
+}
 
 #[test]
 fn test_jaccard_similarity_integration() {
@@ -38,10 +47,10 @@ fn test_weighted_jaccard_integration() {
 
 #[test]
 fn test_decide_reuse_integration() {
-    let model = CostModel::new(10.0, 100.0, 0.9);
+    let model = create_test_cost_model(10.0, 100.0, 0.9);
     let overlap_j = 0.15; // Above threshold
 
-    let (decision, justification) = decide_reuse(overlap_j, &model);
+    let (decision, justification) = decide_reuse(overlap_j, &model, None);
     assert_eq!(decision, ReuseDecision::Reuse);
     assert_eq!(justification.overlap_j, Some(overlap_j));
     assert_eq!(justification.alpha, Some(0.9));
@@ -51,29 +60,29 @@ fn test_decide_reuse_integration() {
 
 #[test]
 fn test_decide_reuse_below_threshold() {
-    let model = CostModel::new(10.0, 100.0, 0.9);
+    let model = create_test_cost_model(10.0, 100.0, 0.9);
     let overlap_j = 0.05; // Below threshold
 
-    let (decision, _) = decide_reuse(overlap_j, &model);
+    let (decision, _) = decide_reuse(overlap_j, &model, None);
     assert_eq!(decision, ReuseDecision::Recompute);
 }
 
 #[test]
 fn test_decide_reuse_with_layer() {
-    let model = CostModel::new(10.0, 100.0, 0.9);
+    let model = create_test_cost_model(10.0, 100.0, 0.9);
     let overlap_j = 0.15;
 
-    let (decision, justification) = decide_reuse_with_layer(overlap_j, &model, "data");
+    let (decision, justification) = decide_reuse_with_layer(overlap_j, &model, "data", None);
     assert_eq!(decision, ReuseDecision::Reuse);
     assert_eq!(justification.layer, Some("data".to_string()));
 }
 
 #[test]
 fn test_economic_delta_positive() {
-    let model = CostModel::new(10.0, 100.0, 0.9);
+    let model = create_test_cost_model(10.0, 100.0, 0.9);
     let overlap_j = 0.15;
 
-    let delta = economic_delta(overlap_j, &model);
+    let delta = economic_delta(overlap_j, &model, None);
     // ΔC = 0.9 * 100.0 * 0.15 - 10.0 = 13.5 - 10.0 = 3.5
     assert!((delta - 3.5).abs() < 0.0001);
 }
@@ -125,15 +134,15 @@ fn test_verify_exact_set() {
 #[test]
 fn test_cost_model_threshold_edge_cases() {
     // Test with very high c_id
-    let model1 = CostModel::new(1000.0, 100.0, 0.9);
-    assert!(model1.reuse_threshold() > 10.0);
+    let model1 = create_test_cost_model(1000.0, 100.0, 0.9);
+    assert!(model1.reuse_threshold(None) > 10.0);
 
     // Test with very low c_id
-    let model2 = CostModel::new(0.1, 100.0, 0.9);
-    assert!(model2.reuse_threshold() < 0.01);
+    let model2 = create_test_cost_model(0.1, 100.0, 0.9);
+    assert!(model2.reuse_threshold(None) < 0.01);
 
     // Test with zero alpha
-    let model3 = CostModel::new(10.0, 100.0, 0.0);
-    assert_eq!(model3.reuse_threshold(), f64::INFINITY);
+    let model3 = create_test_cost_model(10.0, 100.0, 0.0);
+    assert_eq!(model3.reuse_threshold(None), f64::INFINITY);
 }
 

@@ -3,66 +3,8 @@
 //! This module implements the reuse decision rule and cost model evaluation
 //! for determining when to reuse previous computation results.
 
+use northroot_policy::CostModel;
 use northroot_receipts::ReuseJustification;
-
-/// Cost model for reuse decisions.
-///
-/// This struct captures the economic parameters needed to evaluate
-/// whether reuse is beneficial.
-#[derive(Debug, Clone, PartialEq)]
-pub struct CostModel {
-    /// Identity/integration cost: cost to locate, validate, and splice reused results
-    pub c_id: f64,
-    /// Baseline compute cost: cost to (re)execute operator
-    pub c_comp: f64,
-    /// Operator incrementality factor [0,1]: how efficiently deltas can be applied
-    pub alpha: f64,
-}
-
-impl CostModel {
-    /// Create a new cost model.
-    ///
-    /// # Arguments
-    ///
-    /// * `c_id` - Identity/integration cost
-    /// * `c_comp` - Baseline compute cost
-    /// * `alpha` - Incrementality factor [0,1]
-    ///
-    /// # Panics
-    ///
-    /// Panics if `alpha` is not in [0, 1] or if costs are negative.
-    pub fn new(c_id: f64, c_comp: f64, alpha: f64) -> Self {
-        assert!(c_id >= 0.0, "c_id must be non-negative");
-        assert!(c_comp >= 0.0, "c_comp must be non-negative");
-        assert!((0.0..=1.0).contains(&alpha), "alpha must be in [0, 1]");
-
-        Self { c_id, c_comp, alpha }
-    }
-
-    /// Compute the reuse threshold.
-    ///
-    /// Returns the minimum Jaccard overlap required for reuse to be beneficial:
-    /// threshold = C_id / (α · C_comp)
-    ///
-    /// # Returns
-    ///
-    /// Reuse threshold in [0, ∞). If denominator is zero (i.e., `alpha == 0` or
-    /// `c_comp == 0`), returns `f64::INFINITY`, which means reuse is never beneficial
-    /// regardless of overlap (since the operator cannot benefit from incremental computation).
-    ///
-    /// # Note
-    ///
-    /// When threshold is `INFINITY`, the reuse decision will always be `Recompute`,
-    /// as no finite overlap value can exceed infinity.
-    pub fn reuse_threshold(&self) -> f64 {
-        let denominator = self.alpha * self.c_comp;
-        if denominator == 0.0 {
-            f64::INFINITY
-        } else {
-            self.c_id / denominator
-        }
-    }
-}
 
 /// Reuse decision result.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -98,20 +40,29 @@ pub enum ReuseDecision {
 /// # Example
 ///
 /// ```rust
-/// use northroot_engine::delta::{decide_reuse, CostModel};
+/// use northroot_engine::delta::decide_reuse;
+/// use northroot_policy::{CostModel, CostValue};
 ///
-/// let cost_model = CostModel::new(10.0, 100.0, 0.9);
+/// let cost_model = CostModel {
+///     c_id: CostValue::Constant { value: 10.0 },
+///     c_comp: CostValue::Constant { value: 100.0 },
+///     alpha: CostValue::Constant { value: 0.9 },
+/// };
 /// let overlap_j = 0.15; // 15% overlap
 ///
-/// let (decision, justification) = decide_reuse(overlap_j, &cost_model);
+/// let (decision, justification) = decide_reuse(overlap_j, &cost_model, None);
 /// // threshold = 10.0 / (0.9 * 100.0) = 0.111
 /// // Since 0.15 > 0.111, decision will be Reuse
 /// ```
-pub fn decide_reuse(overlap_j: f64, cost_model: &CostModel) -> (ReuseDecision, ReuseJustification) {
+pub fn decide_reuse(
+    overlap_j: f64,
+    cost_model: &CostModel,
+    row_count: Option<usize>,
+) -> (ReuseDecision, ReuseJustification) {
     // Clamp overlap to valid range [0, 1]
     let overlap_j = overlap_j.max(0.0).min(1.0);
     
-    let threshold = cost_model.reuse_threshold();
+    let threshold = cost_model.reuse_threshold(row_count);
 
     let decision = if overlap_j > threshold {
         ReuseDecision::Reuse
@@ -122,11 +73,14 @@ pub fn decide_reuse(overlap_j: f64, cost_model: &CostModel) -> (ReuseDecision, R
         ReuseDecision::Recompute
     };
 
+    // Evaluate cost model to get concrete values
+    let (c_id, c_comp, alpha) = cost_model.evaluate(row_count);
+
     let justification = ReuseJustification {
         overlap_j: Some(overlap_j),
-        alpha: Some(cost_model.alpha),
-        c_id: Some(cost_model.c_id),
-        c_comp: Some(cost_model.c_comp),
+        alpha: Some(alpha),
+        c_id: Some(c_id),
+        c_comp: Some(c_comp),
         decision: Some(match decision {
             ReuseDecision::Reuse => "reuse".to_string(),
             ReuseDecision::Recompute => "recompute".to_string(),
@@ -154,10 +108,15 @@ pub fn decide_reuse(overlap_j: f64, cost_model: &CostModel) -> (ReuseDecision, R
 /// # Returns
 ///
 /// Economic delta (positive = savings, negative = cost)
-pub fn economic_delta(overlap_j: f64, cost_model: &CostModel) -> f64 {
+pub fn economic_delta(
+    overlap_j: f64,
+    cost_model: &CostModel,
+    row_count: Option<usize>,
+) -> f64 {
     // Clamp overlap to valid range [0, 1]
     let overlap_j = overlap_j.max(0.0).min(1.0);
-    cost_model.alpha * cost_model.c_comp * overlap_j - cost_model.c_id
+    let (c_id, c_comp, alpha) = cost_model.evaluate(row_count);
+    alpha * c_comp * overlap_j - c_id
 }
 
 /// Decide reuse with layer tracking.
@@ -177,8 +136,9 @@ pub fn decide_reuse_with_layer(
     overlap_j: f64,
     cost_model: &CostModel,
     layer: &str,
+    row_count: Option<usize>,
 ) -> (ReuseDecision, ReuseJustification) {
-    let (decision, mut justification) = decide_reuse(overlap_j, cost_model);
+    let (decision, mut justification) = decide_reuse(overlap_j, cost_model, row_count);
     justification.layer = Some(layer.to_string());
     (decision, justification)
 }
@@ -186,27 +146,40 @@ pub fn decide_reuse_with_layer(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use northroot_policy::CostValue;
+
+    fn create_test_cost_model() -> CostModel {
+        CostModel {
+            c_id: CostValue::Constant { value: 10.0 },
+            c_comp: CostValue::Constant { value: 100.0 },
+            alpha: CostValue::Constant { value: 0.9 },
+        }
+    }
 
     #[test]
     fn test_cost_model_reuse_threshold() {
-        let model = CostModel::new(10.0, 100.0, 0.9);
+        let model = create_test_cost_model();
         // threshold = 10.0 / (0.9 * 100.0) = 10.0 / 90.0 ≈ 0.111
-        let threshold = model.reuse_threshold();
+        let threshold = model.reuse_threshold(None);
         assert!((threshold - 10.0 / 90.0).abs() < 0.0001);
     }
 
     #[test]
     fn test_cost_model_reuse_threshold_zero_alpha() {
-        let model = CostModel::new(10.0, 100.0, 0.0);
-        assert_eq!(model.reuse_threshold(), f64::INFINITY);
+        let model = CostModel {
+            c_id: CostValue::Constant { value: 10.0 },
+            c_comp: CostValue::Constant { value: 100.0 },
+            alpha: CostValue::Constant { value: 0.0 },
+        };
+        assert_eq!(model.reuse_threshold(None), f64::INFINITY);
     }
 
     #[test]
     fn test_decide_reuse_above_threshold() {
-        let model = CostModel::new(10.0, 100.0, 0.9);
+        let model = create_test_cost_model();
         let overlap_j = 0.15; // Above threshold of ~0.111
 
-        let (decision, justification) = decide_reuse(overlap_j, &model);
+        let (decision, justification) = decide_reuse(overlap_j, &model, None);
         assert_eq!(decision, ReuseDecision::Reuse);
         assert_eq!(justification.overlap_j, Some(overlap_j));
         assert_eq!(justification.decision, Some("reuse".to_string()));
@@ -214,41 +187,41 @@ mod tests {
 
     #[test]
     fn test_decide_reuse_below_threshold() {
-        let model = CostModel::new(10.0, 100.0, 0.9);
+        let model = create_test_cost_model();
         let overlap_j = 0.05; // Below threshold of ~0.111
 
-        let (decision, justification) = decide_reuse(overlap_j, &model);
+        let (decision, justification) = decide_reuse(overlap_j, &model, None);
         assert_eq!(decision, ReuseDecision::Recompute);
         assert_eq!(justification.decision, Some("recompute".to_string()));
     }
 
     #[test]
     fn test_decide_reuse_with_layer() {
-        let model = CostModel::new(10.0, 100.0, 0.9);
+        let model = create_test_cost_model();
         let overlap_j = 0.15;
 
-        let (decision, justification) = decide_reuse_with_layer(overlap_j, &model, "data");
+        let (decision, justification) = decide_reuse_with_layer(overlap_j, &model, "data", None);
         assert_eq!(decision, ReuseDecision::Reuse);
         assert_eq!(justification.layer, Some("data".to_string()));
     }
 
     #[test]
     fn test_economic_delta() {
-        let model = CostModel::new(10.0, 100.0, 0.9);
+        let model = create_test_cost_model();
         let overlap_j = 0.15;
 
         // ΔC = 0.9 * 100.0 * 0.15 - 10.0 = 13.5 - 10.0 = 3.5
-        let delta = economic_delta(overlap_j, &model);
+        let delta = economic_delta(overlap_j, &model, None);
         assert!((delta - 3.5).abs() < 0.0001);
     }
 
     #[test]
     fn test_economic_delta_negative() {
-        let model = CostModel::new(10.0, 100.0, 0.9);
+        let model = create_test_cost_model();
         let overlap_j = 0.05;
 
         // ΔC = 0.9 * 100.0 * 0.05 - 10.0 = 4.5 - 10.0 = -5.5
-        let delta = economic_delta(overlap_j, &model);
+        let delta = economic_delta(overlap_j, &model, None);
         assert!((delta - (-5.5)).abs() < 0.0001);
     }
 }

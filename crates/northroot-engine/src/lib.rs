@@ -55,8 +55,8 @@ pub use signature::{
 // Re-export delta module items for convenience
 pub use delta::{
     chunk_id_from_bytes, chunk_id_from_str, decide_reuse, decide_reuse_with_layer,
-    economic_delta, jaccard_similarity, verify_exact_set, weighted_jaccard_similarity, ChunkSet,
-    CostModel, ReuseDecision,
+    economic_delta, jaccard_similarity, load_cost_model_from_policy, verify_exact_set,
+    weighted_jaccard_similarity, ChunkSet, ReuseDecision,
 };
 
 // Re-export execution module items

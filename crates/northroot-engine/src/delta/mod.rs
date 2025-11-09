@@ -11,6 +11,8 @@ pub use chunking::*;
 pub use decision::*;
 pub use overlap::*;
 
+use northroot_policy::{extract_cost_model, load_policy, CostModel, PolicyError};
+
 use crate::commitments::sha256_prefixed;
 
 /// Overlap metric representing Jaccard similarity and related statistics.
@@ -96,5 +98,34 @@ where
     // Compute hash of sorted chunk IDs
     let combined = chunk_ids.join("|");
     sha256_prefixed(combined.as_bytes())
+}
+
+/// Load cost model from policy reference.
+///
+/// Convenience wrapper that loads a policy from file system and extracts
+/// a concrete cost model for use in reuse decisions.
+///
+/// # Arguments
+///
+/// * `policy_ref` - Policy reference (e.g., "pol:finops/cost-attribution@1")
+/// * `row_count` - Optional row count for linear cost evaluation
+///
+/// # Returns
+///
+/// Concrete `CostModel` if policy is found and valid, or `PolicyError` if not.
+///
+/// # Example
+///
+/// ```rust
+/// use northroot_engine::delta::load_cost_model_from_policy;
+///
+/// let cost_model = load_cost_model_from_policy("pol:finops/cost-attribution@1", Some(1000))?;
+/// ```
+pub fn load_cost_model_from_policy(
+    policy_ref: &str,
+    row_count: Option<usize>,
+) -> Result<CostModel, PolicyError> {
+    let policy = load_policy(policy_ref)?;
+    extract_cost_model(&policy, row_count)
 }
 
