@@ -26,7 +26,7 @@ fn simulate_partition_scan(commit_versions: Vec<i64>) -> Receipt {
         cod: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
         links: vec![],
         ctx: Context {
-            policy_ref: Some("pol:etl-partition-reuse@1".to_string()),
+            policy_ref: Some("pol:etl/partition-reuse@1".to_string()),
             timestamp: "2025-11-08T12:00:00Z".to_string(),
             nonce: None,
             determinism: Some(DeterminismClass::Strict),
@@ -62,7 +62,7 @@ fn main() {
     println!("================================\n");
 
     // Simulate Delta Lake table with 100 partitions, 15 changed
-    let all_commit_versions: Vec<i64> = (1..=100).collect();
+    let _all_commit_versions: Vec<i64> = (1..=100).collect();
     let changed_commit_versions: Vec<i64> = (1..=15).collect();
 
     let receipt = simulate_partition_scan(changed_commit_versions);

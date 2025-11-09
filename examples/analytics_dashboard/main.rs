@@ -4,14 +4,17 @@
 //!
 //! Expected ROI: 142% savings, $684K annual
 
-use northroot_engine::delta::{CostModel, decide_reuse};
+use northroot_engine::delta::{decide_reuse, load_cost_model_from_policy};
 use northroot_receipts::{Context, DeterminismClass, Receipt, ReceiptKind, SpendPayload, SpendPointers, ResourceVector, ReuseJustification};
 use uuid::Uuid;
 
 /// Simulate dashboard query with high overlap.
 fn simulate_dashboard_query(overlap_j: f64) -> Receipt {
-    let cost_model = CostModel::new(0.5, 100.0, 0.95); // C_id=0.5, C_comp=100.0, α=0.95
-    let (decision, justification) = decide_reuse(overlap_j, &cost_model);
+    // Load cost model from policy
+    let policy_ref = "pol:analytics/dashboard@1";
+    let cost_model = load_cost_model_from_policy(policy_ref, None)
+        .expect("Failed to load cost model from policy");
+    let (_decision, justification) = decide_reuse(overlap_j, &cost_model, None);
 
     let receipt = Receipt {
         rid: Uuid::parse_str("00000000-0000-0000-0000-000000000020").unwrap(),
@@ -21,7 +24,7 @@ fn simulate_dashboard_query(overlap_j: f64) -> Receipt {
         cod: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
         links: vec![],
         ctx: Context {
-            policy_ref: Some("pol:analytics-dashboard@1".to_string()),
+            policy_ref: Some("pol:analytics/dashboard@1".to_string()),
             timestamp: "2025-11-08T12:00:00Z".to_string(),
             nonce: None,
             determinism: Some(DeterminismClass::Strict),
@@ -50,15 +53,11 @@ fn simulate_dashboard_query(overlap_j: f64) -> Receipt {
                 span_ids: None,
             },
             justification: Some(ReuseJustification {
-                overlap_j: Some(overlap_j),
-                alpha: Some(0.95),
-                c_id: Some(0.5),
-                c_comp: Some(100.0),
-                decision: Some(match decision {
-                    northroot_engine::delta::ReuseDecision::Reuse => "reuse".to_string(),
-                    northroot_engine::delta::ReuseDecision::Recompute => "recompute".to_string(),
-                    northroot_engine::delta::ReuseDecision::Hybrid => "hybrid".to_string(),
-                }),
+                overlap_j: justification.overlap_j,
+                alpha: justification.alpha,
+                c_id: justification.c_id,
+                c_comp: justification.c_comp,
+                decision: justification.decision,
                 layer: Some("execution".to_string()),
                 minhash_sketch: None,
             }),

@@ -5,7 +5,7 @@
 //!
 //! Expected ROI: 25-46% savings, $276K annual
 
-use northroot_engine::delta::{compute_minhash_sketch, CostModel, decide_reuse};
+use northroot_engine::delta::{compute_minhash_sketch, decide_reuse, load_cost_model_from_policy};
 use northroot_receipts::{
     Context, DeterminismClass, Receipt, ReceiptKind, SpendPayload, SpendPointers,
     ResourceVector, ReuseJustification,
@@ -42,9 +42,12 @@ fn simulate_billing_run(
         0.0 // First run, no previous state
     };
 
-    // Make reuse decision
-    let cost_model = CostModel::new(0.1, 10.0, 0.9); // C_id=0.1, C_comp=10.0, α=0.9
-    let (decision, justification) = decide_reuse(overlap_j, &cost_model);
+    // Make reuse decision using policy-driven cost model
+    let policy_ref = "pol:finops/cost-attribution@1";
+    let row_count = Some(resource_tuples.len());
+    let cost_model = load_cost_model_from_policy(policy_ref, row_count)
+        .expect("Failed to load cost model from policy");
+    let (_decision, justification) = decide_reuse(overlap_j, &cost_model, row_count);
 
     // Create spend receipt
     let receipt = Receipt {
@@ -55,7 +58,7 @@ fn simulate_billing_run(
         cod: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
         links: vec![],
         ctx: Context {
-            policy_ref: Some("pol:finops-cost-attribution@1".to_string()),
+            policy_ref: Some("pol:finops/cost-attribution@1".to_string()),
             timestamp: "2025-11-08T12:00:00Z".to_string(),
             nonce: None,
             determinism: Some(DeterminismClass::Strict),
@@ -84,15 +87,11 @@ fn simulate_billing_run(
                 span_ids: None,
             },
             justification: Some(ReuseJustification {
-                overlap_j: Some(overlap_j),
-                alpha: Some(0.9),
-                c_id: Some(0.1),
-                c_comp: Some(10.0),
-                decision: Some(match decision {
-                    northroot_engine::delta::ReuseDecision::Reuse => "reuse".to_string(),
-                    northroot_engine::delta::ReuseDecision::Recompute => "recompute".to_string(),
-                    northroot_engine::delta::ReuseDecision::Hybrid => "hybrid".to_string(),
-                }),
+                overlap_j: justification.overlap_j,
+                alpha: justification.alpha,
+                c_id: justification.c_id,
+                c_comp: justification.c_comp,
+                decision: justification.decision,
                 layer: Some("data".to_string()),
                 minhash_sketch: Some(sketch_hash.clone()),
             }),
