@@ -25,4 +25,3 @@ pub enum StorageError {
     #[error("Invalid input: {0}")]
     InvalidInput(String),
 }
-

@@ -15,6 +15,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
+pub mod adapters;
 pub mod canonical;
 pub mod error;
 pub mod receipt_deser;
@@ -24,9 +25,13 @@ pub mod schema;
 // Note: This module is only used for generating test vectors
 // and is not part of the public API
 pub mod test_utils;
+pub mod uuid_serde;
 pub mod validation;
 
-pub use canonical::{canonical_body, compute_hash, validate_hash_format};
+pub use canonical::{
+    cbor_deterministic, cbor_hash, compute_hash, encode_canonical, hash_canonical, to_cdn,
+    validate_cbor_deterministic, validate_hash_format, CanonError,
+};
 pub use error::ValidationError;
 #[cfg(feature = "jsonschema")]
 pub use schema::validate_payload_schema;
@@ -147,33 +152,66 @@ impl<'de> serde::Deserialize<'de> for Payload {
         D: serde::Deserializer<'de>,
     {
         use serde::de::Error;
-        let value = serde_json::Value::deserialize(deserializer)?;
+        // Use ciborium::value::Value as format-agnostic intermediate
+        use ciborium::value::Value as CborValue;
+        let value = CborValue::deserialize(deserializer)?;
 
         // Try to determine payload type from structure
         // This is a fallback - Receipt deserializer should handle it properly
-        if value.get("schema_hash").is_some() {
+        // Convert to a map we can query
+        let map = value.as_map().ok_or_else(|| {
+            Error::invalid_type(
+                serde::de::Unexpected::Other("expected object/map"),
+                &"an object",
+            )
+        })?;
+
+        // Helper to check if a key exists in the map
+        let has_key = |key: &str| -> bool {
+            map.iter().any(|(k, _)| {
+                if let CborValue::Text(s) = k {
+                    s == key
+                } else {
+                    false
+                }
+            })
+        };
+
+        // Determine payload type and deserialize
+        // Serialize the value to CBOR bytes, then deserialize as the specific type
+        let mut cbor_bytes = Vec::new();
+        ciborium::ser::into_writer(&value, &mut cbor_bytes)
+            .map_err(|e| Error::custom(format!("Failed to serialize payload: {}", e)))?;
+
+        if has_key("schema_hash") {
             Ok(Payload::DataShape(
-                serde_json::from_value(value).map_err(Error::custom)?,
+                ciborium::de::from_reader(cbor_bytes.as_slice())
+                    .map_err(|e| Error::custom(format!("Failed to deserialize DataShapePayload: {}", e)))?,
             ))
-        } else if value.get("nodes").is_some() {
+        } else if has_key("nodes") {
             Ok(Payload::MethodShape(
-                serde_json::from_value(value).map_err(Error::custom)?,
+                ciborium::de::from_reader(cbor_bytes.as_slice())
+                    .map_err(|e| Error::custom(format!("Failed to deserialize MethodShapePayload: {}", e)))?,
             ))
-        } else if value.get("intent_hash").is_some() {
+        } else if has_key("intent_hash") {
             Ok(Payload::ReasoningShape(
-                serde_json::from_value(value).map_err(Error::custom)?,
+                ciborium::de::from_reader(cbor_bytes.as_slice())
+                    .map_err(|e| Error::custom(format!("Failed to deserialize ReasoningShapePayload: {}", e)))?,
             ))
-        } else if value.get("trace_id").is_some() {
+        } else if has_key("trace_id") {
             Ok(Payload::Execution(
-                serde_json::from_value(value).map_err(Error::custom)?,
+                ciborium::de::from_reader(cbor_bytes.as_slice())
+                    .map_err(|e| Error::custom(format!("Failed to deserialize ExecutionPayload: {}", e)))?,
             ))
-        } else if value.get("meter").is_some() {
+        } else if has_key("meter") {
             Ok(Payload::Spend(
-                serde_json::from_value(value).map_err(Error::custom)?,
+                ciborium::de::from_reader(cbor_bytes.as_slice())
+                    .map_err(|e| Error::custom(format!("Failed to deserialize SpendPayload: {}", e)))?,
             ))
-        } else if value.get("wur_refs").is_some() {
+        } else if has_key("wur_refs") {
             Ok(Payload::Settlement(
-                serde_json::from_value(value).map_err(Error::custom)?,
+                ciborium::de::from_reader(cbor_bytes.as_slice())
+                    .map_err(|e| Error::custom(format!("Failed to deserialize SettlementPayload: {}", e)))?,
             ))
         } else {
             Err(Error::custom("Cannot determine payload type"))
@@ -188,6 +226,7 @@ impl<'de> serde::Deserialize<'de> for Payload {
 #[derive(Debug, Clone, Serialize, PartialEq)]
 pub struct Receipt {
     /// Receipt ID (UUIDv7 recommended for time-ordered IDs)
+    #[serde(with = "uuid_serde")]
     pub rid: Uuid,
     /// Envelope version (e.g., "0.3.0")
     pub version: String,
@@ -199,13 +238,14 @@ pub struct Receipt {
     pub cod: String,
     /// Child receipts for composition (optional)
     #[serde(default)]
+    #[serde(with = "uuid_serde::vec")]
     pub links: Vec<Uuid>,
     /// Context: policy, timestamp, determinism, identity
     pub ctx: Context,
     /// Kind-specific payload
     pub payload: Payload,
-    /// Optional TEE/container attestations
-    pub attest: Option<serde_json::Value>,
+    /// Optional TEE/container attestations (CBOR Value)
+    pub attest: Option<ciborium::value::Value>,
     /// Detached signature over `hash` (optional)
     pub sig: Option<Signature>,
     /// SHA-256 hash of canonical body (without sig/hash)
@@ -497,7 +537,7 @@ pub struct ExecutionRoots {
     /// Trace set root: SHA-256 hash of sorted span commitments (set view)
     pub trace_set_root: String,
     /// Identity root: Merkle root over identity records (DID, kid, role, tenant)
-    /// 
+    ///
     /// This root commits to the set of actors/keys that participated in the execution,
     /// independent of trace ordering. See `identity_root_from_identities` for computation.
     pub identity_root: String,
@@ -597,8 +637,8 @@ pub struct SettlementPayload {
     pub net_positions: BTreeMap<String, f64>,
     /// Rules reference: identifier for the clearing policy/rules used
     pub rules_ref: String,
-    /// Optional cash instructions: payment routing details (ACH, stablecoin, credits, etc.)
-    pub cash_instr: Option<serde_json::Value>,
+    /// Optional cash instructions: payment routing details (ACH, stablecoin, credits, etc.) (CBOR Value)
+    pub cash_instr: Option<ciborium::value::Value>,
 }
 
 // ---------------- Identity Root Computation ----------------
@@ -665,11 +705,9 @@ where
 
     // Collect and sort identities by (did, kid)
     let mut sorted: Vec<IdentityRecord> = identities.collect();
-    sorted.sort_by(|a, b| {
-        match a.did.cmp(&b.did) {
-            std::cmp::Ordering::Equal => a.kid.cmp(&b.kid),
-            other => other,
-        }
+    sorted.sort_by(|a, b| match a.did.cmp(&b.did) {
+        std::cmp::Ordering::Equal => a.kid.cmp(&b.kid),
+        other => other,
     });
 
     // Empty tree: H(0x00 || "")
@@ -685,7 +723,7 @@ where
     for identity in &sorted {
         // Canonicalize identity record with JCS
         let canonical = serde_json::to_string(identity).unwrap();
-        
+
         // Leaf hash = H(0x00 || canonical_bytes)
         let mut hasher = Sha256::new();
         hasher.update(&[0x00u8]);
@@ -697,7 +735,7 @@ where
     let mut current_level = leaf_hashes;
     while current_level.len() > 1 {
         let mut next_level = Vec::new();
-        
+
         // Pair hashes left-to-right
         for i in (0..current_level.len()).step_by(2) {
             if i + 1 < current_level.len() {
@@ -712,7 +750,7 @@ where
                 next_level.push(current_level[i]);
             }
         }
-        
+
         current_level = next_level;
     }
 

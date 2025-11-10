@@ -28,9 +28,9 @@ fn execution_roots_roundtrip() {
     let seq_root = commit_seq_root(&span_commitments);
 
     let roots = p.get("roots").unwrap();
-    
+
     // identity root computation
-    // 
+    //
     // STUBBED: Identity root computation is now properly specified in ADR-003.
     // The identity_root is computed as a Merkle root over identity records (DID, kid, role, tenant)
     // using RFC-6962 style domain separation. See:

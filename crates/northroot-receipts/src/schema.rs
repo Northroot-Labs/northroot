@@ -27,8 +27,8 @@ fn load_schema(schema_name: &str) -> Result<JSONSchema, ValidationError> {
     let manifest_dir = env!("CARGO_MANIFEST_DIR");
     // From crates/northroot-receipts/, go up to workspace root, then to schemas/receipts/
     let schema_path = PathBuf::from(manifest_dir)
-        .parent()  // crates/
-        .and_then(|p| p.parent())  // workspace root
+        .parent() // crates/
+        .and_then(|p| p.parent()) // workspace root
         .ok_or_else(|| {
             ValidationError::SerializationError(
                 "Failed to resolve workspace root from manifest directory".to_string(),

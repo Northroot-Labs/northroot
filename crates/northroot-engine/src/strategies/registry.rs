@@ -4,8 +4,8 @@
 //! Strategies can be registered by name and retrieved dynamically, enabling
 //! extensible compute pipelines.
 
-use std::collections::HashMap;
 use crate::strategies::trait_::Strategy;
+use std::collections::HashMap;
 
 /// Registry for managing strategies by name.
 ///
@@ -149,7 +149,7 @@ impl Default for StrategyRegistry {
 /// ```
 pub fn default_registry() -> StrategyRegistry {
     use crate::strategies::{IncrementalSumStrategy, PartitionStrategy};
-    
+
     let mut registry = StrategyRegistry::new();
     registry.register(PartitionStrategy::new());
     registry.register(IncrementalSumStrategy::new());
@@ -218,4 +218,3 @@ mod tests {
         assert_eq!(registry.len(), 1);
     }
 }
-

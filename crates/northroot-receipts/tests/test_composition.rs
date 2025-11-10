@@ -64,7 +64,7 @@ fn test_partial_chain() {
     let data_shape = load_vector("../../vectors/data_shape.json");
     let method_shape = load_vector("../../vectors/method_shape.json");
     let _execution = load_vector("../../vectors/execution.json");
-    
+
     // Chain missing reasoning_shape - should still validate composition if dom/cod match
     // But execution.dom should match method_shape.cod, not reasoning_shape.cod
     // This test verifies we can validate partial chains

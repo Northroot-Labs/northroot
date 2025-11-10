@@ -10,4 +10,3 @@ pub mod state;
 pub use builder::*;
 pub use merkle_row_map::*;
 pub use state::*;
-

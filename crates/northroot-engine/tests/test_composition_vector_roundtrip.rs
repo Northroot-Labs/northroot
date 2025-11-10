@@ -36,9 +36,9 @@ fn test_valid_chain_roundtrip() {
 
     // Verify all receipts are valid
     for (idx, receipt) in built.iter().enumerate() {
-        receipt.validate().unwrap_or_else(|e| {
-            panic!("Receipt {} in built chain failed validation: {}", idx, e)
-        });
+        receipt
+            .validate()
+            .unwrap_or_else(|e| panic!("Receipt {} in built chain failed validation: {}", idx, e));
     }
 }
 
@@ -156,4 +156,3 @@ fn test_chain_composition_validation() {
         "Invalid chain should fail validate_sequential"
     );
 }
-

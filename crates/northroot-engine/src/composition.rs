@@ -290,10 +290,7 @@ pub fn create_identity_receipt(
 
     // Compute hash
     let hash = receipt.compute_hash()?;
-    Ok(Receipt {
-        hash,
-        ..receipt
-    })
+    Ok(Receipt { hash, ..receipt })
 }
 
 /// Build a sequential chain from individual receipts, validating composition.
@@ -315,9 +312,7 @@ pub fn build_sequential_chain(receipts: Vec<Receipt>) -> Result<Vec<Receipt>, Co
 #[cfg(test)]
 mod tests {
     use super::*;
-    use northroot_receipts::{
-        Context, DataShapePayload, Payload, ReceiptKind,
-    };
+    use northroot_receipts::{Context, DataShapePayload, Payload, ReceiptKind};
     use uuid::Uuid;
 
     fn create_test_receipt(
@@ -419,9 +414,12 @@ mod tests {
 
     #[test]
     fn test_compute_tensor_root() {
-        let h1 = "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
-        let h2 = "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string();
-        let h3 = "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string();
+        let h1 =
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
+        let h2 =
+            "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string();
+        let h3 =
+            "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string();
 
         // Order-independent: same hashes in different order produce same root
         let root1 = compute_tensor_root(&[h1.clone(), h2.clone(), h3.clone()]);
@@ -521,7 +519,8 @@ mod tests {
     #[test]
     fn test_create_identity_receipt() {
         let rid = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
-        let shape_hash = "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
+        let shape_hash =
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
 
         let ctx = Context {
             policy_ref: None,
@@ -551,4 +550,3 @@ mod tests {
         assert!(receipt.validate_fast().is_ok());
     }
 }
-

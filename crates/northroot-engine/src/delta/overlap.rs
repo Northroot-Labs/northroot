@@ -167,8 +167,12 @@ mod tests {
 
     #[test]
     fn test_jaccard_similarity_partial() {
-        let set1: HashSet<String> = ["a".to_string(), "b".to_string(), "c".to_string()].into_iter().collect();
-        let set2: HashSet<String> = ["b".to_string(), "c".to_string(), "d".to_string()].into_iter().collect();
+        let set1: HashSet<String> = ["a".to_string(), "b".to_string(), "c".to_string()]
+            .into_iter()
+            .collect();
+        let set2: HashSet<String> = ["b".to_string(), "c".to_string(), "d".to_string()]
+            .into_iter()
+            .collect();
 
         // Intersection: {b, c} = 2, Union: {a, b, c, d} = 4
         assert_eq!(jaccard_similarity(&set1, &set2), 0.5);
@@ -221,4 +225,3 @@ mod tests {
         assert!(!verify_exact_set(&set1, &set3));
     }
 }
-

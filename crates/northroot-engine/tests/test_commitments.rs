@@ -31,8 +31,15 @@ fn test_cbor_hash_consistency() {
     let hash2 = cbor_hash(&value).unwrap();
 
     assert_eq!(hash1, hash2, "CBOR hash should be consistent");
-    assert!(hash1.starts_with("sha256:"), "Hash should have sha256: prefix");
-    assert_eq!(hash1.len(), 71, "Hash should be 71 chars (sha256: + 64 hex)");
+    assert!(
+        hash1.starts_with("sha256:"),
+        "Hash should have sha256: prefix"
+    );
+    assert_eq!(
+        hash1.len(),
+        71,
+        "Hash should be 71 chars (sha256: + 64 hex)"
+    );
 }
 
 #[test]
@@ -40,7 +47,7 @@ fn test_cbor_jcs_hash_equivalence() {
     // Test that CBOR and JCS produce same hash for same content
     // Note: This may not always be true due to format differences,
     // but for simple structures they should be equivalent
-    
+
     let value = json!({
         "a": 1,
         "b": 2
@@ -64,7 +71,7 @@ fn test_validate_cbor_deterministic() {
     });
 
     let cbor_bytes = cbor_deterministic(&value).unwrap();
-    
+
     // Should validate successfully
     assert!(validate_cbor_deterministic(&cbor_bytes).is_ok());
 }
@@ -90,4 +97,3 @@ fn test_cbor_deterministic_sorted_keys() {
 
     assert_eq!(cbor1, cbor2, "CBOR should sort keys deterministically");
 }
-

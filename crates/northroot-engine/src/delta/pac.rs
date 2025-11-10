@@ -128,31 +128,16 @@ mod tests {
             "pol:test@1",
             "1.0",
         );
-        assert_ne!(pac1, pac2, "Different inputs should produce different PAC keys");
+        assert_ne!(
+            pac1, pac2,
+            "Different inputs should produce different PAC keys"
+        );
     }
 
     #[test]
     fn test_pac_key_empty_strings() {
-        let pac1 = compute_pac_key(
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-        );
-        let pac2 = compute_pac_key(
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-        );
+        let pac1 = compute_pac_key("", "", "", "", "", "", "", "");
+        let pac2 = compute_pac_key("", "", "", "", "", "", "", "");
         assert_eq!(pac1, pac2, "Empty strings should be handled consistently");
     }
 
@@ -207,4 +192,3 @@ mod tests {
         }
     }
 }
-

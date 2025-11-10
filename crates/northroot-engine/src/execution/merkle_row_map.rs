@@ -203,11 +203,10 @@ mod tests {
     fn test_merkle_row_map_single_entry() {
         let mut map = MerkleRowMap::new();
         map.insert("key1".to_string(), serde_json::json!(42));
-        
+
         let root = map.compute_root();
         assert!(root.starts_with("sha256:"));
         assert_eq!(root.len(), 71);
         assert_eq!(map.len(), 1);
     }
 }
-

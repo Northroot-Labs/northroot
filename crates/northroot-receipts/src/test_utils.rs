@@ -144,14 +144,12 @@ pub fn generate_reasoning_shape_receipt(prev_cod: &str) -> Receipt {
 pub fn generate_execution_receipt(prev_cod: &str) -> Receipt {
     // Compute identity_root from identity records
     // Using the identity from ctx.identity_ref as the primary executor
-    let identities = vec![
-        IdentityRecord {
-            did: "did:key:zNorthroot".to_string(),
-            kid: "did:key:zNorthroot#key-1".to_string(),
-            role: Some("executor".to_string()),
-            tenant: None,
-        },
-    ];
+    let identities = vec![IdentityRecord {
+        did: "did:key:zNorthroot".to_string(),
+        kid: "did:key:zNorthroot#key-1".to_string(),
+        role: Some("executor".to_string()),
+        tenant: None,
+    }];
     let identity_root = identity_root_from_identities(identities.into_iter());
 
     let receipt = Receipt {
@@ -301,11 +299,20 @@ pub fn generate_settlement_receipt(prev_cod: &str) -> Receipt {
             ],
             net_positions,
             rules_ref: "clear:net-v1".to_string(),
-            cash_instr: Some(serde_json::json!({
-                "method": "ach",
-                "routing": "021000021",
-                "account": "****1234"
-            })),
+            cash_instr: {
+                // Convert JSON to CBOR Value for test
+                let json_val = serde_json::json!({
+                    "method": "ach",
+                    "routing": "021000021",
+                    "account": "****1234"
+                });
+                let mut cbor_bytes = Vec::new();
+                if ciborium::ser::into_writer(&json_val, &mut cbor_bytes).is_ok() {
+                    ciborium::de::from_reader(cbor_bytes.as_slice()).ok()
+                } else {
+                    None
+                }
+            },
         }),
         attest: None,
         sig: None,
@@ -334,4 +341,3 @@ pub fn generate_sequential_chain() -> Vec<Receipt> {
         settlement,
     ]
 }
-

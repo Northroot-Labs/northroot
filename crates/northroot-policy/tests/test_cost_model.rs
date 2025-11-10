@@ -65,7 +65,7 @@ fn test_cost_model_validation_alpha_out_of_range() {
     // So we test that validation happens during extraction
     let policy = load_policy("pol:finops/cost-attribution@1").unwrap();
     let cost_model = extract_cost_model(&policy, None).unwrap();
-    
+
     // Should be valid
     assert!(cost_model.validate().is_ok());
 }
@@ -87,4 +87,3 @@ fn test_cost_value_linear_evaluation() {
     assert_eq!(cost.evaluate(Some(100)), 3.0); // 2.0 + 0.01 * 100
     assert_eq!(cost.evaluate(Some(1000)), 12.0); // 2.0 + 0.01 * 1000
 }
-

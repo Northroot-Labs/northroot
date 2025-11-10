@@ -19,8 +19,8 @@ fn load_cbor_vectors() -> Result<Value, Box<dyn std::error::Error>> {
 
 #[test]
 fn test_cbor_golden_vectors_integrity() {
-    let vectors = load_cbor_vectors()
-        .unwrap_or_else(|e| panic!("Failed to load CBOR golden vectors: {}", e));
+    let vectors =
+        load_cbor_vectors().unwrap_or_else(|e| panic!("Failed to load CBOR golden vectors: {}", e));
 
     let vectors_array = vectors
         .get("vectors")
@@ -120,8 +120,8 @@ fn test_cbor_round_trip_integrity() {
 
     for json_value in test_cases {
         // Encode to CBOR
-        let cbor_bytes = cbor_deterministic(&json_value)
-            .unwrap_or_else(|e| panic!("Failed to encode: {}", e));
+        let cbor_bytes =
+            cbor_deterministic(&json_value).unwrap_or_else(|e| panic!("Failed to encode: {}", e));
 
         // Decode from CBOR
         let decoded: CborValue = ciborium::de::from_reader(cbor_bytes.as_slice())
@@ -140,4 +140,3 @@ fn test_cbor_round_trip_integrity() {
         );
     }
 }
-

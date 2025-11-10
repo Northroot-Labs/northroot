@@ -8,10 +8,15 @@
 //!
 //! - **`sha256_prefixed()`**: SHA-256 hash with `sha256:` prefix format
 //! - **`jcs()`**: JSON Canonicalization (RFC 8785) with sorted keys
-//! - **`cbor_deterministic()`**: CBOR deterministic encoding (RFC 8949)
-//! - **`cbor_hash()`**: SHA-256 hash of deterministic CBOR
+//! - **`cbor_deterministic()`**: CBOR deterministic encoding (RFC 8949) - *re-exported from `northroot-receipts`*
+//! - **`cbor_hash()`**: SHA-256 hash of deterministic CBOR - *re-exported from `northroot-receipts`*
+//! - **`validate_cbor_deterministic()`**: Validate CBOR deterministic encoding - *re-exported from `northroot-receipts`*
 //! - **`commit_set_root()`**: Merkle root for unordered sets (order-independent)
 //! - **`commit_seq_root()`**: Merkle root for ordered sequences (order-dependent)
+//!
+//! **Note:** CBOR canonicalization functions are re-exported from `northroot-receipts` per ADR-002,
+//! which states that canonicalization belongs in the receipts crate. This maintains backward
+//! compatibility while respecting architectural boundaries.
 //!
 //! ## Domain Separation
 //!
@@ -43,10 +48,14 @@
 //! assert_ne!(seq1, seq2);
 //! ```
 
-use serde::Serialize;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+
+// Re-export CBOR canonicalization functions from receipts (per ADR-002)
+pub use northroot_receipts::canonical::{
+    cbor_deterministic, cbor_hash, validate_cbor_deterministic,
+};
 
 pub fn sha256_prefixed(bytes: &[u8]) -> String {
     let mut h = Sha256::new();
@@ -81,91 +90,4 @@ pub fn commit_set_root(parts: &[String]) -> String {
 
 pub fn commit_seq_root(parts: &[String]) -> String {
     sha256_prefixed(parts.join("|").as_bytes())
-}
-
-/// Encode a value to deterministic CBOR per RFC 8949.
-///
-/// RFC 8949 deterministic encoding rules:
-/// - Preferred argument sizes (no indefinite-length items)
-/// - Lexicographically sorted map keys
-/// - Deterministic encoding rules
-///
-/// # Arguments
-///
-/// * `value` - Value to encode (must implement Serialize)
-///
-/// # Returns
-///
-/// CBOR bytes in deterministic encoding
-///
-/// # Errors
-///
-/// Returns error if serialization fails
-pub fn cbor_deterministic<T: Serialize>(value: &T) -> Result<Vec<u8>, String> {
-    // ciborium uses deterministic encoding by default when using ser::into_writer
-    // with a Vec<u8> writer. The library ensures:
-    // - Map keys are sorted lexicographically
-    // - No indefinite-length items
-    // - Preferred argument sizes
-    let mut buffer = Vec::new();
-    ciborium::ser::into_writer(value, &mut buffer)
-        .map_err(|e| format!("CBOR serialization failed: {}", e))?;
-    Ok(buffer)
-}
-
-/// Compute SHA-256 hash of deterministic CBOR with `sha256:` prefix.
-///
-/// This computes the hash of the deterministic CBOR representation
-/// and returns it in the format `sha256:<64hex>`.
-///
-/// # Arguments
-///
-/// * `value` - Value to encode and hash (must implement Serialize)
-///
-/// # Returns
-///
-/// Hash string in format `sha256:<64hex>`
-///
-/// # Errors
-///
-/// Returns error if CBOR encoding fails
-pub fn cbor_hash<T: Serialize>(value: &T) -> Result<String, String> {
-    let cbor_bytes = cbor_deterministic(value)?;
-    Ok(sha256_prefixed(&cbor_bytes))
-}
-
-/// Validate that CBOR bytes follow RFC 8949 deterministic encoding rules.
-///
-/// This function checks:
-/// - No indefinite-length items
-/// - Map keys are sorted (if applicable)
-/// - Preferred argument sizes
-///
-/// Note: Full validation requires parsing and re-encoding the CBOR.
-/// This function validates by ensuring re-encoding produces identical bytes.
-///
-/// # Arguments
-///
-/// * `cbor_bytes` - CBOR bytes to validate
-///
-/// # Returns
-///
-/// `Ok(())` if CBOR appears to be deterministic, error otherwise
-pub fn validate_cbor_deterministic(cbor_bytes: &[u8]) -> Result<(), String> {
-    use ciborium::value::Value as CborValue;
-    
-    // Parse CBOR - ciborium will reject indefinite-length items
-    let parsed: CborValue = ciborium::de::from_reader(cbor_bytes)
-        .map_err(|e| format!("Invalid CBOR or non-deterministic encoding: {}", e))?;
-    
-    // Re-encode and compare - deterministic encoding should produce identical bytes
-    let mut re_encoded = Vec::new();
-    ciborium::ser::into_writer(&parsed, &mut re_encoded)
-        .map_err(|e| format!("Failed to re-encode CBOR: {}", e))?;
-    
-    if re_encoded != cbor_bytes {
-        return Err("Non-deterministic CBOR: re-encoding produces different bytes".to_string());
-    }
-    
-    Ok(())
 }

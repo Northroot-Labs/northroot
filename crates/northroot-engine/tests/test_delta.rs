@@ -18,8 +18,12 @@ fn create_test_cost_model(c_id: f64, c_comp: f64, alpha: f64) -> CostModel {
 
 #[test]
 fn test_jaccard_similarity_integration() {
-    let set1: HashSet<String> = ["a".to_string(), "b".to_string(), "c".to_string()].into_iter().collect();
-    let set2: HashSet<String> = ["b".to_string(), "c".to_string(), "d".to_string()].into_iter().collect();
+    let set1: HashSet<String> = ["a".to_string(), "b".to_string(), "c".to_string()]
+        .into_iter()
+        .collect();
+    let set2: HashSet<String> = ["b".to_string(), "c".to_string(), "d".to_string()]
+        .into_iter()
+        .collect();
 
     let j = jaccard_similarity(&set1, &set2);
     // Intersection: {b, c} = 2, Union: {a, b, c, d} = 4
@@ -145,4 +149,3 @@ fn test_cost_model_threshold_edge_cases() {
     let model3 = create_test_cost_model(10.0, 100.0, 0.0);
     assert_eq!(model3.reuse_threshold(None), f64::INFINITY);
 }
-

@@ -10,12 +10,15 @@ use serde_json::json;
 fn generate_cbor_hashes() {
     let test_cases = vec![
         ("simple_map", json!({"z": 3, "a": 1, "m": 2})),
+        ("nested_map", json!({"outer": {"inner": {"value": 42}}})),
         (
-            "nested_map",
-            json!({"outer": {"inner": {"value": 42}}}),
+            "array_with_mixed_types",
+            json!([1, "string", true, null, 3.14]),
         ),
-        ("array_with_mixed_types", json!([1, "string", true, null, 3.14])),
-        ("empty_structures", json!({"empty_map": {}, "empty_array": []})),
+        (
+            "empty_structures",
+            json!({"empty_map": {}, "empty_array": []}),
+        ),
         (
             "receipt_like_structure",
             json!({
@@ -35,7 +38,9 @@ fn generate_cbor_hashes() {
 
     println!("Generated CBOR hashes:");
     println!("{{");
-    println!("  \"description\": \"Golden test vectors for CBOR deterministic encoding (RFC 8949)\",");
+    println!(
+        "  \"description\": \"Golden test vectors for CBOR deterministic encoding (RFC 8949)\","
+    );
     println!("  \"vectors\": [");
 
     for (i, (name, value)) in test_cases.iter().enumerate() {
@@ -55,4 +60,3 @@ fn generate_cbor_hashes() {
     println!("  ]");
     println!("}}");
 }
-

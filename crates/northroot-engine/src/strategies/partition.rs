@@ -68,8 +68,9 @@ impl Strategy for PartitionStrategy {
 
         for (idx, row) in rows.iter().enumerate() {
             // Canonicalize row to bytes
-            let row_bytes = serde_json::to_string(row)
-                .map_err(|e| StrategyError::ExecutionFailed(format!("Serialization failed: {}", e)))?;
+            let row_bytes = serde_json::to_string(row).map_err(|e| {
+                StrategyError::ExecutionFailed(format!("Serialization failed: {}", e))
+            })?;
 
             // Generate stable chunk ID
             let chunk_id = chunk_id_from_bytes(row_bytes.as_bytes());
@@ -133,9 +134,7 @@ mod tests {
             {"id": 3, "value": "c"},
         ]);
 
-        let (output, state) = strategy
-            .execute(&input, ExecutionMode::Full, None)
-            .unwrap();
+        let (output, state) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
 
         assert_eq!(output["chunk_count"], 3);
         assert!(state.len() == 3);
@@ -149,13 +148,9 @@ mod tests {
             {"id": 2, "value": "b"},
         ]);
 
-        let (_, state1) = strategy
-            .execute(&input, ExecutionMode::Full, None)
-            .unwrap();
+        let (_, state1) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
 
-        let (_, state2) = strategy
-            .execute(&input, ExecutionMode::Full, None)
-            .unwrap();
+        let (_, state2) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
 
         // Same input should produce same state hash
         assert_eq!(state1.state_hash(), state2.state_hash());
@@ -200,4 +195,3 @@ mod tests {
         assert_eq!(metric.chunk_count_intersection, 1);
     }
 }
-

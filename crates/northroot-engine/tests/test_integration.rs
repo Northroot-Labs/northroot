@@ -8,7 +8,9 @@
 //! - Error propagation
 
 use northroot_engine::*;
-use northroot_receipts::{Context, DataShapePayload, ExecutionPayload, MethodRef, Payload, Receipt, ReceiptKind};
+use northroot_receipts::{
+    Context, DataShapePayload, ExecutionPayload, MethodRef, Payload, Receipt, ReceiptKind,
+};
 use serde_json::json;
 use uuid::Uuid;
 
@@ -50,8 +52,10 @@ fn create_test_receipt(
 #[test]
 fn test_full_composition_workflow() {
     // Create a simple sequential chain: DataShape -> Execution
-    let shape_hash = "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
-    let execution_hash = "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string();
+    let shape_hash =
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
+    let execution_hash =
+        "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string();
 
     let data_shape = create_test_receipt(
         Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
@@ -79,10 +83,17 @@ fn test_full_composition_workflow() {
             trace_id: "trace:test".to_string(),
             method_ref: method_ref.clone(),
             data_shape_hash: shape_hash.clone(),
-            span_commitments: vec!["sha256:4444444444444444444444444444444444444444444444444444444444444444".to_string()],
+            span_commitments: vec![
+                "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+                    .to_string(),
+            ],
             roots: compute_execution_roots(
-                &["sha256:4444444444444444444444444444444444444444444444444444444444444444".to_string()],
-                "sha256:5555555555555555555555555555555555555555555555555555555555555555".to_string(),
+                &[
+                    "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+                        .to_string(),
+                ],
+                "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+                    .to_string(),
             ),
             cdf_metadata: None,
             pac: None,
@@ -115,7 +126,7 @@ fn test_full_composition_workflow() {
 fn test_strategy_pipeline() {
     // Test partition -> incremental_sum pipeline
     let registry = default_registry();
-    
+
     let partition_strategy = registry.get("partition").unwrap();
     let sum_strategy = registry.get("incremental_sum").unwrap();
 
@@ -203,7 +214,8 @@ fn test_error_propagation() {
         "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
         "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
         Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             sketch_hash: None,
         }),
     );
@@ -214,7 +226,8 @@ fn test_error_propagation() {
         "sha256:9999999999999999999999999999999999999999999999999999999999999999".to_string(), // Mismatch!
         "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string(),
         Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:9999999999999999999999999999999999999999999999999999999999999999".to_string(),
+            schema_hash: "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+                .to_string(),
             sketch_hash: None,
         }),
     );
@@ -237,7 +250,8 @@ fn test_error_propagation() {
         "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
         "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
         Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             sketch_hash: None,
         }),
     );
@@ -254,7 +268,7 @@ fn test_error_propagation() {
 
     // Test 3: Strategy error propagation
     let strategy = IncrementalSumStrategy::new();
-    
+
     // Invalid input (not an array)
     let invalid_input = json!({"not": "an array"});
     let result = strategy.execute(&invalid_input, ExecutionMode::Full, None);
@@ -281,9 +295,12 @@ fn test_error_propagation() {
 #[test]
 fn test_parallel_composition() {
     // Test tensor (parallel) composition
-    let hash1 = "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
-    let hash2 = "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string();
-    let hash3 = "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string();
+    let hash1 =
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
+    let hash2 =
+        "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string();
+    let hash3 =
+        "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string();
 
     // Order-independent: same hashes in different order produce same root
     let root1 = compute_tensor_root(&[hash1.clone(), hash2.clone(), hash3.clone()]);
@@ -299,7 +316,7 @@ fn test_parallel_composition() {
 fn test_strategy_registry_integration() {
     // Test that strategy registry works with actual strategies
     let mut registry = StrategyRegistry::new();
-    
+
     assert!(registry.is_empty());
     assert_eq!(registry.len(), 0);
 
@@ -322,4 +339,3 @@ fn test_strategy_registry_integration() {
     let (output, _state) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
     assert_eq!(output["sum"], 42.0);
 }
-

@@ -4,10 +4,10 @@
 //! using Merkle Row-Map for deterministic state.
 
 use crate::delta::{economic_delta, jaccard_similarity, OverlapMetric};
-use northroot_policy::CostModel;
 use crate::execution::MerkleRowMap;
 use crate::strategies::trait_::{ExecutionMode, Strategy, StrategyError};
 use crate::ReuseIndexed;
+use northroot_policy::CostModel;
 use serde_json::Value;
 use std::collections::HashSet;
 use std::sync::RwLock;
@@ -142,7 +142,7 @@ impl Strategy for IncrementalSumStrategy {
 
         // Initialize or load previous state
         let mut state = prev_state.cloned().unwrap_or_else(MerkleRowMap::new);
-        
+
         // Compute overlap metric during execution
         let previous_chunks: HashSet<String> = prev_state
             .map(|ps| Self::chunk_ids_from_state(ps))
@@ -158,8 +158,9 @@ impl Strategy for IncrementalSumStrategy {
                 id.to_string()
             } else {
                 // Fallback: hash of entire row
-                let row_str = serde_json::to_string(row)
-                    .map_err(|e| StrategyError::ExecutionFailed(format!("Serialization failed: {}", e)))?;
+                let row_str = serde_json::to_string(row).map_err(|e| {
+                    StrategyError::ExecutionFailed(format!("Serialization failed: {}", e))
+                })?;
                 crate::delta::chunk_id_from_str(&row_str)
             };
 
@@ -178,8 +179,7 @@ impl Strategy for IncrementalSumStrategy {
             let is_new_or_changed = match mode {
                 ExecutionMode::Delta => {
                     // In delta mode, check if row is new or changed
-                    let prev_value = state.get(&row_id)
-                        .and_then(|v| v.as_f64());
+                    let prev_value = state.get(&row_id).and_then(|v| v.as_f64());
                     prev_value.is_none() || prev_value != Some(value)
                 }
                 ExecutionMode::Full => {
@@ -192,7 +192,7 @@ impl Strategy for IncrementalSumStrategy {
                 // Update state: row_id -> value
                 let prev_value = state.insert(
                     row_id.clone(),
-                    Value::Number(serde_json::Number::from_f64(value).unwrap())
+                    Value::Number(serde_json::Number::from_f64(value).unwrap()),
                 );
 
                 // Track incremental sum (delta mode) or total sum (full mode)
@@ -288,9 +288,7 @@ mod tests {
             {"id": "3", "value": 30.0},
         ]);
 
-        let (output, state) = strategy
-            .execute(&input, ExecutionMode::Full, None)
-            .unwrap();
+        let (output, state) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
 
         assert_eq!(output["sum"], 60.0);
         assert_eq!(state.len(), 3);
@@ -405,7 +403,9 @@ mod tests {
             .unwrap();
 
         // Check cost allocation
-        let cost_alloc = strategy.cost_allocation().expect("Cost allocation should be computed");
+        let cost_alloc = strategy
+            .cost_allocation()
+            .expect("Cost allocation should be computed");
 
         // Verify ΔC computation
         // State accumulates all rows, so:
@@ -422,7 +422,9 @@ mod tests {
             expected_delta_c,
             cost_alloc.delta_c
         );
-        assert!(cost_alloc.delta_c > 0.0, "ΔC should be positive for reuse case");
+        assert!(
+            cost_alloc.delta_c > 0.0,
+            "ΔC should be positive for reuse case"
+        );
     }
 }
-

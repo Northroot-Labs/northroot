@@ -10,4 +10,3 @@ pub mod traits;
 pub use error::StorageError;
 pub use sqlite::SqliteStore;
 pub use traits::{ManifestMeta, ReceiptQuery, ReceiptStore};
-

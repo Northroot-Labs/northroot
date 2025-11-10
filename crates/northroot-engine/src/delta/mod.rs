@@ -130,4 +130,3 @@ pub fn load_cost_model_from_policy(
     let policy = load_policy(policy_ref)?;
     extract_cost_model(&policy, row_count)
 }
-

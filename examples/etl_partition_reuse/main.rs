@@ -16,7 +16,7 @@ use northroot_engine::delta::{
 };
 use northroot_receipts::{
     CdfMetadata, Context, DeterminismClass, ExecutionPayload, ExecutionRoots, MethodRef, Receipt,
-    ReceiptKind, SpendPayload, SpendPointers, ResourceVector, ReuseJustification,
+    ReceiptKind, ResourceVector, ReuseJustification, SpendPayload, SpendPointers,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
@@ -52,11 +52,11 @@ fn simulate_partition_scan(
 ) -> (Receipt, Receipt) {
     // All partitions in the table (100 total)
     let all_partition_versions: Vec<i64> = (1..=100).collect();
-    
+
     // Current partition set: ALL partitions (both reused and changed)
     // In delta mode, we reuse unchanged partitions, so current set = all partitions
     let current_partitions = partitions_to_chunk_ids(&all_partition_versions);
-    
+
     // Changed partitions (for CDF metadata)
     let changed_partitions = partitions_to_chunk_ids(&changed_commit_versions);
 
@@ -74,14 +74,14 @@ fn simulate_partition_scan(
         // - Union: 100
         // - J = 100/100 = 1.0
         // But this doesn't account for the fact that 15 partitions have NEW data
-        
+
         // Better approach: Jaccard on "unchanged partitions"
         // Previous: 100 partitions
         // Current unchanged: 85 partitions (100 - 15 changed)
         // Intersection: 85
         // Union: 100
         // J = 85/100 = 0.85
-        
+
         let unchanged_partitions: HashSet<String> = current_partitions
             .difference(&changed_partitions)
             .cloned()
@@ -106,8 +106,11 @@ fn simulate_partition_scan(
 
     // Create execution receipt
     let exec_receipt = Receipt {
-        rid: Uuid::parse_str(&format!("00000000-0000-0000-0000-0000000000{:02}", 10 + run_number))
-            .unwrap(),
+        rid: Uuid::parse_str(&format!(
+            "00000000-0000-0000-0000-0000000000{:02}",
+            10 + run_number
+        ))
+        .unwrap(),
         version: "0.3.0".to_string(),
         kind: ReceiptKind::Execution,
         dom: "sha256:0000000000000000000000000000000000000000000000000000000000000000".to_string(),
@@ -125,13 +128,24 @@ fn simulate_partition_scan(
             method_ref: MethodRef {
                 method_id: "com.acme/cdf_scan".to_string(),
                 version: "1.0.0".to_string(),
-                method_shape_root: "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
+                method_shape_root:
+                    "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                        .to_string(),
             },
-            data_shape_hash: "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string(),
-            span_commitments: vec!["sha256:4444444444444444444444444444444444444444444444444444444444444444".to_string()],
+            data_shape_hash:
+                "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+                    .to_string(),
+            span_commitments: vec![
+                "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+                    .to_string(),
+            ],
             roots: ExecutionRoots {
-                trace_set_root: "sha256:5555555555555555555555555555555555555555555555555555555555555555".to_string(),
-                identity_root: "sha256:6666666666666666666666666666666666666666666666666666666666666666".to_string(),
+                trace_set_root:
+                    "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+                        .to_string(),
+                identity_root:
+                    "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+                        .to_string(),
                 trace_seq_root: None,
             },
             cdf_metadata: Some(cdf_metadata),
@@ -167,8 +181,11 @@ fn simulate_partition_scan(
 
     // Create spend receipt with PROOF
     let spend_receipt = Receipt {
-        rid: Uuid::parse_str(&format!("00000000-0000-0000-0000-0000000000{:02}", 20 + run_number))
-            .unwrap(),
+        rid: Uuid::parse_str(&format!(
+            "00000000-0000-0000-0000-0000000000{:02}",
+            20 + run_number
+        ))
+        .unwrap(),
         version: "0.3.0".to_string(),
         kind: ReceiptKind::Spend,
         dom: exec_receipt.cod.clone(),
@@ -231,7 +248,9 @@ fn simulate_partition_scan(
     let reused_count = if prev_partitions.is_empty() {
         0
     } else {
-        prev_partitions.len().saturating_sub(changed_partitions.len())
+        prev_partitions
+            .len()
+            .saturating_sub(changed_partitions.len())
     };
     let recomputed_count = changed_partitions.len();
     let reuse_rate = if prev_partitions.is_empty() {
@@ -239,21 +258,26 @@ fn simulate_partition_scan(
     } else {
         100.0 * (reused_count as f64 / prev_partitions.len() as f64)
     };
-    
+
     println!("PROOF OF PARTITION REUSE:");
     println!("  Previous partitions: {} items", prev_partitions.len());
-    println!("  Current partitions (all): {} items", current_partitions.len());
+    println!(
+        "  Current partitions (all): {} items",
+        current_partitions.len()
+    );
     println!("  Changed partitions: {} items", changed_partitions.len());
     println!("  Reused partitions: {} items", reused_count);
-    println!("  Intersection (unchanged): {} items", 
-             current_partitions.difference(&changed_partitions).count());
+    println!(
+        "  Intersection (unchanged): {} items",
+        current_partitions.difference(&changed_partitions).count()
+    );
     println!("  Jaccard similarity (J): {:.4}", overlap_j);
     println!("  Economic delta (ΔC): ${:.4}", delta_c);
     println!("  Reuse decision: {:?}", decision);
-    println!("  Reuse rate: {:.1}% ({} partitions reused, {} recomputed)", 
-             reuse_rate,
-             reused_count,
-             recomputed_count);
+    println!(
+        "  Reuse rate: {:.1}% ({} partitions reused, {} recomputed)",
+        reuse_rate, reused_count, recomputed_count
+    );
     println!();
 
     (exec_receipt, spend_receipt)
@@ -268,15 +292,20 @@ fn main() {
     println!("----------------------------------------");
     let all_partition_versions: Vec<i64> = (1..=100).collect();
     let (exec_receipt1, spend_receipt1) = simulate_partition_scan(all_partition_versions, None, 1);
-    
+
     println!("Execution Receipt 1:");
     println!("  RID: {}", exec_receipt1.rid);
     println!("  Links: {:?} (no previous receipt)", exec_receipt1.links);
     if let northroot_receipts::Payload::Execution(exec) = &exec_receipt1.payload {
         if let Some(cdf) = &exec.cdf_metadata {
             println!("  Partitions processed: {}", cdf.len());
-            println!("  CDF commit versions: {:?}", 
-                     cdf.iter().take(5).map(|c| c.commit_version).collect::<Vec<_>>());
+            println!(
+                "  CDF commit versions: {:?}",
+                cdf.iter()
+                    .take(5)
+                    .map(|c| c.commit_version)
+                    .collect::<Vec<_>>()
+            );
             if cdf.len() > 5 {
                 println!("  ... ({} more)", cdf.len() - 5);
             }
@@ -285,7 +314,10 @@ fn main() {
     println!();
     println!("Spend Receipt 1:");
     println!("  RID: {}", spend_receipt1.rid);
-    println!("  Links: {:?} (links to execution receipt)", spend_receipt1.links);
+    println!(
+        "  Links: {:?} (links to execution receipt)",
+        spend_receipt1.links
+    );
     if let northroot_receipts::Payload::Spend(spend) = &spend_receipt1.payload {
         println!("  Total Value: ${:.2}", spend.total_value);
     }
@@ -295,26 +327,31 @@ fn main() {
     println!("RUN 2: Delta ETL Run (Only Changed Partitions) - PROVING REUSE");
     println!("----------------------------------------------------------------");
     let changed_partition_versions: Vec<i64> = (1..=15).collect();
-    let (exec_receipt2, spend_receipt2) = simulate_partition_scan(
-        changed_partition_versions,
-        Some(&exec_receipt1),
-        2,
-    );
+    let (exec_receipt2, spend_receipt2) =
+        simulate_partition_scan(changed_partition_versions, Some(&exec_receipt1), 2);
 
     println!("Execution Receipt 2:");
     println!("  RID: {}", exec_receipt2.rid);
-    println!("  Links: {:?} (links to Run 1 execution)", exec_receipt2.links);
+    println!(
+        "  Links: {:?} (links to Run 1 execution)",
+        exec_receipt2.links
+    );
     if let northroot_receipts::Payload::Execution(exec) = &exec_receipt2.payload {
         if let Some(cdf) = &exec.cdf_metadata {
             println!("  Changed partitions: {}", cdf.len());
-            println!("  CDF commit versions: {:?}", 
-                     cdf.iter().map(|c| c.commit_version).collect::<Vec<_>>());
+            println!(
+                "  CDF commit versions: {:?}",
+                cdf.iter().map(|c| c.commit_version).collect::<Vec<_>>()
+            );
         }
     }
     println!();
     println!("Spend Receipt 2:");
     println!("  RID: {}", spend_receipt2.rid);
-    println!("  Links: {:?} (links to execution receipt)", spend_receipt2.links);
+    println!(
+        "  Links: {:?} (links to execution receipt)",
+        spend_receipt2.links
+    );
     if let northroot_receipts::Payload::Spend(spend) = &spend_receipt2.payload {
         if let Some(just) = &spend.justification {
             if let Some(j) = just.overlap_j {

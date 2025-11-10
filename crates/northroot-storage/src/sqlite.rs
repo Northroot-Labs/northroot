@@ -2,13 +2,13 @@
 
 use crate::error::StorageError;
 use crate::traits::{ManifestMeta, ReceiptQuery, ReceiptStore};
-use northroot_engine::commitments::cbor_deterministic;
 use northroot_receipts::Receipt;
 use rusqlite::{params, Connection, Row};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 use zstd::encode_all;
+use ciborium;
 
 /// SQLite-based storage backend.
 ///
@@ -53,7 +53,8 @@ impl SqliteStore {
         let conn = self.conn.lock().unwrap();
 
         // Enable WAL mode for better concurrency
-        conn.execute("PRAGMA journal_mode=WAL;", [])?;
+        // PRAGMA statements that return values need to be queried, not executed
+        let _: String = conn.query_row("PRAGMA journal_mode=WAL;", [], |row| row.get(0))?;
         conn.execute("PRAGMA synchronous=NORMAL;", [])?;
 
         // Create receipts table
@@ -198,8 +199,12 @@ impl SqliteStore {
     /// Convert receipt from database row.
     fn receipt_from_row(row: &Row) -> Result<Receipt, StorageError> {
         let cbor_bytes: Vec<u8> = row.get("canonical_cbor")?;
-        let receipt: Receipt = ciborium::de::from_reader(cbor_bytes.as_slice())
-            .map_err(|e| StorageError::SerializationError(format!("CBOR deserialization failed: {}", e)))?;
+        
+        // Deserialize from CBOR bytes (deterministic encoding per RFC 8949)
+        let receipt: Receipt = ciborium::de::from_reader(cbor_bytes.as_slice()).map_err(|e| {
+            StorageError::SerializationError(format!("CBOR deserialization failed: {}", e))
+        })?;
+        
         Ok(receipt)
     }
 }
@@ -208,9 +213,11 @@ impl ReceiptStore for SqliteStore {
     fn store_receipt(&self, r: &Receipt) -> Result<(), StorageError> {
         let conn = self.conn.lock().unwrap();
 
-        // Serialize receipt to CBOR
-        let cbor_bytes = cbor_deterministic(r)
-            .map_err(|e| StorageError::SerializationError(format!("CBOR serialization failed: {}", e)))?;
+        // Serialize receipt to CBOR using deterministic encoding (RFC 8949)
+        // This provides better performance and storage efficiency than JSON
+        let cbor_bytes = northroot_receipts::cbor_deterministic(r).map_err(|e| {
+            StorageError::SerializationError(format!("CBOR serialization failed: {}", e))
+        })?;
 
         // Extract fields
         let pac = Self::extract_pac(r);
@@ -229,32 +236,32 @@ impl ReceiptStore for SqliteStore {
         let chunk_manifest_hash_vec = chunk_manifest_hash.map(|h| h.to_vec());
         let merkle_root_vec = merkle_root.map(|r| r.to_vec());
 
-        let mut stmt = conn.prepare(
+        conn.execute(
             "INSERT OR REPLACE INTO receipts (
                 rid, kind, version, hash, pac, change_epoch_id, policy_ref,
                 timestamp, canonical_cbor, minhash_signature, hll_cardinality,
                 chunk_manifest_hash, chunk_manifest_size_bytes, merkle_root,
                 prev_execution_rid, created_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)"
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
+            params![
+                r.rid.to_string(),
+                format!("{:?}", r.kind),
+                r.version,
+                r.hash,
+                pac.as_slice(),
+                change_epoch,
+                policy_ref,
+                r.ctx.timestamp,
+                cbor_bytes,
+                minhash_signature,
+                hll_cardinality,
+                chunk_manifest_hash_vec,
+                chunk_manifest_size_bytes,
+                merkle_root_vec,
+                prev_execution_rid.map(|r| r.to_string()),
+                created_at,
+            ],
         )?;
-        stmt.execute(params![
-            r.rid.to_string(),
-            format!("{:?}", r.kind),
-            r.version,
-            r.hash,
-            pac.as_slice(),
-            change_epoch,
-            policy_ref,
-            r.ctx.timestamp,
-            cbor_bytes,
-            minhash_signature,
-            hll_cardinality,
-            chunk_manifest_hash_vec,
-            chunk_manifest_size_bytes,
-            merkle_root_vec,
-            prev_execution_rid.map(|r| r.to_string()),
-            created_at,
-        ])?;
 
         Ok(())
     }
@@ -263,7 +270,21 @@ impl ReceiptStore for SqliteStore {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare("SELECT canonical_cbor FROM receipts WHERE rid = ?1")?;
         let mut rows = stmt.query_map(params![rid.to_string()], |row| {
-            Self::receipt_from_row(row).map_err(|e| rusqlite::Error::InvalidColumnType(0, "receipt".to_string(), rusqlite::types::Type::Blob))
+            Self::receipt_from_row(row).map_err(|e| match e {
+                StorageError::DatabaseError(db_err) => db_err,
+                StorageError::SerializationError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::CompressionError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::InvalidInput(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::NotFound(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+            })
         })?;
 
         match rows.next() {
@@ -275,18 +296,33 @@ impl ReceiptStore for SqliteStore {
 
     fn query_receipts(&self, q: ReceiptQuery) -> Result<Vec<Receipt>, StorageError> {
         let conn = self.conn.lock().unwrap();
-        
+
         // For Phase 2, use a simple approach: fetch all and filter in memory
         // This will be optimized in later phases when we have proper indexes
-        let mut stmt = conn.prepare("SELECT canonical_cbor FROM receipts ORDER BY created_at DESC")?;
+        let mut stmt =
+            conn.prepare("SELECT canonical_cbor FROM receipts ORDER BY created_at DESC")?;
         let rows = stmt.query_map([], |row| {
-            Self::receipt_from_row(row).map_err(|e| rusqlite::Error::InvalidColumnType(0, "receipt".to_string(), rusqlite::types::Type::Blob))
+            Self::receipt_from_row(row).map_err(|e| match e {
+                StorageError::DatabaseError(db_err) => db_err,
+                StorageError::SerializationError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::CompressionError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::InvalidInput(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::NotFound(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+            })
         })?;
 
         let mut receipts = Vec::new();
         for row_result in rows {
             let receipt = row_result?;
-            
+
             // Apply filters
             if let Some(ref pac) = q.pac {
                 let receipt_pac = Self::extract_pac(&receipt);
@@ -327,9 +363,9 @@ impl ReceiptStore for SqliteStore {
                     continue;
                 }
             }
-            
+
             receipts.push(receipt);
-            
+
             // Apply limit
             if let Some(limit) = q.limit {
                 if receipts.len() >= limit {
@@ -341,13 +377,20 @@ impl ReceiptStore for SqliteStore {
         Ok(receipts)
     }
 
-    fn put_manifest(&self, hash: &[u8; 32], data: &[u8], meta: &ManifestMeta) -> Result<(), StorageError> {
+    fn put_manifest(
+        &self,
+        hash: &[u8; 32],
+        data: &[u8],
+        meta: &ManifestMeta,
+    ) -> Result<(), StorageError> {
         let conn = self.conn.lock().unwrap();
 
         // Compress manifest if encoding is zstd
         let (compressed_data, encoding) = if meta.encoding == "zstd" {
             let compressed = encode_all(data, 3) // Level 3 compression
-                .map_err(|e| StorageError::CompressionError(format!("zstd compression failed: {}", e)))?;
+                .map_err(|e| {
+                    StorageError::CompressionError(format!("zstd compression failed: {}", e))
+                })?;
             (compressed, "zstd".to_string())
         } else {
             (data.to_vec(), meta.encoding.clone())
@@ -358,31 +401,30 @@ impl ReceiptStore for SqliteStore {
             .map(|d| d.as_secs() as i64)
             .map_err(|_| StorageError::InvalidInput("Failed to get current time".to_string()))?;
 
-        let mut stmt = conn.prepare(
+        conn.execute(
             "INSERT OR REPLACE INTO manifests (
                 manifest_hash, pac, change_epoch_id, encoding, bytes,
                 size_uncompressed, created_at, expires_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            params![
+                hash.as_slice(),
+                meta.pac.as_slice(),
+                meta.change_epoch_id,
+                encoding,
+                compressed_data,
+                meta.size_uncompressed as i64,
+                created_at,
+                meta.expires_at,
+            ],
         )?;
-        stmt.execute(params![
-            hash.as_slice(),
-            meta.pac.as_slice(),
-            meta.change_epoch_id,
-            encoding,
-            compressed_data,
-            meta.size_uncompressed as i64,
-            created_at,
-            meta.expires_at,
-        ])?;
 
         Ok(())
     }
 
     fn get_manifest(&self, hash: &[u8; 32]) -> Result<Option<Vec<u8>>, StorageError> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
-            "SELECT encoding, bytes FROM manifests WHERE manifest_hash = ?1"
-        )?;
+        let mut stmt =
+            conn.prepare("SELECT encoding, bytes FROM manifests WHERE manifest_hash = ?1")?;
         let mut rows = stmt.query_map(params![hash.as_slice()], |row| {
             let encoding: String = row.get("encoding")?;
             let bytes: Vec<u8> = row.get("bytes")?;
@@ -394,7 +436,12 @@ impl ReceiptStore for SqliteStore {
                 if encoding == "zstd" {
                     // Decompress
                     zstd::decode_all(compressed_bytes.as_slice())
-                        .map_err(|e| StorageError::CompressionError(format!("zstd decompression failed: {}", e)))
+                        .map_err(|e| {
+                            StorageError::CompressionError(format!(
+                                "zstd decompression failed: {}",
+                                e
+                            ))
+                        })
                         .map(Some)
                 } else {
                     Ok(Some(compressed_bytes))
@@ -405,16 +452,34 @@ impl ReceiptStore for SqliteStore {
         }
     }
 
-    fn get_previous_execution(&self, pac: &[u8; 32], trace_id: &str) -> Result<Option<Receipt>, StorageError> {
+    fn get_previous_execution(
+        &self,
+        pac: &[u8; 32],
+        trace_id: &str,
+    ) -> Result<Option<Receipt>, StorageError> {
         // Query for most recent execution receipt with matching PAC and trace_id
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT canonical_cbor FROM receipts 
              WHERE pac = ?1 AND kind = 'Execution'
-             ORDER BY created_at DESC LIMIT 1"
+             ORDER BY created_at DESC LIMIT 1",
         )?;
         let mut rows = stmt.query_map(params![pac.as_slice()], |row| {
-            Self::receipt_from_row(row).map_err(|e| rusqlite::Error::InvalidColumnType(0, "receipt".to_string(), rusqlite::types::Type::Blob))
+            Self::receipt_from_row(row).map_err(|e| match e {
+                StorageError::DatabaseError(db_err) => db_err,
+                StorageError::SerializationError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::CompressionError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::InvalidInput(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::NotFound(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+            })
         })?;
 
         match rows.next() {
@@ -430,18 +495,20 @@ impl ReceiptStore for SqliteStore {
                     Ok(None)
                 }
             }
-            Some(Err(e)) => Err(StorageError::SerializationError(format!("Failed to deserialize receipt: {}", e))),
+            Some(Err(e)) => Err(StorageError::SerializationError(format!(
+                "Failed to deserialize receipt: {}",
+                e
+            ))),
             None => Ok(None),
         }
     }
 
     fn gc_manifests(&self, before: i64) -> Result<usize, StorageError> {
         let conn = self.conn.lock().unwrap();
-        let mut stmt = conn.prepare(
-            "DELETE FROM manifests WHERE expires_at IS NOT NULL AND expires_at < ?1"
+        let count = conn.execute(
+            "DELETE FROM manifests WHERE expires_at IS NOT NULL AND expires_at < ?1",
+            params![before],
         )?;
-        let count = stmt.execute(params![before])?;
         Ok(count)
     }
 }
-

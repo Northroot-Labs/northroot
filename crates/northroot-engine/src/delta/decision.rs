@@ -61,7 +61,7 @@ pub fn decide_reuse(
 ) -> (ReuseDecision, ReuseJustification) {
     // Clamp overlap to valid range [0, 1]
     let overlap_j = overlap_j.max(0.0).min(1.0);
-    
+
     let threshold = cost_model.reuse_threshold(row_count);
 
     let decision = if overlap_j > threshold {
@@ -86,7 +86,7 @@ pub fn decide_reuse(
             ReuseDecision::Recompute => "recompute".to_string(),
             ReuseDecision::Hybrid => "hybrid".to_string(),
         }),
-        layer: None, // Caller should set layer based on context
+        layer: None,          // Caller should set layer based on context
         minhash_sketch: None, // Caller should set minhash_sketch for FinOps use cases
     };
 
@@ -108,11 +108,7 @@ pub fn decide_reuse(
 /// # Returns
 ///
 /// Economic delta (positive = savings, negative = cost)
-pub fn economic_delta(
-    overlap_j: f64,
-    cost_model: &CostModel,
-    row_count: Option<usize>,
-) -> f64 {
+pub fn economic_delta(overlap_j: f64, cost_model: &CostModel, row_count: Option<usize>) -> f64 {
     // Clamp overlap to valid range [0, 1]
     let overlap_j = overlap_j.max(0.0).min(1.0);
     let (c_id, c_comp, alpha) = cost_model.evaluate(row_count);
@@ -225,4 +221,3 @@ mod tests {
         assert!((delta - (-5.5)).abs() < 0.0001);
     }
 }
-

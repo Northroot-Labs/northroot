@@ -2,27 +2,45 @@
 
 use northroot_receipts::{Context, ExecutionPayload, MethodRef, Payload, Receipt, ReceiptKind};
 use northroot_storage::{ReceiptQuery, ReceiptStore, SqliteStore};
-use tempfile::TempDir;
 use uuid::Uuid;
 
 fn create_test_receipt(rid: Uuid) -> Receipt {
     let method_ref = MethodRef {
         method_id: "com.test/example".to_string(),
         version: "1.0.0".to_string(),
-        method_shape_root: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+        method_shape_root:
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
     };
 
     let payload = Payload::Execution(ExecutionPayload {
         trace_id: "test-trace-1".to_string(),
         method_ref: method_ref.clone(),
-        data_shape_hash: "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
-        span_commitments: vec!["sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string()],
+        data_shape_hash: "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+            .to_string(),
+        span_commitments: vec![
+            "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string(),
+        ],
         roots: northroot_receipts::ExecutionRoots {
-            trace_set_root: "sha256:4444444444444444444444444444444444444444444444444444444444444444".to_string(),
-            trace_seq_root: Some("sha256:6666666666666666666666666666666666666666666666666666666666666666".to_string()),
-            identity_root: "sha256:5555555555555555555555555555555555555555555555555555555555555555".to_string(),
+            trace_set_root:
+                "sha256:4444444444444444444444444444444444444444444444444444444444444444"
+                    .to_string(),
+            trace_seq_root: Some(
+                "sha256:6666666666666666666666666666666666666666666666666666666666666666"
+                    .to_string(),
+            ),
+            identity_root:
+                "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+                    .to_string(),
         },
         cdf_metadata: None,
+        pac: None,
+        change_epoch: None,
+        minhash_signature: None,
+        hll_cardinality: None,
+        chunk_manifest_hash: None,
+        chunk_manifest_size_bytes: None,
+        merkle_root: None,
+        prev_execution_rid: None,
     });
 
     let ctx = Context {
@@ -69,10 +87,10 @@ fn test_store_and_retrieve_receipt() {
 #[test]
 fn test_query_receipts_by_policy() {
     let store = SqliteStore::in_memory().unwrap();
-    
+
     let rid1 = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     let rid2 = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
-    
+
     let receipt1 = create_test_receipt(rid1);
     let mut receipt2 = create_test_receipt(rid2);
     receipt2.ctx.policy_ref = Some("pol:other@1".to_string());
@@ -93,7 +111,7 @@ fn test_query_receipts_by_policy() {
 #[test]
 fn test_store_and_retrieve_manifest() {
     let store = SqliteStore::in_memory().unwrap();
-    
+
     let hash = [0u8; 32];
     let data = b"test manifest data";
     let meta = northroot_storage::ManifestMeta {
@@ -105,7 +123,7 @@ fn test_store_and_retrieve_manifest() {
     };
 
     store.put_manifest(&hash, data, &meta).unwrap();
-    
+
     let retrieved = store.get_manifest(&hash).unwrap().unwrap();
     assert_eq!(retrieved, data);
 }
@@ -113,11 +131,11 @@ fn test_store_and_retrieve_manifest() {
 #[test]
 fn test_gc_manifests() {
     let store = SqliteStore::in_memory().unwrap();
-    
+
     let hash1 = [0u8; 32];
     let hash2 = [1u8; 32];
     let data = b"test data";
-    
+
     let meta1 = northroot_storage::ManifestMeta {
         pac: [1u8; 32],
         change_epoch_id: None,
@@ -125,7 +143,7 @@ fn test_gc_manifests() {
         size_uncompressed: data.len(),
         expires_at: Some(1000), // Expired
     };
-    
+
     let meta2 = northroot_storage::ManifestMeta {
         pac: [2u8; 32],
         change_epoch_id: None,
@@ -145,4 +163,3 @@ fn test_gc_manifests() {
     // Second manifest should still exist
     assert!(store.get_manifest(&hash2).unwrap().is_some());
 }
-

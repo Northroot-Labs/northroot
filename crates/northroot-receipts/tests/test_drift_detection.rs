@@ -266,10 +266,8 @@ fn test_cdf_metadata_in_execution_receipt() {
         rid: Uuid::parse_str("00000000-0000-0000-0000-000000000010").unwrap(),
         version: "0.3.0".to_string(),
         kind: ReceiptKind::Execution,
-        dom: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
-            .to_string(),
-        cod: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
-            .to_string(),
+        dom: "sha256:0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+        cod: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
         links: vec![],
         ctx: Context {
             policy_ref: Some("pol:test".to_string()),
@@ -397,10 +395,7 @@ impl CdfDriftDetector {
     /// # Returns
     ///
     /// Tuple of (missing_versions, affected_partitions)
-    pub fn detect_cdf_drift(
-        &self,
-        actual_receipts: &[Receipt],
-    ) -> (Vec<i64>, Vec<String>) {
+    pub fn detect_cdf_drift(&self, actual_receipts: &[Receipt]) -> (Vec<i64>, Vec<String>) {
         // Collect all commit versions from actual receipts
         let mut actual_versions = BTreeSet::new();
         for receipt in actual_receipts {
@@ -446,18 +441,16 @@ fn test_cdf_range_drift_detection() {
     partition_versions.insert("partition_2".to_string(), vec![5, 6, 7]);
     partition_versions.insert("partition_3".to_string(), vec![8, 9, 10]);
 
-    let detector = CdfDriftDetector::new(expected_versions)
-        .with_partition_versions(partition_versions);
+    let detector =
+        CdfDriftDetector::new(expected_versions).with_partition_versions(partition_versions);
 
     // Create receipts with CDF metadata (missing versions 5-7)
     let receipt1 = Receipt {
         rid: Uuid::parse_str("00000000-0000-0000-0000-000000000020").unwrap(),
         version: "0.3.0".to_string(),
         kind: ReceiptKind::Execution,
-        dom: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
-            .to_string(),
-        cod: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
-            .to_string(),
+        dom: "sha256:0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+        cod: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
         links: vec![],
         ctx: Context {
             policy_ref: Some("pol:test".to_string()),
@@ -513,6 +506,14 @@ fn test_cdf_range_drift_detection() {
                     commit_timestamp: "2025-11-08T12:03:00Z".to_string(),
                 },
             ]),
+            pac: None,
+            change_epoch: None,
+            minhash_signature: None,
+            hll_cardinality: None,
+            chunk_manifest_hash: None,
+            chunk_manifest_size_bytes: None,
+            merkle_root: None,
+            prev_execution_rid: None,
         }),
         attest: None,
         sig: None,
@@ -523,10 +524,8 @@ fn test_cdf_range_drift_detection() {
         rid: Uuid::parse_str("00000000-0000-0000-0000-000000000021").unwrap(),
         version: "0.3.0".to_string(),
         kind: ReceiptKind::Execution,
-        dom: "sha256:0000000000000000000000000000000000000000000000000000000000000000"
-            .to_string(),
-        cod: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
-            .to_string(),
+        dom: "sha256:0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+        cod: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
         links: vec![],
         ctx: Context {
             policy_ref: Some("pol:test".to_string()),
@@ -577,6 +576,14 @@ fn test_cdf_range_drift_detection() {
                     commit_timestamp: "2025-11-08T12:09:00Z".to_string(),
                 },
             ]),
+            pac: None,
+            change_epoch: None,
+            minhash_signature: None,
+            hll_cardinality: None,
+            chunk_manifest_hash: None,
+            chunk_manifest_size_bytes: None,
+            merkle_root: None,
+            prev_execution_rid: None,
         }),
         attest: None,
         sig: None,
@@ -584,11 +591,14 @@ fn test_cdf_range_drift_detection() {
     };
 
     // Detect drift
-    let (missing_versions, affected_partitions) =
-        detector.detect_cdf_drift(&[receipt1, receipt2]);
+    let (missing_versions, affected_partitions) = detector.detect_cdf_drift(&[receipt1, receipt2]);
 
     // Verify missing versions 5, 6, 7
-    assert_eq!(missing_versions.len(), 3, "Should detect 3 missing versions");
+    assert_eq!(
+        missing_versions.len(),
+        3,
+        "Should detect 3 missing versions"
+    );
     assert!(
         missing_versions.contains(&5),
         "Should detect missing version 5"
@@ -608,10 +618,10 @@ fn test_cdf_range_drift_detection() {
         1,
         "Should identify 1 affected partition"
     );
-        assert!(
-            affected_partitions.contains(&"partition_2".to_string()),
-            "partition_2 should be identified as affected"
-        );
+    assert!(
+        affected_partitions.contains(&"partition_2".to_string()),
+        "partition_2 should be identified as affected"
+    );
 }
 
 /// Compare MinHash sketches and detect drift when divergence >5%.
@@ -671,8 +681,8 @@ fn test_minhash_sketch_divergence() {
         "acct6:ec2:us-east-1:instance", // Different tuple
     ];
 
-    let sketch1 = compute_minhash_sketch(run1_tuples.iter());
-    let sketch2 = compute_minhash_sketch(run2_tuples.iter());
+    let _sketch1 = compute_minhash_sketch(run1_tuples.iter());
+    let _sketch2 = compute_minhash_sketch(run2_tuples.iter());
 
     // Convert to chunk sets for comparison
     let chunk_set1: HashSet<String> = run1_tuples
@@ -741,7 +751,7 @@ fn test_minhash_sketch_divergence() {
         "acct2:ec2:us-west-2:instance",
         "acct3:rds:eu-west-1:db",
         "acct7:ec2:us-east-1:instance", // Different
-        "acct8:s3:us-west-2:bucket",   // Different
+        "acct8:s3:us-west-2:bucket",    // Different
     ];
 
     let chunk_set5: HashSet<String> = run5_tuples

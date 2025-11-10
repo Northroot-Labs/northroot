@@ -25,7 +25,12 @@ pub trait ReceiptStore: Send + Sync {
     ///
     /// Manifests are compressed with zstd before storage and can have
     /// an expiration time for garbage collection.
-    fn put_manifest(&self, hash: &[u8; 32], data: &[u8], meta: &ManifestMeta) -> Result<(), StorageError>;
+    fn put_manifest(
+        &self,
+        hash: &[u8; 32],
+        data: &[u8],
+        meta: &ManifestMeta,
+    ) -> Result<(), StorageError>;
 
     /// Retrieve manifest by hash.
     ///
@@ -35,7 +40,11 @@ pub trait ReceiptStore: Send + Sync {
     /// Get previous execution receipt for reuse decision.
     ///
     /// Looks up the most recent execution receipt with matching PAC and trace_id.
-    fn get_previous_execution(&self, pac: &[u8; 32], trace_id: &str) -> Result<Option<Receipt>, StorageError>;
+    fn get_previous_execution(
+        &self,
+        pac: &[u8; 32],
+        trace_id: &str,
+    ) -> Result<Option<Receipt>, StorageError>;
 
     /// Garbage collect expired manifests.
     ///
@@ -77,4 +86,3 @@ pub struct ManifestMeta {
     /// Expiration timestamp (Unix epoch seconds), None = never expire
     pub expires_at: Option<i64>,
 }
-

@@ -15,8 +15,8 @@ use northroot_engine::delta::{
     load_cost_model_from_policy,
 };
 use northroot_receipts::{
-    Context, DeterminismClass, Receipt, ReceiptKind, SpendPayload, SpendPointers,
-    ResourceVector, ReuseJustification,
+    Context, DeterminismClass, Receipt, ReceiptKind, ResourceVector, ReuseJustification,
+    SpendPayload, SpendPointers,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
@@ -89,8 +89,11 @@ fn simulate_dashboard_query(
 
     // Create spend receipt with PROOF
     let receipt = Receipt {
-        rid: Uuid::parse_str(&format!("00000000-0000-0000-0000-0000000000{:02}", 20 + run_number))
-            .unwrap(),
+        rid: Uuid::parse_str(&format!(
+            "00000000-0000-0000-0000-0000000000{:02}",
+            20 + run_number
+        ))
+        .unwrap(),
         version: "0.3.0".to_string(),
         kind: ReceiptKind::Spend,
         dom: "sha256:0000000000000000000000000000000000000000000000000000000000000000".to_string(),
@@ -147,8 +150,14 @@ fn simulate_dashboard_query(
     println!("PROOF OF QUERY REUSE:");
     println!("  Previous result rows: {} items", prev_chunks.len());
     println!("  Current result rows: {} items", current_chunks.len());
-    println!("  Intersection: {} items", current_chunks.intersection(&prev_chunks).count());
-    println!("  Union: {} items", current_chunks.union(&prev_chunks).count());
+    println!(
+        "  Intersection: {} items",
+        current_chunks.intersection(&prev_chunks).count()
+    );
+    println!(
+        "  Union: {} items",
+        current_chunks.union(&prev_chunks).count()
+    );
     println!("  Jaccard similarity (J): {:.4}", overlap_j);
     println!("  Economic delta (ΔC): ${:.4}", delta_c);
     println!("  Reuse decision: {:?}", decision);
@@ -183,7 +192,10 @@ fn main() {
     println!("  Links: {:?} (no previous receipt)", receipt1.links);
     if let northroot_receipts::Payload::Spend(spend) = &receipt1.payload {
         if let Some(just) = &spend.justification {
-            println!("  Overlap J: {:.4} (no previous state)", just.overlap_j.unwrap_or(0.0));
+            println!(
+                "  Overlap J: {:.4} (no previous state)",
+                just.overlap_j.unwrap_or(0.0)
+            );
         }
         println!("  Total Value: ${:.2}", spend.total_value);
     }

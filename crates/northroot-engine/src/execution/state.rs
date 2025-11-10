@@ -3,8 +3,8 @@
 //! This module provides utilities for managing trace IDs, span commitments,
 //! and execution root computation.
 
-use northroot_receipts::{ExecutionRoots, MethodRef, ValidationError};
 use crate::commitments::{commit_seq_root, commit_set_root};
+use northroot_receipts::{ExecutionRoots, MethodRef, ValidationError};
 
 /// Validate method reference structure.
 ///
@@ -30,8 +30,12 @@ pub fn validate_method_ref(method_ref: &MethodRef) -> Result<(), ValidationError
         ));
     }
 
-    if !method_ref.method_shape_root.starts_with("sha256:") || method_ref.method_shape_root.len() != 71 {
-        return Err(ValidationError::InvalidHashFormat(method_ref.method_shape_root.clone()));
+    if !method_ref.method_shape_root.starts_with("sha256:")
+        || method_ref.method_shape_root.len() != 71
+    {
+        return Err(ValidationError::InvalidHashFormat(
+            method_ref.method_shape_root.clone(),
+        ));
     }
 
     Ok(())
@@ -84,7 +88,10 @@ pub fn generate_trace_id(seed: Option<&str>) -> String {
     } else {
         // Generate UUID-based trace ID
         // Note: In production, use UUIDv7 for time-ordered IDs
-        format!("trace:{}", uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap())
+        format!(
+            "trace:{}",
+            uuid::Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap()
+        )
     }
 }
 
@@ -98,7 +105,9 @@ mod tests {
         let method_ref = MethodRef {
             method_id: "com.acme/normalize-ledger".to_string(),
             version: "1.0.0".to_string(),
-            method_shape_root: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            method_shape_root:
+                "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                    .to_string(),
         };
 
         assert!(validate_method_ref(&method_ref).is_ok());
@@ -109,7 +118,9 @@ mod tests {
         let method_ref = MethodRef {
             method_id: String::new(),
             version: "1.0.0".to_string(),
-            method_shape_root: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            method_shape_root:
+                "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                    .to_string(),
         };
 
         assert!(validate_method_ref(&method_ref).is_err());
@@ -133,7 +144,8 @@ mod tests {
             "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
         ];
 
-        let identity_root = "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string();
+        let identity_root =
+            "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string();
 
         let roots = compute_execution_roots(&span_commitments, identity_root.clone());
 
@@ -153,4 +165,3 @@ mod tests {
         assert!(trace_id1.starts_with("sha256:"));
     }
 }
-

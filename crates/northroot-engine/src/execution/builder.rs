@@ -8,8 +8,8 @@ use northroot_receipts::{
 };
 use uuid::Uuid;
 
-use crate::execution::state::{compute_execution_roots, generate_trace_id, validate_method_ref};
 use crate::commitments::sha256_prefixed;
+use crate::execution::state::{compute_execution_roots, generate_trace_id, validate_method_ref};
 
 /// Builder for execution receipts.
 ///
@@ -123,10 +123,7 @@ impl ExecutionReceiptBuilder {
             .method_shape_root
             .as_str();
         let change_epoch_id = self.change_epoch.as_deref().unwrap_or("none");
-        let determinism_class = self
-            .determinism
-            .as_deref()
-            .unwrap_or("observational");
+        let determinism_class = self.determinism.as_deref().unwrap_or("observational");
         let policy_ref = self.policy_ref.as_deref().unwrap_or("none");
         let output_schema_version = "1.0"; // Default schema version
 
@@ -241,7 +238,9 @@ mod tests {
         MethodRef {
             method_id: "com.acme/test".to_string(),
             version: "1.0.0".to_string(),
-            method_shape_root: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            method_shape_root:
+                "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                    .to_string(),
         }
     }
 
@@ -254,8 +253,14 @@ mod tests {
         let receipt = ExecutionReceiptBuilder::new()
             .trace_id("test-trace".to_string())
             .method_ref(method_ref)
-            .data_shape_hash("sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string())
-            .add_span_commitment("sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string())
+            .data_shape_hash(
+                "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                    .to_string(),
+            )
+            .add_span_commitment(
+                "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+                    .to_string(),
+            )
             .build(rid, "0.3.0".to_string(), ctx)
             .unwrap();
 
@@ -271,8 +276,14 @@ mod tests {
         // Missing method_ref
         let result = ExecutionReceiptBuilder::new()
             .trace_id("test-trace".to_string())
-            .data_shape_hash("sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string())
-            .add_span_commitment("sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string())
+            .data_shape_hash(
+                "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                    .to_string(),
+            )
+            .add_span_commitment(
+                "sha256:3333333333333333333333333333333333333333333333333333333333333333"
+                    .to_string(),
+            )
             .build(rid, "0.3.0".to_string(), ctx.clone());
 
         assert!(result.is_err());
@@ -282,7 +293,10 @@ mod tests {
         let result = ExecutionReceiptBuilder::new()
             .trace_id("test-trace".to_string())
             .method_ref(method_ref)
-            .data_shape_hash("sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string())
+            .data_shape_hash(
+                "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                    .to_string(),
+            )
             .build(rid, "0.3.0".to_string(), ctx);
 
         assert!(result.is_err());
@@ -293,7 +307,10 @@ mod tests {
         let method_ref = create_test_method_ref();
         let builder = ExecutionReceiptBuilder::new()
             .method_ref(method_ref)
-            .data_shape_hash("sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string())
+            .data_shape_hash(
+                "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                    .to_string(),
+            )
             .change_epoch("snap-123".to_string())
             .policy_ref("pol:test@1".to_string())
             .determinism("strict".to_string());
@@ -304,7 +321,10 @@ mod tests {
         // Same inputs should produce same key
         let builder2 = ExecutionReceiptBuilder::new()
             .method_ref(create_test_method_ref())
-            .data_shape_hash("sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string())
+            .data_shape_hash(
+                "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                    .to_string(),
+            )
             .change_epoch("snap-123".to_string())
             .policy_ref("pol:test@1".to_string())
             .determinism("strict".to_string());
@@ -317,7 +337,9 @@ mod tests {
     fn test_compute_pac_key_missing_fields() {
         let builder = ExecutionReceiptBuilder::new();
         let result = builder.compute_pac_key();
-        assert!(result.is_err(), "Should error when required fields are missing");
+        assert!(
+            result.is_err(),
+            "Should error when required fields are missing"
+        );
     }
 }
-

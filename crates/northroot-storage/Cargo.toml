@@ -14,7 +14,6 @@ publish = false
 
 [dependencies]
 northroot-receipts = { path = "../northroot-receipts" }
-northroot-engine = { path = "../northroot-engine" }
 northroot-commons = { path = "../northroot-commons" }
 rusqlite = { version = "0.31", features = ["bundled"] }
 serde = { workspace = true }

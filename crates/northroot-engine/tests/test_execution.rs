@@ -13,7 +13,8 @@ fn test_validate_method_ref() {
     let method_ref = MethodRef {
         method_id: "com.acme/test".to_string(),
         version: "1.0.0".to_string(),
-        method_shape_root: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+        method_shape_root:
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
     };
 
     assert!(validate_method_ref(&method_ref).is_ok());
@@ -26,7 +27,8 @@ fn test_compute_execution_roots() {
         "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
     ];
 
-    let identity_root = "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string();
+    let identity_root =
+        "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string();
 
     let roots = compute_execution_roots(&span_commitments, identity_root.clone());
 
@@ -86,14 +88,19 @@ fn test_execution_receipt_builder() {
     let method_ref = MethodRef {
         method_id: "com.acme/test".to_string(),
         version: "1.0.0".to_string(),
-        method_shape_root: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+        method_shape_root:
+            "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
     };
 
     let receipt = ExecutionReceiptBuilder::new()
         .trace_id("test-trace".to_string())
         .method_ref(method_ref)
-        .data_shape_hash("sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string())
-        .add_span_commitment("sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string())
+        .data_shape_hash(
+            "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
+        )
+        .add_span_commitment(
+            "sha256:3333333333333333333333333333333333333333333333333333333333333333".to_string(),
+        )
         .build(rid, "0.3.0".to_string(), ctx)
         .unwrap();
 
@@ -110,4 +117,3 @@ fn test_generate_trace_id() {
     assert_eq!(trace_id1, trace_id2); // Deterministic
     assert_ne!(trace_id1, trace_id3); // Different seeds produce different IDs
 }
-

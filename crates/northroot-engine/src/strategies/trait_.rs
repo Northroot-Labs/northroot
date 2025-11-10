@@ -69,4 +69,3 @@ impl std::fmt::Display for StrategyError {
 }
 
 impl std::error::Error for StrategyError {}
-

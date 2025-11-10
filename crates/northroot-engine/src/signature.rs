@@ -37,7 +37,11 @@ impl std::fmt::Display for SignatureError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             SignatureError::VerificationFailed { kid, reason } => {
-                write!(f, "Signature verification failed for key {}: {}", kid, reason)
+                write!(
+                    f,
+                    "Signature verification failed for key {}: {}",
+                    kid, reason
+                )
             }
             SignatureError::UnsupportedAlgorithm { alg } => {
                 write!(f, "Unsupported signature algorithm: {}", alg)
@@ -145,19 +149,18 @@ fn verify_ed25519(sig: &Signature, message: &[u8]) -> Result<(), SignatureError>
     let sig_array: [u8; 64] = sig_bytes[..64]
         .try_into()
         .map_err(|_| SignatureError::InvalidFormat("Invalid signature length".to_string()))?;
-    
+
     let signature = Ed25519Signature::from_bytes(&sig_array);
 
     // Resolve public key from DID
     let public_key = resolve_did_key(&sig.kid)?;
 
     // Verify signature
-    let verifying_key = VerifyingKey::from_bytes(&public_key).map_err(|e| {
-        SignatureError::VerificationFailed {
+    let verifying_key =
+        VerifyingKey::from_bytes(&public_key).map_err(|e| SignatureError::VerificationFailed {
             kid: sig.kid.clone(),
             reason: format!("Invalid public key: {}", e),
-        }
-    })?;
+        })?;
 
     verifying_key
         .verify(message, &signature)
@@ -216,7 +219,10 @@ pub fn resolve_did_key(kid: &str) -> Result<[u8; 32], SignatureError> {
     if key_bytes.len() < 34 {
         return Err(SignatureError::DidResolutionFailed {
             did: kid.to_string(),
-            reason: format!("Invalid key length: expected at least 34 bytes, got {}", key_bytes.len()),
+            reason: format!(
+                "Invalid key length: expected at least 34 bytes, got {}",
+                key_bytes.len()
+            ),
         });
     }
 
@@ -229,12 +235,12 @@ pub fn resolve_did_key(kid: &str) -> Result<[u8; 32], SignatureError> {
     }
 
     // Extract public key (last 32 bytes)
-    let public_key: [u8; 32] = key_bytes[key_bytes.len() - 32..]
-        .try_into()
-        .map_err(|_| SignatureError::DidResolutionFailed {
+    let public_key: [u8; 32] = key_bytes[key_bytes.len() - 32..].try_into().map_err(|_| {
+        SignatureError::DidResolutionFailed {
             did: kid.to_string(),
             reason: "Failed to extract 32-byte public key".to_string(),
-        })?;
+        }
+    })?;
 
     Ok(public_key)
 }
@@ -261,10 +267,7 @@ mod tests {
     use northroot_receipts::{Context, DataShapePayload, Payload, ReceiptKind, Signature};
     use uuid::Uuid;
 
-    fn create_test_receipt_with_sig(
-        hash: String,
-        sig: Option<Signature>,
-    ) -> Receipt {
+    fn create_test_receipt_with_sig(hash: String, sig: Option<Signature>) -> Receipt {
         let ctx = Context {
             policy_ref: None,
             timestamp: "2025-01-01T00:00:00Z".to_string(),
@@ -274,7 +277,8 @@ mod tests {
         };
 
         let payload = Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             sketch_hash: None,
         });
 
@@ -282,8 +286,10 @@ mod tests {
             rid: Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap(),
             version: "0.3.0".to_string(),
             kind: ReceiptKind::DataShape,
-            dom: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
-            cod: "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
+            dom: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
+            cod: "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                .to_string(),
             links: Vec::new(),
             ctx,
             payload,
@@ -357,4 +363,3 @@ mod tests {
         assert!(result.is_err());
     }
 }
-

@@ -4,10 +4,7 @@ use northroot_engine::signature::*;
 use northroot_receipts::{Context, DataShapePayload, Payload, Receipt, ReceiptKind, Signature};
 use uuid::Uuid;
 
-fn create_test_receipt_with_sig(
-    hash: String,
-    sig: Option<Signature>,
-) -> Receipt {
+fn create_test_receipt_with_sig(hash: String, sig: Option<Signature>) -> Receipt {
     let ctx = Context {
         policy_ref: None,
         timestamp: "2025-01-01T00:00:00Z".to_string(),
@@ -17,7 +14,8 @@ fn create_test_receipt_with_sig(
     };
 
     let payload = Payload::DataShape(DataShapePayload {
-        schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+        schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+            .to_string(),
         sketch_hash: None,
     });
 
@@ -129,4 +127,3 @@ fn test_verify_all_signatures() {
         _ => panic!("Expected MissingSignature error"),
     }
 }
-

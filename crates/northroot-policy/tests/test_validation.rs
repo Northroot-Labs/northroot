@@ -1,7 +1,9 @@
 //! Tests for policy validation.
 
 use northroot_policy::validation::*;
-use northroot_receipts::{Context, DeterminismClass, Receipt, DataShapePayload, Payload, ReceiptKind};
+use northroot_receipts::{
+    Context, DataShapePayload, DeterminismClass, Payload, Receipt, ReceiptKind,
+};
 use uuid::Uuid;
 
 #[test]
@@ -154,7 +156,8 @@ fn test_validate_policy_no_policy_ref() {
         links: Vec::new(),
         ctx,
         payload: Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             sketch_hash: None,
         }),
         attest: None,
@@ -190,7 +193,8 @@ fn test_validate_policy_with_policy_ref() {
         links: Vec::new(),
         ctx,
         payload: Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             sketch_hash: None,
         }),
         attest: None,
@@ -220,4 +224,3 @@ fn test_validate_region_constraints_stub() {
     // Currently stub returns Ok
     assert!(validate_region_constraints("us-east-1", &policy).is_ok());
 }
-

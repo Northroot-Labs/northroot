@@ -16,6 +16,32 @@ Golden rules
 
 ⸻
 
+Architectural Principles
+
+Separation of Concerns
+	•	Canonicalization: All canonicalization (JCS, CBOR) lives in `receipts` (per ADR-002)
+	•	Computation Logic: Delta decisions, reuse strategies, PAC computation live in `engine`
+	•	Storage: Storage adapters are infrastructure; they read receipts, don't compute proofs
+	•	Policy: Policy validation is semantic (allowed/denied), not computational
+
+Dependency Direction
+	•	Inner crates (receipts, commons) define types and primitives
+	•	Middle crates (engine, policy, ops) use inner types, implement logic
+	•	Outer crates (storage, sdk, apps) orchestrate and adapt
+	•	Never: receipts → engine, policy → engine, storage → engine
+
+Canonicalization Ownership
+	•	JCS (JSON): `receipts/src/canonical.rs` - default, always available
+	•	CBOR: `receipts/src/canonical.rs` - deterministic encoding for storage/performance
+	•	Rationale: Canonicalization is about receipt structure, not compute logic
+
+PAC Key Computation
+	•	Location: `engine/src/delta/pac.rs` - part of delta compute decisions
+	•	Usage: Engine computes PAC during execution; storage reads PAC from receipts
+	•	Rationale: PAC computation requires execution context (data/method shapes, epochs)
+
+⸻
+
 Where code belongs
 
 If code primarily does…	It goes in…
@@ -25,6 +51,7 @@ Operator & method manifests (schemas, examples, validators)	ops
 Policies & strategies (cost models, reuse thresholds, allow/deny, FP tolerances)	policy
 DSL for intents + planner (capability matching)	planner
 SDK & adapters (OTel exporter, CLI, language shims)	sdk/*
+Proof storage, content-addressed lookup, manifest management	storage
 Cross-cutting utils (logging, error types)	commons
 App/API surfaces (HTTP, TUI)	apps/*
 
@@ -36,9 +63,10 @@ Decision tree (new work)
 	1.	Does it change how compute is performed or reused? → engine (trait or operator impl).
 	2.	Does it define or verify evidence of work? → receipts (types/validators).
 	3.	Is it “what can be run” metadata? → ops (schemas + generators).
-	4.	Is it “when/how to run” policy? → policy (strategies + validators).
+	4.	Is it "when/how to run" policy? → policy (strategies + validators).
 	5.	Is it translating human/agent goal → method? → planner.
 	6.	Is it integration code or UX? → sdk/* or apps/*.
+	7.	Is it storage/adapters for receipts? → storage (infrastructure).
 
 If multiple, split by the direction of dependency: deeper concern owns the types; higher layer holds orchestrators.
 
@@ -52,10 +80,13 @@ engine    → commons, receipts
 ops       → commons, receipts
 policy    → commons, receipts
 planner   → commons, receipts, ops, policy (read-only)
+storage   → commons, receipts
 sdk/*     → commons, receipts, ops (never engine-internal)
 apps/*    → sdk/*, planner, engine (through stable traits)
 
-Forbidden: receipts depending on engine; policy depending on engine; cyclical edges.
+Forbidden: receipts depending on engine; policy depending on engine; storage depending on engine; cyclical edges.
+
+Note: Storage adapters (SQLite, future S3/Postgres) are infrastructure, not SDK. They persist receipts and manifests but do not compute proofs or make reuse decisions.
 
 ⸻
 
@@ -75,7 +106,7 @@ Testing layout
 ⸻
 
 Naming & paths
-	•	Crates: northroot-{receipts|engine|ops|policy|planner|commons}.
+	•	Crates: northroot-{receipts|engine|ops|policy|planner|commons|storage}.
 	•	Modules: commitments, canonical, validation, delta, chunking, cost, strategy.
 	•	Schemas live in /schemas/{receipts|ops|policy}/... with mirrors in code.
 	•	Docs in /docs/specs/* (one spec per concept; link from READMEs).

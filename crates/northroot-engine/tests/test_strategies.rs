@@ -12,9 +12,7 @@ fn test_partition_strategy() {
         {"id": 3, "value": "c"},
     ]);
 
-    let (output, state) = strategy
-        .execute(&input, ExecutionMode::Full, None)
-        .unwrap();
+    let (output, state) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
 
     assert_eq!(output["chunk_count"], 3);
     assert_eq!(state.len(), 3);
@@ -29,13 +27,9 @@ fn test_partition_strategy_deterministic() {
         {"id": 2, "value": "b"},
     ]);
 
-    let (_, state1) = strategy
-        .execute(&input, ExecutionMode::Full, None)
-        .unwrap();
+    let (_, state1) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
 
-    let (_, state2) = strategy
-        .execute(&input, ExecutionMode::Full, None)
-        .unwrap();
+    let (_, state2) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
 
     // Same input should produce same state hash
     assert_eq!(state1.state_hash(), state2.state_hash());
@@ -50,9 +44,7 @@ fn test_incremental_sum_strategy_full() {
         {"id": "3", "value": 30.0},
     ]);
 
-    let (output, state) = strategy
-        .execute(&input, ExecutionMode::Full, None)
-        .unwrap();
+    let (output, state) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
 
     assert_eq!(output["sum"], 60.0);
     assert_eq!(state.len(), 3);
@@ -104,11 +96,8 @@ fn test_strategy_composition() {
         .unwrap();
 
     // Second strategy: sum (can use partition state if needed)
-    let (sum_output, _) = sum
-        .execute(&input, ExecutionMode::Full, None)
-        .unwrap();
+    let (sum_output, _) = sum.execute(&input, ExecutionMode::Full, None).unwrap();
 
     assert_eq!(sum_output["sum"], 30.0);
     assert!(partition_state.len() > 0);
 }
-

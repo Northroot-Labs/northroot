@@ -4,7 +4,6 @@
 //! deterministically and that CBOR encoding doesn't break existing receipt validation.
 
 use northroot_receipts::*;
-use northroot_engine::commitments::{cbor_deterministic, cbor_hash, validate_cbor_deterministic};
 use std::fs;
 
 fn load_vector(path: &str) -> Result<Receipt, Box<dyn std::error::Error>> {
@@ -26,8 +25,8 @@ fn test_receipt_cbor_encoding() {
     ];
 
     for path in &vectors {
-        let receipt = load_vector(path)
-            .unwrap_or_else(|e| panic!("Failed to load {}: {}", path, e));
+        let receipt =
+            load_vector(path).unwrap_or_else(|e| panic!("Failed to load {}: {}", path, e));
 
         // Encode receipt payload to CBOR
         let cbor_bytes = cbor_deterministic(&receipt.payload)
@@ -110,4 +109,3 @@ fn test_spend_receipt_cbor_with_alpha() {
     assert!(cbor_hash_val.starts_with("sha256:"));
     assert_eq!(cbor_hash_val.len(), 71);
 }
-

@@ -978,6 +978,7 @@ dependencies = [
 name = "northroot-receipts"
 version = "0.1.0"
 dependencies = [
+ "ciborium",
  "hex",
  "jsonschema",
  "northroot-commons",
@@ -985,6 +986,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "thiserror",
  "uuid",
 ]
 
@@ -995,7 +997,6 @@ dependencies = [
  "ciborium",
  "hex",
  "northroot-commons",
- "northroot-engine",
  "northroot-receipts",
  "rusqlite",
  "serde",

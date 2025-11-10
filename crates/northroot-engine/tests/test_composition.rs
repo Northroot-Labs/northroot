@@ -24,7 +24,7 @@ fn test_compute_tensor_root_order_independent() {
     let root1 = compute_tensor_root(&[h1.clone(), h2.clone(), h3.clone()]);
     let root2 = compute_tensor_root(&[h3.clone(), h1.clone(), h2.clone()]);
     let root3 = compute_tensor_root(&[h2.clone(), h3.clone(), h1.clone()]);
-    
+
     assert_eq!(root1, root2);
     assert_eq!(root2, root3);
 
@@ -61,8 +61,8 @@ fn test_build_sequential_chain() {
 
 #[test]
 fn test_build_sequential_chain_invalid() {
-    use northroot_receipts::{Receipt, Context, DataShapePayload, Payload, ReceiptKind};
-    
+    use northroot_receipts::{Context, DataShapePayload, Payload, Receipt, ReceiptKind};
+
     let ctx = Context {
         policy_ref: None,
         timestamp: "2025-01-01T00:00:00Z".to_string(),
@@ -80,7 +80,8 @@ fn test_build_sequential_chain_invalid() {
         links: Vec::new(),
         ctx: ctx.clone(),
         payload: Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             sketch_hash: None,
         }),
         attest: None,
@@ -88,7 +89,10 @@ fn test_build_sequential_chain_invalid() {
         hash: String::new(),
     };
     let r1_hash = r1.compute_hash().unwrap();
-    let r1 = Receipt { hash: r1_hash, ..r1 };
+    let r1 = Receipt {
+        hash: r1_hash,
+        ..r1
+    };
 
     let r2 = Receipt {
         rid: Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap(),
@@ -99,7 +103,8 @@ fn test_build_sequential_chain_invalid() {
         links: Vec::new(),
         ctx,
         payload: Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:9999999999999999999999999999999999999999999999999999999999999999".to_string(),
+            schema_hash: "sha256:9999999999999999999999999999999999999999999999999999999999999999"
+                .to_string(),
             sketch_hash: None,
         }),
         attest: None,
@@ -107,7 +112,10 @@ fn test_build_sequential_chain_invalid() {
         hash: String::new(),
     };
     let r2_hash = r2.compute_hash().unwrap();
-    let r2 = Receipt { hash: r2_hash, ..r2 };
+    let r2 = Receipt {
+        hash: r2_hash,
+        ..r2
+    };
 
     let result = build_sequential_chain(vec![r1, r2]);
     assert!(result.is_err());
@@ -121,9 +129,9 @@ fn test_build_sequential_chain_invalid() {
 
 #[test]
 fn test_validate_all_links() {
-    use northroot_receipts::{Receipt, Context, DataShapePayload, Payload, ReceiptKind};
+    use northroot_receipts::{Context, DataShapePayload, Payload, Receipt, ReceiptKind};
     use std::collections::HashMap;
-    
+
     let parent_rid = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     let child1_rid = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
     let child2_rid = Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap();
@@ -145,7 +153,8 @@ fn test_validate_all_links() {
         links: vec![child1_rid, child2_rid],
         ctx: ctx.clone(),
         payload: Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             sketch_hash: None,
         }),
         attest: None,
@@ -153,7 +162,10 @@ fn test_validate_all_links() {
         hash: String::new(),
     };
     let parent_hash = parent.compute_hash().unwrap();
-    let parent = Receipt { hash: parent_hash, ..parent };
+    let parent = Receipt {
+        hash: parent_hash,
+        ..parent
+    };
 
     let child1 = Receipt {
         rid: child1_rid,
@@ -164,7 +176,8 @@ fn test_validate_all_links() {
         links: Vec::new(),
         ctx: ctx.clone(),
         payload: Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
+            schema_hash: "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                .to_string(),
             sketch_hash: None,
         }),
         attest: None,
@@ -172,7 +185,10 @@ fn test_validate_all_links() {
         hash: String::new(),
     };
     let child1_hash = child1.compute_hash().unwrap();
-    let child1 = Receipt { hash: child1_hash, ..child1 };
+    let child1 = Receipt {
+        hash: child1_hash,
+        ..child1
+    };
 
     let child2 = Receipt {
         rid: child2_rid,
@@ -183,7 +199,8 @@ fn test_validate_all_links() {
         links: Vec::new(),
         ctx,
         payload: Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
+            schema_hash: "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                .to_string(),
             sketch_hash: None,
         }),
         attest: None,
@@ -191,7 +208,10 @@ fn test_validate_all_links() {
         hash: String::new(),
     };
     let child2_hash = child2.compute_hash().unwrap();
-    let child2 = Receipt { hash: child2_hash, ..child2 };
+    let child2 = Receipt {
+        hash: child2_hash,
+        ..child2
+    };
 
     let mut children = HashMap::new();
     children.insert(child1_rid, child1);
@@ -202,9 +222,9 @@ fn test_validate_all_links() {
 
 #[test]
 fn test_validate_all_links_missing_child() {
-    use northroot_receipts::{Receipt, Context, DataShapePayload, Payload, ReceiptKind};
+    use northroot_receipts::{Context, DataShapePayload, Payload, Receipt, ReceiptKind};
     use std::collections::HashMap;
-    
+
     let parent_rid = Uuid::parse_str("00000000-0000-0000-0000-000000000001").unwrap();
     let child1_rid = Uuid::parse_str("00000000-0000-0000-0000-000000000002").unwrap();
     let child2_rid = Uuid::parse_str("00000000-0000-0000-0000-000000000003").unwrap();
@@ -226,7 +246,8 @@ fn test_validate_all_links_missing_child() {
         links: vec![child1_rid, child2_rid],
         ctx: ctx.clone(),
         payload: Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            schema_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             sketch_hash: None,
         }),
         attest: None,
@@ -234,7 +255,10 @@ fn test_validate_all_links_missing_child() {
         hash: String::new(),
     };
     let parent_hash = parent.compute_hash().unwrap();
-    let parent = Receipt { hash: parent_hash, ..parent };
+    let parent = Receipt {
+        hash: parent_hash,
+        ..parent
+    };
 
     let child1 = Receipt {
         rid: child1_rid,
@@ -245,7 +269,8 @@ fn test_validate_all_links_missing_child() {
         links: Vec::new(),
         ctx,
         payload: Payload::DataShape(DataShapePayload {
-            schema_hash: "sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string(),
+            schema_hash: "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+                .to_string(),
             sketch_hash: None,
         }),
         attest: None,
@@ -253,7 +278,10 @@ fn test_validate_all_links_missing_child() {
         hash: String::new(),
     };
     let child1_hash = child1.compute_hash().unwrap();
-    let child1 = Receipt { hash: child1_hash, ..child1 };
+    let child1 = Receipt {
+        hash: child1_hash,
+        ..child1
+    };
 
     let mut children = HashMap::new();
     children.insert(child1_rid, child1);
@@ -268,4 +296,3 @@ fn test_validate_all_links_missing_child() {
         _ => panic!("Expected LinkValidationFailed error"),
     }
 }
-

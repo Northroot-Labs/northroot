@@ -9,8 +9,8 @@
 use northroot_engine::*;
 use northroot_receipts::Receipt;
 use serde_json::Value;
-use std::fs;
 use std::collections::HashSet;
+use std::fs;
 
 fn load_vector(path: &str) -> Result<Vec<Receipt>, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(path)?;
@@ -31,21 +31,24 @@ fn test_composition_chain_valid_integrity() {
 
     // Verify chain has all 6 receipt kinds
     assert_eq!(chain.len(), 6, "Valid chain must have all 6 receipt kinds");
-    
+
     // Verify sequential composition (cod(R_i) == dom(R_{i+1}))
     for i in 0..chain.len().saturating_sub(1) {
         assert_eq!(
-            chain[i].cod, chain[i + 1].dom,
+            chain[i].cod,
+            chain[i + 1].dom,
             "Sequential mismatch at index {}: cod({}) != dom({})",
-            i, i, i + 1
+            i,
+            i,
+            i + 1
         );
     }
 
     // Verify all receipts validate
     for (idx, receipt) in chain.iter().enumerate() {
-        receipt.validate().unwrap_or_else(|e| {
-            panic!("Receipt {} in valid chain failed validation: {}", idx, e)
-        });
+        receipt
+            .validate()
+            .unwrap_or_else(|e| panic!("Receipt {} in valid chain failed validation: {}", idx, e));
     }
 
     // Verify composition validation passes
@@ -127,11 +130,12 @@ fn test_delta_compute_scenarios_integrity() {
         .collect();
     let expected_j = jaccard_data["expected"].as_f64().unwrap();
     let computed_j = delta::jaccard_similarity(&set1, &set2);
-    
+
     assert!(
         (computed_j - expected_j).abs() < 0.0001,
         "Jaccard similarity mismatch: expected {}, computed {}",
-        expected_j, computed_j
+        expected_j,
+        computed_j
     );
 
     // Test reuse decision
@@ -152,13 +156,15 @@ fn test_delta_compute_scenarios_integrity() {
     };
     let (decision, justification) = delta::decide_reuse(overlap_j, &cost_model, None);
     let expected_decision = reuse_data["decision"].as_str().unwrap();
-    
+
     assert_eq!(
-        format!("{:?}", decision), expected_decision,
+        format!("{:?}", decision),
+        expected_decision,
         "Reuse decision mismatch"
     );
     assert_eq!(
-        justification.overlap_j.unwrap(), overlap_j,
+        justification.overlap_j.unwrap(),
+        overlap_j,
         "Justification overlap_j should match input"
     );
 
@@ -179,11 +185,12 @@ fn test_delta_compute_scenarios_integrity() {
     };
     let expected_delta = delta_data["expected"].as_f64().unwrap();
     let computed_delta = delta::economic_delta(delta_overlap_j, &delta_cost_model, None);
-    
+
     assert!(
         (computed_delta - expected_delta).abs() < 0.0001,
         "Economic delta mismatch: expected {}, computed {}",
-        expected_delta, computed_delta
+        expected_delta,
+        computed_delta
     );
 }
 
@@ -206,12 +213,14 @@ fn test_execution_roots_integrity() {
         let roots = compute_execution_roots(&span_commitments, identity_root);
 
         assert_eq!(
-            roots.trace_set_root, expected_trace_set,
+            roots.trace_set_root,
+            expected_trace_set,
             "Trace set root mismatch for scenario: {}",
             scenario["name"].as_str().unwrap()
         );
         assert_eq!(
-            roots.trace_seq_root.as_ref().unwrap(), expected_trace_seq,
+            roots.trace_seq_root.as_ref().unwrap(),
+            expected_trace_seq,
             "Trace seq root mismatch for scenario: {}",
             scenario["name"].as_str().unwrap()
         );
@@ -227,7 +236,8 @@ fn test_merkle_row_map_integrity() {
     let empty_map = MerkleRowMap::new();
     let empty_expected = merkle_data["empty_map"]["root"].as_str().unwrap();
     assert_eq!(
-        empty_map.compute_root(), empty_expected,
+        empty_map.compute_root(),
+        empty_expected,
         "Empty map root mismatch"
     );
 
@@ -239,19 +249,23 @@ fn test_merkle_row_map_integrity() {
     }
     let single_expected = merkle_data["single_entry"]["root"].as_str().unwrap();
     assert_eq!(
-        single_map.compute_root(), single_expected,
+        single_map.compute_root(),
+        single_expected,
         "Single entry map root mismatch"
     );
 
     // Test multiple entries
     let mut multi_map = MerkleRowMap::new();
-    let multi_entries = merkle_data["multiple_entries"]["entries"].as_object().unwrap();
+    let multi_entries = merkle_data["multiple_entries"]["entries"]
+        .as_object()
+        .unwrap();
     for (key, value) in multi_entries {
         multi_map.insert(key.clone(), value.clone());
     }
     let multi_expected = merkle_data["multiple_entries"]["root"].as_str().unwrap();
     assert_eq!(
-        multi_map.compute_root(), multi_expected,
+        multi_map.compute_root(),
+        multi_expected,
         "Multiple entries map root mismatch"
     );
 
@@ -271,8 +285,8 @@ fn test_merkle_row_map_integrity() {
     }
 
     assert_eq!(
-        map1.compute_root(), map2.compute_root(),
+        map1.compute_root(),
+        map2.compute_root(),
         "Order independence test failed: roots should match regardless of insertion order"
     );
 }
-

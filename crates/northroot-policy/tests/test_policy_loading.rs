@@ -50,17 +50,17 @@ fn test_load_policy_invalid_format() {
 #[test]
 fn test_policy_structure() {
     let policy = load_policy("pol:finops/cost-attribution@1").unwrap();
-    
+
     // Check cost model structure (verify it's valid JSON)
     // The cost model fields are already validated during parsing
     assert!(!policy.cost_model.c_id.is_null());
     assert!(!policy.cost_model.c_comp.is_null());
     assert!(!policy.cost_model.alpha.is_null());
-    
+
     // Check decision structure
     assert_eq!(policy.decision.fallback, "recompute");
     assert!(policy.decision.bounds.is_some());
-    
+
     // Check constraints
     assert!(policy.constraints.is_some());
     let constraints = policy.constraints.as_ref().unwrap();
@@ -85,4 +85,3 @@ fn test_policy_legacy_format() {
         // If it succeeds, that's fine too
     }
 }
-

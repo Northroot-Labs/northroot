@@ -239,26 +239,22 @@ pub fn load_policy(policy_ref: &str) -> Result<DeltaComputePolicy, PolicyError> 
     let policy_path = parse_policy_ref_to_path(policy_ref)?;
 
     // Load JSON from file system
-    let json_content = fs::read_to_string(&policy_path).map_err(|_e| {
-        PolicyError::PolicyNotFound {
+    let json_content =
+        fs::read_to_string(&policy_path).map_err(|_e| PolicyError::PolicyNotFound {
             policy_ref: policy_ref.to_string(),
-        }
-    })?;
+        })?;
 
     // Parse JSON
-    let json_value: Value = serde_json::from_str(&json_content).map_err(|e| {
-        PolicyError::InvalidPolicyRef {
+    let json_value: Value =
+        serde_json::from_str(&json_content).map_err(|e| PolicyError::InvalidPolicyRef {
             policy_ref: policy_ref.to_string(),
             reason: format!("Failed to parse policy JSON: {}", e),
-        }
-    })?;
+        })?;
 
     // Convert to DeltaComputePolicy
-    DeltaComputePolicy::try_from(json_value).map_err(|e| {
-        PolicyError::InvalidPolicyRef {
-            policy_ref: policy_ref.to_string(),
-            reason: e,
-        }
+    DeltaComputePolicy::try_from(json_value).map_err(|e| PolicyError::InvalidPolicyRef {
+        policy_ref: policy_ref.to_string(),
+        reason: e,
     })
 }
 
@@ -341,10 +337,12 @@ pub fn extract_cost_model(
     };
 
     // Validate the cost model
-    cost_model.validate().map_err(|e| PolicyError::InvalidPolicyRef {
-        policy_ref: policy.policy_id.clone(),
-        reason: format!("Invalid cost model: {}", e),
-    })?;
+    cost_model
+        .validate()
+        .map_err(|e| PolicyError::InvalidPolicyRef {
+            policy_ref: policy.policy_id.clone(),
+            reason: format!("Invalid cost model: {}", e),
+        })?;
 
     // Validate alpha is in [0, 1] for the given row count
     let (_, _, alpha_val) = cost_model.evaluate(row_count);
@@ -365,11 +363,9 @@ pub fn extract_cost_model(
 ///
 /// Supports both "constant" and "linear" cost value types.
 fn parse_cost_value(value: &Value) -> Result<crate::cost_model::CostValue, PolicyError> {
-    serde_json::from_value(value.clone()).map_err(|e| {
-        PolicyError::InvalidPolicyRef {
-            policy_ref: "unknown".to_string(),
-            reason: format!("Failed to parse cost value: {}", e),
-        }
+    serde_json::from_value(value.clone()).map_err(|e| PolicyError::InvalidPolicyRef {
+        policy_ref: "unknown".to_string(),
+        reason: format!("Failed to parse cost value: {}", e),
     })
 }
 
@@ -394,10 +390,7 @@ fn parse_cost_value(value: &Value) -> Result<crate::cost_model::CostValue, Polic
 /// - `Observational` is the least restrictive (no reproducibility claim)
 ///
 /// A receipt with a more restrictive class than required is acceptable.
-pub fn validate_determinism(
-    ctx: &Context,
-    required: DeterminismClass,
-) -> Result<(), PolicyError> {
+pub fn validate_determinism(ctx: &Context, required: DeterminismClass) -> Result<(), PolicyError> {
     let actual = ctx.determinism.as_ref();
 
     match (required, actual) {
@@ -435,10 +428,7 @@ pub fn validate_determinism(
 /// # Returns
 ///
 /// `Ok(())` if receipt complies with policy, or `PolicyError` if violation.
-pub fn validate_policy(
-    receipt: &Receipt,
-    policy_ref: Option<&str>,
-) -> Result<(), PolicyError> {
+pub fn validate_policy(receipt: &Receipt, policy_ref: Option<&str>) -> Result<(), PolicyError> {
     let policy_ref = policy_ref
         .or(receipt.ctx.policy_ref.as_deref())
         .ok_or_else(|| PolicyError::InvalidPolicyRef {
@@ -590,4 +580,3 @@ mod tests {
         assert!(validate_determinism(&ctx_observational, DeterminismClass::Observational).is_ok());
     }
 }
-

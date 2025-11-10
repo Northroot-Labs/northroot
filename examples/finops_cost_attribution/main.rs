@@ -11,12 +11,12 @@
 //! Expected ROI: 25-46% savings, $276K annual
 
 use northroot_engine::delta::{
-    chunk_id_from_str, compute_minhash_sketch, decide_reuse, economic_delta,
-    jaccard_similarity, load_cost_model_from_policy,
+    chunk_id_from_str, compute_minhash_sketch, decide_reuse, economic_delta, jaccard_similarity,
+    load_cost_model_from_policy,
 };
 use northroot_receipts::{
-    Context, DeterminismClass, Receipt, ReceiptKind, SpendPayload, SpendPointers,
-    ResourceVector, ReuseJustification,
+    Context, DeterminismClass, Receipt, ReceiptKind, ResourceVector, ReuseJustification,
+    SpendPayload, SpendPointers,
 };
 use std::collections::HashSet;
 use uuid::Uuid;
@@ -74,14 +74,29 @@ fn simulate_billing_run(
                     // In production, chunk sets would be stored in execution receipts
                     // This is a limitation of the current demo - we need execution receipts
                     // to store the actual chunk sets
-                    
+
                     // For now, we'll compute overlap from the actual resource tuples
                     // that we know were in the previous run (from context)
                     // In a real implementation, this would come from the execution receipt
                     let prev_tuples = vec![
-                        ("acct1".to_string(), "s3".to_string(), "us-east-1".to_string(), "bucket".to_string()),
-                        ("acct2".to_string(), "ec2".to_string(), "us-west-2".to_string(), "instance".to_string()),
-                        ("acct3".to_string(), "rds".to_string(), "eu-west-1".to_string(), "db".to_string()),
+                        (
+                            "acct1".to_string(),
+                            "s3".to_string(),
+                            "us-east-1".to_string(),
+                            "bucket".to_string(),
+                        ),
+                        (
+                            "acct2".to_string(),
+                            "ec2".to_string(),
+                            "us-west-2".to_string(),
+                            "instance".to_string(),
+                        ),
+                        (
+                            "acct3".to_string(),
+                            "rds".to_string(),
+                            "eu-west-1".to_string(),
+                            "db".to_string(),
+                        ),
                     ];
                     let prev_chunks = tuples_to_chunk_ids(&prev_tuples);
                     let j = jaccard_similarity(&current_chunks, &prev_chunks);
@@ -169,8 +184,14 @@ fn simulate_billing_run(
     println!("PROOF OF REUSE:");
     println!("  Previous chunks: {} items", prev_chunks.len());
     println!("  Current chunks: {} items", current_chunks.len());
-    println!("  Intersection: {} items", current_chunks.intersection(&prev_chunks).count());
-    println!("  Union: {} items", current_chunks.union(&prev_chunks).count());
+    println!(
+        "  Intersection: {} items",
+        current_chunks.intersection(&prev_chunks).count()
+    );
+    println!(
+        "  Union: {} items",
+        current_chunks.union(&prev_chunks).count()
+    );
     println!("  Jaccard similarity (J): {:.4}", overlap_j);
     println!("  Economic delta (ΔC): ${:.4}", delta_c);
     println!("  Reuse decision: {:?}", decision);
@@ -187,9 +208,24 @@ fn main() {
     println!("RUN 1: Initial Billing Run");
     println!("---------------------------");
     let run1_tuples = vec![
-        ("acct1".to_string(), "s3".to_string(), "us-east-1".to_string(), "bucket".to_string()),
-        ("acct2".to_string(), "ec2".to_string(), "us-west-2".to_string(), "instance".to_string()),
-        ("acct3".to_string(), "rds".to_string(), "eu-west-1".to_string(), "db".to_string()),
+        (
+            "acct1".to_string(),
+            "s3".to_string(),
+            "us-east-1".to_string(),
+            "bucket".to_string(),
+        ),
+        (
+            "acct2".to_string(),
+            "ec2".to_string(),
+            "us-west-2".to_string(),
+            "instance".to_string(),
+        ),
+        (
+            "acct3".to_string(),
+            "rds".to_string(),
+            "eu-west-1".to_string(),
+            "db".to_string(),
+        ),
     ];
 
     let (receipt1, _sketch1) = simulate_billing_run(run1_tuples, None);
@@ -201,7 +237,10 @@ fn main() {
             if let Some(sketch) = &just.minhash_sketch {
                 println!("  MinHash Sketch: {}", sketch);
             }
-            println!("  Overlap J: {:.4} (no previous state)", just.overlap_j.unwrap_or(0.0));
+            println!(
+                "  Overlap J: {:.4} (no previous state)",
+                just.overlap_j.unwrap_or(0.0)
+            );
         }
         println!("  Total Value: ${:.2}", spend.total_value);
     }
@@ -211,10 +250,30 @@ fn main() {
     println!("RUN 2: Billing Run with Overlap - PROVING REUSE");
     println!("------------------------------------------------");
     let run2_tuples = vec![
-        ("acct1".to_string(), "s3".to_string(), "us-east-1".to_string(), "bucket".to_string()),
-        ("acct2".to_string(), "ec2".to_string(), "us-west-2".to_string(), "instance".to_string()),
-        ("acct3".to_string(), "rds".to_string(), "eu-west-1".to_string(), "db".to_string()),
-        ("acct4".to_string(), "lambda".to_string(), "ap-southeast-1".to_string(), "function".to_string()),
+        (
+            "acct1".to_string(),
+            "s3".to_string(),
+            "us-east-1".to_string(),
+            "bucket".to_string(),
+        ),
+        (
+            "acct2".to_string(),
+            "ec2".to_string(),
+            "us-west-2".to_string(),
+            "instance".to_string(),
+        ),
+        (
+            "acct3".to_string(),
+            "rds".to_string(),
+            "eu-west-1".to_string(),
+            "db".to_string(),
+        ),
+        (
+            "acct4".to_string(),
+            "lambda".to_string(),
+            "ap-southeast-1".to_string(),
+            "function".to_string(),
+        ),
     ];
 
     let (receipt2, _sketch2) = simulate_billing_run(run2_tuples, Some(&receipt1));

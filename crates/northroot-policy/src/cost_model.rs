@@ -56,16 +56,25 @@ impl CostValue {
         match self {
             CostValue::Constant { value } => {
                 if *value < 0.0 {
-                    Err(format!("Constant cost value must be non-negative, got {}", value))
+                    Err(format!(
+                        "Constant cost value must be non-negative, got {}",
+                        value
+                    ))
                 } else {
                     Ok(())
                 }
             }
             CostValue::Linear { per_row, base } => {
                 if *base < 0.0 {
-                    Err(format!("Linear base cost must be non-negative, got {}", base))
+                    Err(format!(
+                        "Linear base cost must be non-negative, got {}",
+                        base
+                    ))
                 } else if *per_row < 0.0 {
-                    Err(format!("Linear per_row cost must be non-negative, got {}", per_row))
+                    Err(format!(
+                        "Linear per_row cost must be non-negative, got {}",
+                        per_row
+                    ))
                 } else {
                     Ok(())
                 }
@@ -299,4 +308,3 @@ mod tests {
         assert!((threshold - 1.0 / (0.9 * 0.51)).abs() < 0.0001);
     }
 }
-

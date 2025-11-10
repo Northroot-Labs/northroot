@@ -40,7 +40,7 @@ pub use composition::{
     validate_link, validate_sequential, CompositionError,
 };
 // Re-export policy items for convenience.
-// 
+//
 // **Boundary note**: Policy validation lives in `northroot-policy` crate.
 // Engine re-exports these for convenience, but policy validation is NOT part of engine.
 // Policy answers "is this allowed?" (semantic validation), not "how do I compute this?" (engine).
@@ -48,15 +48,13 @@ pub use northroot_policy::{
     load_policy, validate_determinism, validate_policy, validate_policy_ref_format,
     validate_region_constraints, validate_tool_constraints, PolicyError,
 };
-pub use signature::{
-    resolve_did_key, verify_all_signatures, verify_signature, SignatureError,
-};
+pub use signature::{resolve_did_key, verify_all_signatures, verify_signature, SignatureError};
 
 // Re-export delta module items for convenience
 pub use delta::{
-    chunk_id_from_bytes, chunk_id_from_str, decide_reuse, decide_reuse_with_layer,
-    economic_delta, jaccard_similarity, load_cost_model_from_policy, verify_exact_set,
-    weighted_jaccard_similarity, ChunkSet, ReuseDecision,
+    chunk_id_from_bytes, chunk_id_from_str, decide_reuse, decide_reuse_with_layer, economic_delta,
+    jaccard_similarity, load_cost_model_from_policy, verify_exact_set, weighted_jaccard_similarity,
+    ChunkSet, ReuseDecision,
 };
 
 // Re-export execution module items
