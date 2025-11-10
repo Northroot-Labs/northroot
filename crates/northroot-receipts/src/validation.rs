@@ -196,6 +196,45 @@ pub fn validate_payload_hashes(receipt: &Receipt) -> Result<(), ValidationError>
             if let Some(ref trace_seq_root) = payload.roots.trace_seq_root {
                 validate_hash_format_str(trace_seq_root)?;
             }
+            // Validate new optional fields
+            if let Some(ref pac) = payload.pac {
+                if pac.len() != 32 {
+                    return Err(ValidationError::InvalidValue(format!(
+                        "PAC key must be exactly 32 bytes, got {} bytes",
+                        pac.len()
+                    )));
+                }
+            }
+            if let Some(ref change_epoch) = payload.change_epoch {
+                if change_epoch.is_empty() {
+                    return Err(ValidationError::InvalidValue(
+                        "change_epoch must be non-empty if present".to_string(),
+                    ));
+                }
+            }
+            if let Some(hll_cardinality) = payload.hll_cardinality {
+                if hll_cardinality == 0 {
+                    return Err(ValidationError::InvalidValue(
+                        "hll_cardinality must be > 0 if present".to_string(),
+                    ));
+                }
+            }
+            if let Some(ref chunk_manifest_hash) = payload.chunk_manifest_hash {
+                if chunk_manifest_hash.len() != 32 {
+                    return Err(ValidationError::InvalidValue(format!(
+                        "chunk_manifest_hash must be exactly 32 bytes, got {} bytes",
+                        chunk_manifest_hash.len()
+                    )));
+                }
+            }
+            if let Some(ref merkle_root) = payload.merkle_root {
+                if merkle_root.len() != 32 {
+                    return Err(ValidationError::InvalidValue(format!(
+                        "merkle_root must be exactly 32 bytes, got {} bytes",
+                        merkle_root.len()
+                    )));
+                }
+            }
         }
         crate::Payload::Spend(payload) => {
             // Validate currency code format
@@ -317,6 +356,7 @@ pub fn validate_payload(receipt: &Receipt) -> Result<(), ValidationError> {
                     "execution.span_commitments must not be empty".to_string(),
                 ));
             }
+            // Additional validation for new fields is done in validate_payload_hashes
         }
         crate::Payload::MethodShape(payload) => {
             if payload.nodes.is_empty() {

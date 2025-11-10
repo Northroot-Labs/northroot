@@ -454,6 +454,30 @@ pub struct ExecutionPayload {
     pub roots: ExecutionRoots,
     /// Optional Delta Lake Change Data Feed metadata for partition-level reuse tracking
     pub cdf_metadata: Option<Vec<CdfMetadata>>,
+    /// Proof-addressable cache key (32 bytes)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub pac: Option<[u8; 32]>,
+    /// Change epoch: snapshot or commit ID (e.g., "snap-123", "commit-abc")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub change_epoch: Option<String>,
+    /// MinHash signature for fast overlap estimation (BLOB)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub minhash_signature: Option<Vec<u8>>,
+    /// HyperLogLog cardinality estimate
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hll_cardinality: Option<u64>,
+    /// Hash pointer to full chunk manifest
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chunk_manifest_hash: Option<[u8; 32]>,
+    /// Size of uncompressed manifest in bytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub chunk_manifest_size_bytes: Option<u64>,
+    /// Optional Merkle root for integrity verification
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub merkle_root: Option<[u8; 32]>,
+    /// Previous execution RID for receipt chain
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prev_execution_rid: Option<Uuid>,
 }
 
 /// Reference to a method (operator plan) used in execution.

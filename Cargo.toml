@@ -5,6 +5,7 @@ members = [
     "crates/northroot-ops",
     "crates/northroot-policy",
     "crates/northroot-commons",
+    "crates/northroot-storage",
 ]
 resolver = "2"
 

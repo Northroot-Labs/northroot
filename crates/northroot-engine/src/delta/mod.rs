@@ -6,10 +6,12 @@
 pub mod chunking;
 pub mod decision;
 pub mod overlap;
+pub mod pac;
 
 pub use chunking::*;
 pub use decision::*;
 pub use overlap::*;
+pub use pac::*;
 
 use northroot_policy::{extract_cost_model, load_policy, CostModel, PolicyError};
 

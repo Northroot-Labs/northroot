@@ -85,6 +85,14 @@ fn test_full_composition_workflow() {
                 "sha256:5555555555555555555555555555555555555555555555555555555555555555".to_string(),
             ),
             cdf_metadata: None,
+            pac: None,
+            change_epoch: None,
+            minhash_signature: None,
+            hll_cardinality: None,
+            chunk_manifest_hash: None,
+            chunk_manifest_size_bytes: None,
+            merkle_root: None,
+            prev_execution_rid: None,
         }),
     );
 

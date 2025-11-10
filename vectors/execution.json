@@ -31,7 +31,15 @@
             "identity_root": "sha256:74d02dd16c5439737b4ca10ae20cf2c62086c0629e46a876e09e415aaeb29728",
             "trace_seq_root": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d"
         },
-        "cdf_metadata": null
+        "cdf_metadata": null,
+        "pac": null,
+        "change_epoch": null,
+        "minhash_signature": null,
+        "hll_cardinality": null,
+        "chunk_manifest_hash": null,
+        "chunk_manifest_size_bytes": null,
+        "merkle_root": null,
+        "prev_execution_rid": null
     },
     "attest": null,
     "sig": null,

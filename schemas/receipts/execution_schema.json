@@ -94,6 +94,41 @@
                 },
                 "additionalProperties": false
             }
+        },
+        "pac": {
+            "type": ["string", "null"],
+            "description": "Proof-addressable cache key (base64-encoded 32-byte binary)"
+        },
+        "change_epoch": {
+            "type": ["string", "null"],
+            "description": "Change epoch: snapshot or commit ID (e.g., \"snap-123\", \"commit-abc\")"
+        },
+        "minhash_signature": {
+            "type": ["string", "null"],
+            "description": "MinHash signature for fast overlap estimation (base64-encoded binary)"
+        },
+        "hll_cardinality": {
+            "type": ["integer", "null"],
+            "description": "HyperLogLog cardinality estimate",
+            "minimum": 0
+        },
+        "chunk_manifest_hash": {
+            "type": ["string", "null"],
+            "description": "Hash pointer to full chunk manifest (base64-encoded 32-byte binary)"
+        },
+        "chunk_manifest_size_bytes": {
+            "type": ["integer", "null"],
+            "description": "Size of uncompressed manifest in bytes",
+            "minimum": 0
+        },
+        "merkle_root": {
+            "type": ["string", "null"],
+            "description": "Optional Merkle root for integrity verification (base64-encoded 32-byte binary)"
+        },
+        "prev_execution_rid": {
+            "type": ["string", "null"],
+            "description": "Previous execution RID for receipt chain (UUID format)",
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
         }
     },
     "additionalProperties": false

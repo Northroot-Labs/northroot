@@ -22,6 +22,9 @@ pub struct ExecutionReceiptBuilder {
     data_shape_hash: Option<String>,
     span_commitments: Vec<String>,
     identity_root: Option<String>,
+    change_epoch: Option<String>,
+    policy_ref: Option<String>,
+    determinism: Option<String>,
 }
 
 impl ExecutionReceiptBuilder {
@@ -33,6 +36,9 @@ impl ExecutionReceiptBuilder {
             data_shape_hash: None,
             span_commitments: Vec::new(),
             identity_root: None,
+            change_epoch: None,
+            policy_ref: None,
+            determinism: None,
         }
     }
 
@@ -76,6 +82,64 @@ impl ExecutionReceiptBuilder {
     pub fn identity_root(mut self, identity_root: String) -> Self {
         self.identity_root = Some(identity_root);
         self
+    }
+
+    /// Set the change epoch (snapshot or commit ID).
+    pub fn change_epoch(mut self, change_epoch: String) -> Self {
+        self.change_epoch = Some(change_epoch);
+        self
+    }
+
+    /// Set the policy reference.
+    pub fn policy_ref(mut self, policy_ref: String) -> Self {
+        self.policy_ref = Some(policy_ref);
+        self
+    }
+
+    /// Set the determinism class.
+    pub fn determinism(mut self, determinism: String) -> Self {
+        self.determinism = Some(determinism);
+        self
+    }
+
+    /// Compute PAC key for this execution.
+    ///
+    /// # Returns
+    ///
+    /// 32-byte PAC key, or error if required fields are missing
+    pub fn compute_pac_key(&self) -> Result<[u8; 32], ValidationError> {
+        use crate::delta::pac::compute_pac_key;
+
+        let namespace = "northroot"; // Default namespace
+        let version = "0.3.0"; // Receipt version
+        let data_shape_hash = self
+            .data_shape_hash
+            .as_ref()
+            .ok_or_else(|| ValidationError::MissingField("data_shape_hash".to_string()))?;
+        let method_shape_hash = self
+            .method_ref
+            .as_ref()
+            .ok_or_else(|| ValidationError::MissingField("method_ref".to_string()))?
+            .method_shape_root
+            .as_str();
+        let change_epoch_id = self.change_epoch.as_deref().unwrap_or("none");
+        let determinism_class = self
+            .determinism
+            .as_deref()
+            .unwrap_or("observational");
+        let policy_ref = self.policy_ref.as_deref().unwrap_or("none");
+        let output_schema_version = "1.0"; // Default schema version
+
+        Ok(compute_pac_key(
+            namespace,
+            version,
+            data_shape_hash,
+            method_shape_hash,
+            change_epoch_id,
+            determinism_class,
+            policy_ref,
+            output_schema_version,
+        ))
     }
 
     /// Build the execution receipt.
@@ -123,6 +187,14 @@ impl ExecutionReceiptBuilder {
             span_commitments: self.span_commitments,
             roots,
             cdf_metadata: None,
+            pac: None,
+            change_epoch: self.change_epoch.clone(),
+            minhash_signature: None,
+            hll_cardinality: None,
+            chunk_manifest_hash: None,
+            chunk_manifest_size_bytes: None,
+            merkle_root: None,
+            prev_execution_rid: None,
         });
         let receipt = Receipt {
             rid,
@@ -214,6 +286,38 @@ mod tests {
             .build(rid, "0.3.0".to_string(), ctx);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_compute_pac_key() {
+        let method_ref = create_test_method_ref();
+        let builder = ExecutionReceiptBuilder::new()
+            .method_ref(method_ref)
+            .data_shape_hash("sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string())
+            .change_epoch("snap-123".to_string())
+            .policy_ref("pol:test@1".to_string())
+            .determinism("strict".to_string());
+
+        let pac_key = builder.compute_pac_key().unwrap();
+        assert_eq!(pac_key.len(), 32, "PAC key should be 32 bytes");
+
+        // Same inputs should produce same key
+        let builder2 = ExecutionReceiptBuilder::new()
+            .method_ref(create_test_method_ref())
+            .data_shape_hash("sha256:2222222222222222222222222222222222222222222222222222222222222222".to_string())
+            .change_epoch("snap-123".to_string())
+            .policy_ref("pol:test@1".to_string())
+            .determinism("strict".to_string());
+
+        let pac_key2 = builder2.compute_pac_key().unwrap();
+        assert_eq!(pac_key, pac_key2, "Same inputs should produce same PAC key");
+    }
+
+    #[test]
+    fn test_compute_pac_key_missing_fields() {
+        let builder = ExecutionReceiptBuilder::new();
+        let result = builder.compute_pac_key();
+        assert!(result.is_err(), "Should error when required fields are missing");
     }
 }
 
