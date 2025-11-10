@@ -121,7 +121,8 @@ where
 /// ```rust
 /// use northroot_engine::delta::load_cost_model_from_policy;
 ///
-/// let cost_model = load_cost_model_from_policy("pol:finops/cost-attribution@1", Some(1000))?;
+/// let cost_model = load_cost_model_from_policy("pol:finops/cost-attribution@1", Some(1000))
+///     .expect("Failed to load cost model");
 /// ```
 pub fn load_cost_model_from_policy(
     policy_ref: &str,

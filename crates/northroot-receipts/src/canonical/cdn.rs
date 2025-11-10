@@ -22,9 +22,16 @@ pub fn to_cdn(value: &CborValue) -> String {
         CborValue::Null => "null".into(),
         CborValue::Bool(b) => b.to_string(),
         CborValue::Integer(i) => {
-            // Format as integer - use Debug formatting as fallback
-            // ciborium::value::Integer doesn't implement Display
-            format!("{:?}", i)
+            // Format as integer - ciborium::value::Integer doesn't implement Display
+            // Use Debug formatting and extract the number from the string
+            // Format is typically "Integer(42)" or similar
+            let debug_str = format!("{:?}", i);
+            // Try to extract number from debug string, or use the whole thing
+            // For now, just use Debug format and clean it up
+            debug_str
+                .trim_start_matches("Integer(")
+                .trim_end_matches(")")
+                .to_string()
         }
         CborValue::Float(f) => {
             match f {

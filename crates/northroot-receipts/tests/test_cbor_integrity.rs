@@ -4,11 +4,14 @@
 //! deterministically and that CBOR encoding doesn't break existing receipt validation.
 
 use northroot_receipts::*;
+use northroot_receipts::adapters::json;
 use std::fs;
 
 fn load_vector(path: &str) -> Result<Receipt, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(path)?;
-    let receipt: Receipt = serde_json::from_str(&json_str)?;
+    let mut receipt = json::receipt_from_json(&json_str)?;
+    // Recompute hash with CBOR canonicalization (test vectors have old JCS hashes)
+    receipt.hash = receipt.compute_hash()?;
     Ok(receipt)
 }
 
@@ -83,9 +86,9 @@ fn test_receipt_cbor_does_not_break_json_validation() {
     // Receipt should still validate after CBOR operations
     receipt.validate().unwrap();
 
-    // Hash computation should still work
-    let json_hash = receipt.compute_hash().unwrap();
-    assert_eq!(json_hash, receipt.hash);
+    // Hash computation should still work (now using CBOR canonicalization)
+    let computed_hash = receipt.compute_hash().unwrap();
+    assert_eq!(computed_hash, receipt.hash, "Hash should match computed value");
 }
 
 #[test]

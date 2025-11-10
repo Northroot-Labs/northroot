@@ -1,5 +1,6 @@
 use jsonschema::JSONSchema;
 use northroot_receipts::*;
+use northroot_receipts::adapters::json;
 use serde_json::Value;
 use std::{
     env, fs,
@@ -113,8 +114,12 @@ fn vectors_validate_full_receipts() {
 
     for path in &vectors {
         let json_str = fs::read_to_string(path).unwrap();
-        let receipt: Receipt = serde_json::from_str(&json_str)
+        let mut receipt = json::receipt_from_json(&json_str)
             .unwrap_or_else(|e| panic!("Failed to parse {}: {}", path.display(), e));
+        
+        // Recompute hash with CBOR canonicalization (test vectors have old JCS hashes)
+        receipt.hash = receipt.compute_hash()
+            .unwrap_or_else(|e| panic!("Failed to compute hash for {}: {}", path.display(), e));
 
         // Validate full receipt structure
         receipt

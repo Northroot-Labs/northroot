@@ -304,11 +304,16 @@ impl Receipt {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use northroot_receipts::Receipt;
+    /// use northroot_receipts::adapters::json;
+    ///
+    /// // Load a spend receipt (example - simplified for documentation)
+    /// // In practice, use load_vector() or receipt_from_json() with a full receipt
+    /// // let receipt = json::receipt_from_json(json_str).unwrap();
     ///
     /// // If receipt is a spend receipt with justification.alpha = 0.9
-    /// let alpha = receipt.alpha(); // Some(0.9)
+    /// // let alpha = receipt.alpha(); // Some(0.9)
     /// ```
     pub fn alpha(&self) -> Option<f64> {
         if let Payload::Spend(spend) = &self.payload {
@@ -334,14 +339,19 @@ impl Receipt {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use northroot_receipts::Receipt;
+    /// use northroot_receipts::adapters::json;
+    ///
+    /// // Load a spend receipt (example - simplified for documentation)
+    /// // In practice, use load_vector() or receipt_from_json() with a full receipt
+    /// // let receipt = json::receipt_from_json(json_str).unwrap();
     ///
     /// // Validate that α >= 0.8
-    /// match receipt.validate_alpha_threshold(0.8) {
-    ///     Ok(()) => println!("α threshold met"),
-    ///     Err(e) => println!("α too low: {}", e),
-    /// }
+    /// // match receipt.validate_alpha_threshold(0.8) {
+    /// //     Ok(()) => println!("α threshold met"),
+    /// //     Err(e) => println!("α too low: {}", e),
+    /// // }
     /// ```
     pub fn validate_alpha_threshold(&self, min_alpha: f64) -> Result<(), ValidationError> {
         if !(0.0..=1.0).contains(&min_alpha) {

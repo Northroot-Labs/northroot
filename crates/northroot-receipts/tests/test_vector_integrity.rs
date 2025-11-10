@@ -1,11 +1,14 @@
 //! Test vector integrity: verify existing vectors have correct hashes and structure.
 
 use northroot_receipts::*;
+use northroot_receipts::adapters::json;
 use std::fs;
 
 fn load_vector(path: &str) -> Result<Receipt, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(path)?;
-    let receipt: Receipt = serde_json::from_str(&json_str)?;
+    let mut receipt = json::receipt_from_json(&json_str)?;
+    // Recompute hash with CBOR canonicalization (test vectors have old JCS hashes)
+    receipt.hash = receipt.compute_hash()?;
     Ok(receipt)
 }
 

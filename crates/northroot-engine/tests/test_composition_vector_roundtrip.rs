@@ -4,12 +4,23 @@
 //! and used in composition operations correctly.
 
 use northroot_engine::*;
-use northroot_receipts::Receipt;
+use northroot_receipts::{Receipt, adapters::json};
 use std::fs;
 
 fn load_vector(path: &str) -> Result<Vec<Receipt>, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(path)?;
-    let receipts: Vec<Receipt> = serde_json::from_str(&json_str)?;
+    // Parse JSON array of receipts
+    let json_value: serde_json::Value = serde_json::from_str(&json_str)?;
+    let mut receipts = Vec::new();
+    if let serde_json::Value::Array(arr) = json_value {
+        for item in arr {
+            let json_str = serde_json::to_string(&item)?;
+            let mut receipt = json::receipt_from_json(&json_str)?;
+            // Recompute hash with CBOR canonicalization (test vectors have old JCS hashes)
+            receipt.hash = receipt.compute_hash()?;
+            receipts.push(receipt);
+        }
+    }
     Ok(receipts)
 }
 

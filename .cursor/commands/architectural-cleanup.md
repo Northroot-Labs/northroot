@@ -1,0 +1,1 @@
+research the codebase and use the ADR playbook to test for architectural violations. if any found, clean up. 
