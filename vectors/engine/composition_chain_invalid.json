@@ -1,54 +1,55 @@
 [
   {
-    "rid": "00000000-0000-0000-0000-000000000001",
-    "version": "0.3.0",
-    "kind": "data_shape",
-    "dom": "sha256:385cfdbc00ec32031699460779c15099b2bba3cad0e440fffb08e10df0acb9e1",
+    "attest": null,
     "cod": "sha256:68ba79b042ab0cbfcfdfc7cfc0fc1e7b1beeb6d6ddd336a2a88a2f02b64fe414",
-    "links": [],
     "ctx": {
-      "policy_ref": "pol:standard-v1",
-      "timestamp": "2025-11-06T12:00:00.000Z",
-      "nonce": null,
       "determinism": "strict",
-      "identity_ref": "did:key:zNorthroot"
+      "identity_ref": "did:key:zNorthroot",
+      "nonce": null,
+      "policy_ref": "pol:standard-v1",
+      "timestamp": "2025-11-06T12:00:00.000Z"
     },
+    "dom": "sha256:385cfdbc00ec32031699460779c15099b2bba3cad0e440fffb08e10df0acb9e1",
+    "hash": "sha256:ae536d81d66aa23403581860d9540188d86ed4b90ae2f0bcaadfa50ccb4d0065",
+    "kind": "data_shape",
+    "links": [],
     "payload": {
       "schema_hash": "sha256:68ba79b042ab0cbfcfdfc7cfc0fc1e7b1beeb6d6ddd336a2a88a2f02b64fe414",
       "sketch_hash": null
     },
-    "attest": null,
+    "rid": "00000000-0000-0000-0000-000000000001",
     "sig": null,
-    "hash": "sha256:e58858ad998397eaa1db5642bcca7c0132ef5e0b7c76c6307ad2900cb696bcd7"
+    "version": "0.3.0"
   },
   {
-    "rid": "00000000-0000-0000-0000-000000000002",
-    "version": "0.3.0",
-    "kind": "method_shape",
-    "dom": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+    "attest": null,
     "cod": "sha256:e7880638dcc10d2f2a4a817d8aeb1ea618a2b3f7c6b6d730f4f8c06f586ea81b",
-    "links": ["00000000-0000-0000-0000-000000000001"],
     "ctx": {
-      "policy_ref": "pol:standard-v1",
-      "timestamp": "2025-11-06T12:00:00.000Z",
-      "nonce": null,
       "determinism": "strict",
-      "identity_ref": "did:key:zNorthroot"
+      "identity_ref": "did:key:zNorthroot",
+      "nonce": null,
+      "policy_ref": "pol:standard-v1",
+      "timestamp": "2025-11-06T12:00:00.000Z"
     },
+    "dom": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+    "hash": "sha256:f5734b3671aba6c3b2ec44d795a08f4be3c8d988671c36580907b314ae3fcd2f",
+    "kind": "method_shape",
+    "links": [
+      "00000000-0000-0000-0000-000000000001"
+    ],
     "payload": {
+      "dag_hash": null,
+      "edges": null,
       "nodes": [
         {
           "id": "op1",
           "span_shape_hash": "sha256:a01494edccade55e39cd74ca38709b344295d908e5c83981bb7e23dc7b311c15"
         }
       ],
-      "edges": null,
-      "root_multiset": "sha256:e7880638dcc10d2f2a4a817d8aeb1ea618a2b3f7c6b6d730f4f8c06f586ea81b",
-      "dag_hash": null
+      "root_multiset": "sha256:e7880638dcc10d2f2a4a817d8aeb1ea618a2b3f7c6b6d730f4f8c06f586ea81b"
     },
-    "attest": null,
+    "rid": "00000000-0000-0000-0000-000000000002",
     "sig": null,
-    "hash": "sha256:invalid_hash_for_testing_mismatch"
+    "version": "0.3.0"
   }
 ]
-

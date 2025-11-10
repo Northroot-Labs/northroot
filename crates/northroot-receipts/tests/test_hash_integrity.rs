@@ -6,6 +6,7 @@ use std::fs;
 
 fn load_vector(path: &str) -> Receipt {
     let json_str = fs::read_to_string(path).unwrap();
+    // Test vectors now have CBOR-based hashes
     json::receipt_from_json(&json_str).unwrap()
 }
 

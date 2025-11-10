@@ -1,47 +1,47 @@
 {
-    "rid": "00000000-0000-0000-0000-000000000004",
-    "version": "0.3.0",
-    "kind": "execution",
-    "dom": "sha256:fb04389691fdb79ff2df1b9868e10764001991e1ce5342504b80e482e088b6b5",
-    "cod": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d",
-    "links": [
-        "00000000-0000-0000-0000-000000000003"
+  "attest": null,
+  "cod": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d",
+  "ctx": {
+    "determinism": "strict",
+    "identity_ref": "did:key:zNorthroot",
+    "nonce": null,
+    "policy_ref": "pol:standard-v1",
+    "timestamp": "2025-11-06T12:00:00.000Z"
+  },
+  "dom": "sha256:fb04389691fdb79ff2df1b9868e10764001991e1ce5342504b80e482e088b6b5",
+  "hash": "sha256:fbea7214346e0c3c650e52557c9aa914bd4083e6bced1b2b55dd979a44c42a5f",
+  "kind": "execution",
+  "links": [
+    "00000000-0000-0000-0000-000000000003"
+  ],
+  "payload": {
+    "cdf_metadata": null,
+    "change_epoch": null,
+    "chunk_manifest_hash": null,
+    "chunk_manifest_size_bytes": null,
+    "data_shape_hash": "sha256:68ba79b042ab0cbfcfdfc7cfc0fc1e7b1beeb6d6ddd336a2a88a2f02b64fe414",
+    "hll_cardinality": null,
+    "merkle_root": null,
+    "method_ref": {
+      "method_id": "com.acme/normalize-ledger",
+      "method_shape_root": "sha256:a01494edccade55e39cd74ca38709b344295d908e5c83981bb7e23dc7b311c15",
+      "version": "1.0.0"
+    },
+    "minhash_signature": null,
+    "pac": null,
+    "prev_execution_rid": null,
+    "roots": {
+      "identity_root": "sha256:74d02dd16c5439737b4ca10ae20cf2c62086c0629e46a876e09e415aaeb29728",
+      "trace_seq_root": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d",
+      "trace_set_root": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d"
+    },
+    "span_commitments": [
+      "sha256:9897d53ba0aa43e2e9f2d935591ce280da9fa8da27823ac2659fc4264e94fba7",
+      "sha256:e2f03f888ccf3e36d4f17e50d9a4b0c01957bac865eaf96e6419b97c3f3d63a0"
     ],
-    "ctx": {
-        "policy_ref": "pol:standard-v1",
-        "timestamp": "2025-11-06T12:00:00.000Z",
-        "nonce": null,
-        "determinism": "strict",
-        "identity_ref": "did:key:zNorthroot"
-    },
-    "payload": {
-        "trace_id": "tr_demo_001",
-        "method_ref": {
-            "method_id": "com.acme/normalize-ledger",
-            "version": "1.0.0",
-            "method_shape_root": "sha256:a01494edccade55e39cd74ca38709b344295d908e5c83981bb7e23dc7b311c15"
-        },
-        "data_shape_hash": "sha256:68ba79b042ab0cbfcfdfc7cfc0fc1e7b1beeb6d6ddd336a2a88a2f02b64fe414",
-        "span_commitments": [
-            "sha256:9897d53ba0aa43e2e9f2d935591ce280da9fa8da27823ac2659fc4264e94fba7",
-            "sha256:e2f03f888ccf3e36d4f17e50d9a4b0c01957bac865eaf96e6419b97c3f3d63a0"
-        ],
-        "roots": {
-            "trace_set_root": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d",
-            "identity_root": "sha256:74d02dd16c5439737b4ca10ae20cf2c62086c0629e46a876e09e415aaeb29728",
-            "trace_seq_root": "sha256:df82f595ae27ea901b2ad1f559025a405ccd285cae382a78da09f01a8a89058d"
-        },
-        "cdf_metadata": null,
-        "pac": null,
-        "change_epoch": null,
-        "minhash_signature": null,
-        "hll_cardinality": null,
-        "chunk_manifest_hash": null,
-        "chunk_manifest_size_bytes": null,
-        "merkle_root": null,
-        "prev_execution_rid": null
-    },
-    "attest": null,
-    "sig": null,
-    "hash": "sha256:e7e308474c36ab0da3e19c921aacf92d612a95bceb3f992dc44c9b678f254f40"
+    "trace_id": "tr_demo_001"
+  },
+  "rid": "00000000-0000-0000-0000-000000000004",
+  "sig": null,
+  "version": "0.3.0"
 }

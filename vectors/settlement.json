@@ -1,36 +1,36 @@
 {
-  "rid": "00000000-0000-0000-0000-000000000006",
-  "version": "0.3.0",
-  "kind": "settlement",
-  "dom": "sha256:dd06220b9b4521452dea8c603219d0b549aa07357835d26519cc03bdb2dbefd7",
+  "attest": null,
   "cod": "sha256:346ae4ca888b80b0220ccc02a5fc3798e5525b30b77083f784e003d3106ae107",
+  "ctx": {
+    "determinism": "strict",
+    "identity_ref": "did:key:zNorthroot",
+    "nonce": null,
+    "policy_ref": "pol:standard-v1",
+    "timestamp": "2025-11-06T12:00:00.000Z"
+  },
+  "dom": "sha256:dd06220b9b4521452dea8c603219d0b549aa07357835d26519cc03bdb2dbefd7",
+  "hash": "sha256:06f1ad9ca953337908b2f032b9722da75b548e1e6fb36027dbc9aefebf4d756e",
+  "kind": "settlement",
   "links": [
     "00000000-0000-0000-0000-000000000005"
   ],
-  "ctx": {
-    "policy_ref": "pol:standard-v1",
-    "timestamp": "2025-11-06T12:00:00.000Z",
-    "nonce": null,
-    "determinism": "strict",
-    "identity_ref": "did:key:zNorthroot"
-  },
   "payload": {
-    "wur_refs": [
-      "00000000-0000-0000-0000-000000000004",
-      "00000000-0000-0000-0000-000000000005"
-    ],
+    "cash_instr": {
+      "account": "****1234",
+      "method": "ach",
+      "routing": "021000021"
+    },
     "net_positions": {
       "did:key:partyA": 0.72,
       "did:key:partyB": -0.72
     },
     "rules_ref": "clear:net-v1",
-    "cash_instr": {
-      "account": "****1234",
-      "method": "ach",
-      "routing": "021000021"
-    }
+    "wur_refs": [
+      "00000000-0000-0000-0000-000000000004",
+      "00000000-0000-0000-0000-000000000005"
+    ]
   },
-  "attest": null,
+  "rid": "00000000-0000-0000-0000-000000000006",
   "sig": null,
-  "hash": "sha256:74b7bda7a92b49ecb21b36d72d1c4436c78c409a3264b5502de11b9e66c6a0ab"
+  "version": "0.3.0"
 }

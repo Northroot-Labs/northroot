@@ -15,9 +15,8 @@ fn load_vector(path: &str) -> Result<Vec<Receipt>, Box<dyn std::error::Error>> {
     if let serde_json::Value::Array(arr) = json_value {
         for item in arr {
             let json_str = serde_json::to_string(&item)?;
-            let mut receipt = json::receipt_from_json(&json_str)?;
-            // Recompute hash with CBOR canonicalization (test vectors have old JCS hashes)
-            receipt.hash = receipt.compute_hash()?;
+            // Test vectors now have CBOR-based hashes
+            let receipt = json::receipt_from_json(&json_str)?;
             receipts.push(receipt);
         }
     }

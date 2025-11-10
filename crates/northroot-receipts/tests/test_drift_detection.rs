@@ -18,46 +18,43 @@ use std::fs;
 /// 2. Run `cargo test --test test_vector_integrity` to get new hashes
 /// 3. Update this constant with the new hashes
 ///
-/// **Migration Note**: Old JCS-based hashes are no longer valid. This test is
-/// temporarily disabled during migration. After updating test vectors with new
-/// CBOR-based hashes, re-enable this test.
+/// **Updated**: These hashes are computed from CBOR canonicalization (RFC 8949),
+/// not JSON (JCS). All hashes changed during the CBOR migration.
 const BASELINE_HASHES: &[(&str, &str)] = &[
     (
         "data_shape.json",
-        "sha256:e58858ad998397eaa1db5642bcca7c0132ef5e0b7c76c6307ad2900cb696bcd7",
+        "sha256:ae536d81d66aa23403581860d9540188d86ed4b90ae2f0bcaadfa50ccb4d0065",
     ),
     (
         "method_shape.json",
-        "sha256:b26a128e7e1fa304a9d43d92c96f3d0fcb9381a91d8fc87d13c1813f42361208",
+        "sha256:af589a4e472fb7f1644d9a6f98224973c754a87a4232619c1e49384c8b3d5281",
     ),
     (
         "reasoning_shape.json",
-        "sha256:4318692a6fe02e195581592b4df2e1052152fc9b8a71987222d1b1fd9ce50b61",
+        "sha256:62b76e51f24d101e92581981e3a9b58785320983585768aa2dc7c1eabd1eb598",
     ),
     (
         "execution.json",
-        "sha256:e7e308474c36ab0da3e19c921aacf92d612a95bceb3f992dc44c9b678f254f40",
+        "sha256:fbea7214346e0c3c650e52557c9aa914bd4083e6bced1b2b55dd979a44c42a5f",
     ),
     (
         "spend.json",
-        "sha256:5daf3ddb440d6ecf7977ce0fbc038c984c62894d3d2aa11befa7c78df527a2ad",
+        "sha256:088b62232e0b9500985329afff5465b0d0faff1a76aafc3388509a700343cbcb",
     ),
     (
         "settlement.json",
-        "sha256:74b7bda7a92b49ecb21b36d72d1c4436c78c409a3264b5502de11b9e66c6a0ab",
+        "sha256:06f1ad9ca953337908b2f032b9722da75b548e1e6fb36027dbc9aefebf4d756e",
     ),
 ];
 
 fn load_vector(path: &str) -> Result<Receipt, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(path)?;
-    let mut receipt = json::receipt_from_json(&json_str)?;
-    // Recompute hash with CBOR canonicalization (test vectors have old JCS hashes)
-    receipt.hash = receipt.compute_hash()?;
+    // Test vectors now have CBOR-based hashes, no need to recompute
+    let receipt = json::receipt_from_json(&json_str)?;
     Ok(receipt)
 }
 
 #[test]
-#[ignore] // Temporarily disabled during CBOR migration - test vectors have old JCS hashes
 fn test_vector_hash_baselines() {
     // Build baseline map
     let vectors_dir = "../../vectors";

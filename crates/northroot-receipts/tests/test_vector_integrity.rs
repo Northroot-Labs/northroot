@@ -6,9 +6,8 @@ use std::fs;
 
 fn load_vector(path: &str) -> Result<Receipt, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(path)?;
-    let mut receipt = json::receipt_from_json(&json_str)?;
-    // Recompute hash with CBOR canonicalization (test vectors have old JCS hashes)
-    receipt.hash = receipt.compute_hash()?;
+    // Test vectors now have CBOR-based hashes
+    let receipt = json::receipt_from_json(&json_str)?;
     Ok(receipt)
 }
 

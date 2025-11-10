@@ -114,12 +114,9 @@ fn vectors_validate_full_receipts() {
 
     for path in &vectors {
         let json_str = fs::read_to_string(path).unwrap();
-        let mut receipt = json::receipt_from_json(&json_str)
+        // Test vectors now have CBOR-based hashes
+        let receipt = json::receipt_from_json(&json_str)
             .unwrap_or_else(|e| panic!("Failed to parse {}: {}", path.display(), e));
-        
-        // Recompute hash with CBOR canonicalization (test vectors have old JCS hashes)
-        receipt.hash = receipt.compute_hash()
-            .unwrap_or_else(|e| panic!("Failed to compute hash for {}: {}", path.display(), e));
 
         // Validate full receipt structure
         receipt

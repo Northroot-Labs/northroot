@@ -19,7 +19,7 @@ Golden rules
 Architectural Principles
 
 Separation of Concerns
-	•	Canonicalization: All canonicalization (JCS, CBOR) lives in `receipts` (per ADR-002)
+	•	Canonicalization: All canonicalization (CBOR deterministic encoding per RFC 8949) lives in `receipts` (per ADR-002). JSON is only available through adapter layer for external compatibility.
 	•	Computation Logic: Delta decisions, reuse strategies, PAC computation live in `engine`
 	•	Storage: Storage adapters are infrastructure; they read receipts, don't compute proofs
 	•	Policy: Policy validation is semantic (allowed/denied), not computational
@@ -31,9 +31,10 @@ Dependency Direction
 	•	Never: receipts → engine, policy → engine, storage → engine
 
 Canonicalization Ownership
-	•	JCS (JSON): `receipts/src/canonical.rs` - default, always available
-	•	CBOR: `receipts/src/canonical.rs` - deterministic encoding for storage/performance
-	•	Rationale: Canonicalization is about receipt structure, not compute logic
+	•	CBOR (RFC 8949): `receipts/src/canonical/` - primary canonicalization method for all receipts
+	•	JSON: `receipts/src/adapters/json.rs` - adapter layer only, for external API boundaries
+	•	CDN (CBOR Diagnostic Notation): `receipts/src/canonical/cdn.rs` - human-readable debugging output
+	•	Rationale: Canonicalization is about receipt structure, not compute logic. CBOR provides deterministic encoding, better performance, and storage efficiency. JSON is preserved only for external compatibility via adapters.
 
 PAC Key Computation
 	•	Location: `engine/src/delta/pac.rs` - part of delta compute decisions
@@ -46,7 +47,7 @@ Where code belongs
 
 If code primarily does…	It goes in…
 Compute reuse, delta decisions, chunking, runners, kernels	engine
-Receipt envelope/types, canonicalization (JCS), hashing, validation	receipts
+Receipt envelope/types, canonicalization (CBOR), hashing, validation	receipts
 Operator & method manifests (schemas, examples, validators)	ops
 Policies & strategies (cost models, reuse thresholds, allow/deny, FP tolerances)	policy
 DSL for intents + planner (capability matching)	planner
