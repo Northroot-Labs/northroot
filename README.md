@@ -14,6 +14,91 @@ Northroot implements a **unified receipt algebra** where all proofs are expresse
 - **Delta Compute**: Incremental recomputation with reuse decisions
 - **Settlement**: Multi-party netting and value exchange
 
+## Quick Start
+
+### Prerequisites
+
+- **Rust**: 1.91.0 or later (MSRV: 1.86)
+- **Cargo**: Comes with Rust installation
+- **Platform Support**: 
+  - ✅ Linux (x86_64, aarch64)
+  - ✅ macOS (x86_64, Apple Silicon)
+  - ✅ Windows (x86_64, MSVC toolchain)
+
+### Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/Northroot-Labs/northroot.git
+cd northroot
+
+# Verify Rust version
+rustc --version  # Should be 1.91.0 or later
+
+# Build all crates
+cargo build
+```
+
+### Running the Demos
+
+Northroot includes three interactive demos that showcase proof-of-reuse for different compute scenarios:
+
+#### 1. FinOps Cost Attribution Demo
+
+Demonstrates proof of compute reuse for FinOps cost attribution with Jaccard similarity computation and economic delta calculations.
+
+```bash
+cargo run --package northroot-engine --example finops_cost_attribution
+```
+
+**What it shows:**
+- Resource tuple overlap between billing runs
+- Jaccard similarity computation
+- Economic delta (ΔC) from reuse
+- Receipt linking chain
+
+#### 2. ETL Partition Reuse Demo
+
+Demonstrates partition-level reuse for ETL workloads using Delta Lake CDF metadata.
+
+```bash
+cargo run --package northroot-engine --example etl_partition_reuse
+```
+
+**What it shows:**
+- Partition-level overlap computation
+- CDF metadata for changed partitions
+- Reuse rate calculations (e.g., 85% reuse with only 15 partitions recomputed)
+
+#### 3. Analytics Dashboard Demo
+
+Demonstrates query result reuse for analytics dashboards with high-overlap scenarios.
+
+```bash
+cargo run --package northroot-engine --example analytics_dashboard
+```
+
+**What it shows:**
+- Query result set overlap
+- High-overlap reuse scenarios (90%+ similarity)
+- Economic proof of incremental refresh
+
+### Testing
+
+```bash
+# Run all tests
+cargo test
+
+# Run tests for a specific crate
+cargo test --package northroot-receipts
+
+# Run with output
+cargo test -- --nocapture
+
+# Run specific test
+cargo test --test test_drift_detection
+```
+
 ## Repository Map
 
 **Libraries (crates/):**
@@ -91,33 +176,69 @@ The system supports incremental recomputation via:
 - **Merkle Row-Map**: Deterministic state for incremental operators
 - **Policy-driven**: Thresholds and strategies controlled by policies
 
-## Quick Start
+## Building and Development
 
-### Prerequisites
-
-- Rust 1.91.0 (MSRV 1.86)
-- JSON Schema validator (for receipt validation)
-
-### Building
+### Build Commands
 
 ```bash
 # Build all crates
 cargo build
 
 # Build specific crate
-cargo build -p northroot-receipts
+cargo build --package northroot-receipts
 
-# Run all tests
-cargo test
+# Build in release mode
+cargo build --release
 
-# Run tests for specific crate
-cargo test -p northroot-receipts
+# Check without building
+cargo check
 ```
 
-### Using Receipts
+### Code Quality
+
+```bash
+# Format code
+cargo fmt
+
+# Check formatting
+cargo fmt --check
+
+# Lint code
+cargo clippy -- -D warnings
+
+# Run integrity checks
+bash scripts/check-integrity.sh
+```
+
+### Cross-Platform Development
+
+Northroot uses standard Rust toolchains and supports cross-compilation:
+
+```bash
+# Install cross-compilation target (example: Linux from macOS)
+rustup target add x86_64-unknown-linux-gnu
+
+# Build for specific target
+cargo build --target x86_64-unknown-linux-gnu
+
+# List available targets
+rustup target list
+```
+
+**Common targets:**
+- `x86_64-unknown-linux-gnu` - Linux x86_64
+- `aarch64-unknown-linux-gnu` - Linux ARM64
+- `x86_64-apple-darwin` - macOS Intel
+- `aarch64-apple-darwin` - macOS Apple Silicon
+- `x86_64-pc-windows-msvc` - Windows x86_64
+
+## Usage Examples
+
+### Creating a Receipt
 
 ```rust
 use northroot_receipts::{Receipt, ReceiptKind, Payload};
+use uuid::Uuid;
 
 // Create a data_shape receipt
 let receipt = Receipt {
@@ -130,30 +251,106 @@ let receipt = Receipt {
 };
 ```
 
+### Loading from JSON (Adapter Layer)
+
+```rust
+use northroot_receipts::adapters::json;
+
+let json_str = r#"{"rid": "...", ...}"#;
+let receipt = json::receipt_from_json(json_str)?;
+```
+
+### CBOR Serialization (Core Format)
+
+```rust
+use northroot_receipts::canonical;
+use ciborium::ser;
+
+let mut buf = Vec::new();
+ser::into_writer(&receipt, &mut buf)?;
+
+// Compute canonical hash
+let hash = canonical::compute_hash(&receipt)?;
+```
+
 ## Documentation
+
+### Core Specifications
 
 - **[Proof Algebra](docs/specs/proof_algebra.md)**: Unified algebra specification
 - **[Data Model](crates/northroot-receipts/docs/specs/data_model.md)**: Receipt schema and types
 - **[Incremental Compute](docs/specs/incremental_compute.md)**: Delta compute strategy
 - **[Delta Compute](docs/specs/delta_compute.md)**: Formal reuse decision spec
 - **[Merkle Row-Map](docs/specs/merkle_row_map.md)**: Deterministic state structure
+
+### Development Guides
+
 - **[ADR Playbook](docs/ADR_PLAYBOOK.md)**: Repository structure and code placement guide
+- **[Contributing Guide](CONTRIBUTING.md)**: Contribution guidelines and workflow
+- **[LLM Context](llms.txt)**: LLM-friendly codebase navigation and context
+
+### Architecture
+
+- **[Architecture Diagrams](docs/specs/architecture-diagrams.md)**: Visual representations of system architecture
+- **[ADR-002: Canonicalization Strategy](ADRs/ADR-002-canonicalization-strategy.md)**: CBOR canonicalization approach
 
 ## Project Structure
 
-- **crates/northroot-receipts/**: Rust crate defining receipt types and schemas (publishable)
-- **crates/northroot-engine/**: Proof algebra engine, commitments, validation (private for now)
-- **crates/northroot-ops/**: Operator manifests (internal)
-- **crates/northroot-policy/**: Policy definitions for strategy control (internal)
-- **crates/northroot-commons/**: Shared utilities (internal)
-- **docs/**: Project-level specifications and ADRs
-- **schemas/**: JSON Schemas organized by crate
-- **vectors/**: Test vectors and golden examples
+```
+northroot/
+├── crates/
+│   ├── northroot-receipts/    # Canonical data model (publishable)
+│   ├── northroot-engine/      # Proof algebra engine (private for now)
+│   ├── northroot-ops/         # Operator manifests (internal)
+│   ├── northroot-policy/      # Policy definitions (internal)
+│   ├── northroot-commons/     # Shared utilities (internal)
+│   └── northroot-storage/     # Storage adapters (internal)
+├── examples/                  # Demo examples
+│   ├── finops_cost_attribution/
+│   ├── etl_partition_reuse/
+│   └── analytics_dashboard/
+├── docs/                      # Project-level specifications and ADRs
+├── schemas/                   # JSON Schemas organized by crate
+└── vectors/                   # Test vectors and golden examples
+```
 
-## License
+## Compatibility
 
-See [LICENSE](LICENSE) file.
+### Supported Platforms
+
+| Platform | Architecture | Status | Notes |
+|----------|-------------|--------|-------|
+| Linux | x86_64 | ✅ Fully tested | Primary development platform |
+| Linux | aarch64 | ✅ Supported | ARM64 support |
+| macOS | x86_64 | ✅ Fully tested | Intel Macs |
+| macOS | aarch64 | ✅ Fully tested | Apple Silicon (M1/M2/M3) |
+| Windows | x86_64 | ✅ Supported | MSVC toolchain required |
+
+### Rust Version
+
+- **Minimum Supported Rust Version (MSRV)**: 1.86
+- **Recommended**: 1.91.0 or later
+- **Edition**: 2021
+
+### Dependencies
+
+- Standard library only for core functionality
+- `serde` for serialization
+- `ciborium` for CBOR canonicalization (RFC 8949)
+- `sha2` for cryptographic hashing
+- `uuid` for receipt identifiers
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and [llms.txt](llms.txt) for LLM-friendly codebase navigation and context.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for:
+
+- Code organization guidelines
+- Testing requirements
+- Pull request process
+- Code style and formatting
+
+For LLM-assisted development, see [llms.txt](llms.txt) for codebase navigation and context.
+
+## License
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
