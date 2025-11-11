@@ -16,7 +16,9 @@ Northroot is a **unified proof algebra system** for verifiable compute and value
 - **Envelope**: Common structure (`rid`, `version`, `kind`, `dom`/`cod`, `ctx`, `sig`, `hash`)
 - **Payload**: Kind-specific data (one of six kinds)
 - **Composition**: Sequential (cod == dom) and parallel (tensor)
-- **Location**: `receipts/` crate (Rust types + JSON schemas)
+- **Location**: `crates/northroot-receipts/` (Rust types + JSON schemas)
+- **Canonicalization**: CBOR deterministic encoding (RFC 8949) - primary format
+- **JSON Support**: Available via adapter layer (`adapters::json`) for external compatibility only
 
 ### Shapes
 **Typed commitments representing data structures or computational states.**
@@ -40,8 +42,9 @@ Northroot is a **unified proof algebra system** for verifiable compute and value
 
 - **Overlap**: Jaccard similarity `J ∈ [0,1]` on chunk sets
 - **Reuse rule**: `J > C_id / (α · C_comp)`
-- **Merkle Row-Map**: Deterministic state for incremental operators
+- **Merkle Row-Map**: Deterministic state for incremental operators (CBOR canonicalization)
 - **Policy-driven**: Thresholds controlled by policies
+- **PAC Keys**: Proof-addressable cache keys computed in `engine/src/delta/pac.rs`
 
 ### Operators
 **Atomic, deterministic transformation units.**
@@ -49,7 +52,7 @@ Northroot is a **unified proof algebra system** for verifiable compute and value
 - **Manifest**: Tool ID, version, param schema, input/output shapes
 - **Determinism pins**: Numeric rounding, I/O normalization, hashing
 - **Incremental support**: Optional delta mode with state preservation
-- **Location**: `operators/` (manifests), `receipts/schemas/examples/` (examples)
+- **Location**: `crates/northroot-ops/` (manifests), `schemas/` (examples)
 
 ### Methods
 **Composable DAGs of operators.**
@@ -57,7 +60,7 @@ Northroot is a **unified proof algebra system** for verifiable compute and value
 - **Structure**: Nodes (operator refs) + edges (DAG)
 - **Shape commitment**: `root_multiset` (sorted span shape hashes)
 - **Incremental-capable**: If operators emit stable partition indices + state
-- **Location**: `methods/` (definitions)
+- **Location**: `crates/northroot-ops/` (definitions)
 
 ### Policies
 **Strategy control for delta compute and execution constraints.**
@@ -65,7 +68,7 @@ Northroot is a **unified proof algebra system** for verifiable compute and value
 - **Identifier**: `pol:<namespace>/<name>@<version>`
 - **Reuse decision**: Defines cost models and overlap thresholds
 - **Determinism constraints**: strict/bounded/observational
-- **Location**: `policies/` (definitions)
+- **Location**: `crates/northroot-policy/` (definitions)
 
 ### Strategies
 **Composable compute patterns for incremental execution.**
@@ -73,34 +76,72 @@ Northroot is a **unified proof algebra system** for verifiable compute and value
 - **Partition**: Stable row-based chunking
 - **Incremental Sum**: State-preserving aggregation
 - **Delta Apply**: Efficient updates to previous state
-- **Location**: `engine/strategies/`
+- **Location**: `crates/northroot-engine/src/strategies/`
+
+### Storage
+**Infrastructure for receipt persistence and content-addressed lookup.**
+
+- **SQLite adapter**: `crates/northroot-storage/` (primary implementation)
+- **Content-addressed**: Uses PAC keys and receipt hashes for lookup
+- **No compute logic**: Storage only persists receipts, does not compute proofs
+- **Dependencies**: `receipts`, `commons` only (never depends on `engine`)
 
 ## Directory Structure
 
 ```
 northroot/
-├── receipts/              # Data model (Rust crate)
-│   ├── src/lib.rs        # Receipt types (Receipt, Payload, etc.)
-│   ├── schemas/          # JSON schemas for validation
-│   ├── docs/specs/       # Receipt-specific specs
-│   └── tests/            # Validation tests
+├── crates/
+│   ├── northroot-receipts/      # Canonical data model (publishable)
+│   │   ├── src/
+│   │   │   ├── lib.rs           # Receipt types (Receipt, Payload, etc.)
+│   │   │   ├── canonical/      # CBOR canonicalization (RFC 8949)
+│   │   │   │   ├── mod.rs       # Entry point, compute_hash
+│   │   │   │   ├── cbor_canon.rs # CBOR deterministic encoding
+│   │   │   │   └── cdn.rs       # CBOR Diagnostic Notation (pretty-print)
+│   │   │   ├── adapters/        # Format adapters
+│   │   │   │   └── json.rs      # JSON adapter (external compatibility)
+│   │   │   └── uuid_serde.rs   # UUID format-aware serialization
+│   │   ├── schemas/             # JSON schemas for validation
+│   │   ├── docs/specs/          # Receipt-specific specs
+│   │   └── tests/               # Validation tests
+│   │
+│   ├── northroot-engine/        # Proof algebra engine (private for now)
+│   │   ├── src/
+│   │   │   ├── commitments.rs   # SHA-256, set/seq roots (engine-internal)
+│   │   │   ├── delta/           # Delta compute logic
+│   │   │   │   ├── mod.rs       # Jaccard, reuse decisions
+│   │   │   │   └── pac.rs       # PAC key computation
+│   │   │   ├── execution/       # Execution strategies
+│   │   │   │   └── merkle_row_map.rs # Merkle Row-Map (CBOR-based)
+│   │   │   └── strategies/      # Delta compute strategies
+│   │   └── examples/            # Demo examples
+│   │       ├── finops_cost_attribution/
+│   │       ├── etl_partition_reuse/
+│   │       └── analytics_dashboard/
+│   │
+│   ├── northroot-ops/           # Operator & method manifests (internal)
+│   ├── northroot-policy/        # Policy definitions (internal)
+│   ├── northroot-commons/       # Cross-cutting utilities (internal)
+│   └── northroot-storage/       # Storage adapters (internal)
+│       └── src/sqlite.rs        # SQLite storage implementation
 │
-├── engine/               # Proof algebra engine
-│   ├── src/
-│   │   └── commitments.rs # SHA-256, JCS, set/seq roots
-│   └── strategies/       # Delta compute strategies
+├── examples/                    # Demo examples (linked from engine)
+│   ├── finops_cost_attribution/
+│   ├── etl_partition_reuse/
+│   └── analytics_dashboard/
 │
-├── methods/              # Method definitions (DAGs)
-├── operators/            # Operator manifests
-├── policies/             # Policy definitions
+├── docs/
+│   ├── specs/                   # Project-level specifications
+│   │   ├── proof_algebra.md     # Unified algebra (START HERE)
+│   │   ├── incremental_compute.md
+│   │   ├── delta_compute.md
+│   │   └── merkle_row_map.md
+│   └── ADR_PLAYBOOK.md          # Architectural guide
 │
-├── docs/specs/           # Project-level specifications
-│   ├── proof_algebra.md  # Unified algebra (START HERE)
-│   ├── incremental_compute.md
-│   ├── delta_compute.md
-│   └── merkle_row_map.md
-│
-└── vectors/              # Test vectors & golden examples
+├── schemas/                     # JSON Schemas organized by crate
+├── vectors/                     # Test vectors & golden examples (JSON for readability)
+└── scripts/                     # Utility scripts
+    └── check-integrity.sh       # Integrity check script
 ```
 
 ## Navigation Guide
@@ -108,33 +149,40 @@ northroot/
 ### Understanding the System
 
 1. **Start here**: `docs/specs/proof_algebra.md` — Unified algebra overview
-2. **Data model**: `receipts/docs/specs/data_model.md` — Receipt structure
+2. **Data model**: `crates/northroot-receipts/docs/specs/data_model.md` — Receipt structure
 3. **Delta compute**: `docs/specs/incremental_compute.md` — Strategy spec
 4. **Formal reuse**: `docs/specs/delta_compute.md` — Decision rule
+5. **Architecture**: `docs/ADR_PLAYBOOK.md` — Code placement and boundaries
 
 ### Finding Code
 
-- **Receipt types**: `receipts/src/lib.rs` (Receipt, Payload, all kinds)
-- **Hashing/commitments**: `engine/src/commitments.rs` (sha256_prefixed, jcs, roots)
-- **Operator examples**: `receipts/schemas/examples/`
-- **Test vectors**: `vectors/` (JSON examples)
+- **Receipt types**: `crates/northroot-receipts/src/lib.rs` (Receipt, Payload, all kinds)
+- **CBOR canonicalization**: `crates/northroot-receipts/src/canonical/` (primary canonicalization)
+- **JSON adapter**: `crates/northroot-receipts/src/adapters/json.rs` (external compatibility)
+- **Hashing/commitments**: `crates/northroot-receipts/src/canonical/mod.rs` (compute_hash, sha256_prefixed)
+- **Engine commitments**: `crates/northroot-engine/src/commitments.rs` (engine-internal JCS, set/seq roots)
+- **Delta compute**: `crates/northroot-engine/src/delta/mod.rs` (Jaccard, reuse decisions)
+- **Merkle Row-Map**: `crates/northroot-engine/src/execution/merkle_row_map.rs` (CBOR-based state)
+- **Storage**: `crates/northroot-storage/src/sqlite.rs` (receipt persistence)
+- **Test vectors**: `vectors/` (JSON examples, converted to CBOR internally)
 
 ### Understanding Receipts
 
-**Receipt structure** (see `receipts/src/lib.rs`):
+**Receipt structure** (see `crates/northroot-receipts/src/lib.rs`):
 
 ```rust
 pub struct Receipt {
-    pub rid: Uuid,              // UUIDv7
+    pub rid: Uuid,              // UUIDv7 (format-aware: string in JSON, 16-byte bstr in CBOR)
     pub version: String,        // "0.3.0"
     pub kind: ReceiptKind,      // DataShape | MethodShape | ...
     pub dom: String,           // sha256:<64hex>
     pub cod: String,           // sha256:<64hex>
-    pub links: Vec<Uuid>,      // child receipts
+    pub links: Vec<Uuid>,      // child receipts (format-aware)
     pub ctx: Context,         // policy, timestamp, determinism
     pub payload: Payload,      // kind-specific
+    pub attest: Option<Value>, // Flexible attestation (ciborium::value::Value)
     pub sig: Option<Signature>,
-    pub hash: String,          // sha256(canonical body)
+    pub hash: String,          // sha256(cbor_canonical(body))
 }
 ```
 
@@ -145,6 +193,12 @@ pub struct Receipt {
 - `Execution`: Span commitments + roots
 - `Spend`: Resources + pricing + justification
 - `Settlement`: Net positions
+
+**Canonicalization**:
+- **Primary**: CBOR deterministic encoding (RFC 8949) via `northroot_receipts::canonical::encode_canonical()`
+- **Hash computation**: `northroot_receipts::canonical::compute_hash()` uses CBOR canonicalization
+- **JSON**: Available via `northroot_receipts::adapters::json::receipt_from_json()` for external APIs
+- **CDN**: Human-readable debugging via `northroot_receipts::canonical::cdn::to_cdn()`
 
 ### Understanding Delta Compute
 
@@ -163,9 +217,11 @@ Where:
 
 **Policy control**: `ctx.policy_ref` → policy JSON → cost models + thresholds
 
+**PAC Keys**: Computed in `engine/src/delta/pac.rs` during execution, stored in `ExecutionPayload.pac`
+
 ### Understanding Operators
 
-**Operator manifest** (see `operators/operator_v1.md`):
+**Operator manifest** (see `crates/northroot-ops/`):
 
 - `tool_id`: Stable identifier (e.g., `acme.frame.inc_sum`)
 - `tool_version`: Version string
@@ -177,11 +233,11 @@ Where:
 **Incremental operators**:
 - Support `mode: "delta"` parameter
 - Emit `state_hash` for delta keying
-- Use Merkle Row-Map for deterministic state
+- Use Merkle Row-Map for deterministic state (CBOR canonicalization)
 
 ### Understanding Methods
 
-**Method shape** (see `methods/README.md`):
+**Method shape** (see `crates/northroot-ops/`):
 
 - Nodes: `[{id, span_shape_hash}]`
 - Edges: `[{from, to}]` (optional DAG)
@@ -192,7 +248,7 @@ Where:
 
 ### Understanding Policies
 
-**Policy structure** (see `policies/README.md`):
+**Policy structure** (see `crates/northroot-policy/`):
 
 - `policy_id`: `pol:<namespace>/<name>@<version>`
 - `overlap.measure`: How to compute J (jaccard:row-hash, sketch:minhash, etc.)
@@ -202,6 +258,15 @@ Where:
 
 **Referenced by**: `Receipt.ctx.policy_ref`
 
+### Understanding Storage
+
+**Storage adapters** (see `crates/northroot-storage/`):
+
+- **SQLite**: Primary implementation for receipt persistence
+- **Content-addressed**: Uses PAC keys and receipt hashes for lookup
+- **No compute logic**: Storage only persists receipts, does not compute proofs or make reuse decisions
+- **Dependencies**: `receipts`, `commons` only (never depends on `engine`)
+
 ## Common Tasks
 
 ### Creating a Receipt
@@ -209,14 +274,47 @@ Where:
 1. Define payload (one of six kinds)
 2. Compute `dom`/`cod` (shape commitments)
 3. Build `Context` (policy_ref, timestamp, determinism)
-4. Serialize to canonical JSON (JCS)
-5. Compute `hash = sha256(canonical body)`
+4. Serialize to canonical CBOR (RFC 8949)
+5. Compute `hash = sha256(cbor_canonical(body))`
 6. Sign `hash` → `sig`
 7. Construct `Receipt` with all fields
 
+**Code example**:
+```rust
+use northroot_receipts::{Receipt, ReceiptKind, canonical};
+use uuid::Uuid;
+
+let receipt = Receipt { /* ... */ };
+let hash = canonical::compute_hash(&receipt)?;
+let receipt = Receipt { hash, ..receipt };
+```
+
+### Loading from JSON (Adapter Layer)
+
+```rust
+use northroot_receipts::adapters::json;
+
+let json_str = r#"{"rid": "...", ...}"#;
+let receipt = json::receipt_from_json(json_str)?;
+// Receipt is now in CBOR format internally
+```
+
+### Serializing to CBOR (Core Format)
+
+```rust
+use northroot_receipts::canonical;
+use ciborium::ser;
+
+let mut buf = Vec::new();
+ser::into_writer(&receipt, &mut buf)?;
+
+// Compute canonical hash
+let hash = canonical::compute_hash(&receipt)?;
+```
+
 ### Validating a Receipt
 
-1. Recompute `hash` from canonical body → must match `receipt.hash`
+1. Recompute `hash` from canonical CBOR body → must match `receipt.hash`
 2. Verify `sig` over `hash` (if present)
 3. Validate payload against kind-specific schema
 4. Check composition: `cod(R_i) == dom(R_{i+1})` (if chained)
@@ -236,48 +334,88 @@ Where:
 1. Define manifest (tool_id, version, param_schema, shapes)
 2. Pin determinism (x_numeric, x_io)
 3. If incremental: Support `mode: "delta"`, emit `state_hash`
-4. Add to operator registry
+4. Add to operator registry (`crates/northroot-ops/`)
 5. Reference from methods via `operator_ref`
+
+### Running Demos
+
+```bash
+# FinOps Cost Attribution
+cargo run --package northroot-engine --example finops_cost_attribution
+
+# ETL Partition Reuse
+cargo run --package northroot-engine --example etl_partition_reuse
+
+# Analytics Dashboard
+cargo run --package northroot-engine --example analytics_dashboard
+```
 
 ## Key Files Reference
 
 | File | Purpose |
 |------|---------|
-| `receipts/src/lib.rs` | Receipt type definitions (source of truth) |
-| `engine/src/commitments.rs` | Hashing, JCS, set/seq roots |
+| `crates/northroot-receipts/src/lib.rs` | Receipt type definitions (source of truth) |
+| `crates/northroot-receipts/src/canonical/mod.rs` | CBOR canonicalization, hash computation |
+| `crates/northroot-receipts/src/canonical/cbor_canon.rs` | CBOR deterministic encoding (RFC 8949) |
+| `crates/northroot-receipts/src/adapters/json.rs` | JSON adapter (external compatibility) |
+| `crates/northroot-engine/src/commitments.rs` | Engine-internal hashing, JCS, set/seq roots |
+| `crates/northroot-engine/src/delta/mod.rs` | Delta compute logic (Jaccard, reuse decisions) |
+| `crates/northroot-engine/src/delta/pac.rs` | PAC key computation |
+| `crates/northroot-engine/src/execution/merkle_row_map.rs` | Merkle Row-Map (CBOR-based) |
+| `crates/northroot-storage/src/sqlite.rs` | SQLite storage adapter |
 | `docs/specs/proof_algebra.md` | Unified algebra specification |
-| `receipts/docs/specs/data_model.md` | Receipt schema details |
+| `docs/specs/data_model.md` | Receipt schema details |
 | `docs/specs/incremental_compute.md` | Delta strategy spec |
 | `docs/specs/delta_compute.md` | Formal reuse decision spec |
-| `docs/specs/merkle_row_map.md` | State structure spec |
-| `operators/operator_v1.md` | Operator manifest spec |
-| `vectors/` | Test vectors (golden examples) |
+| `docs/specs/merkle_row_map.md` | State structure spec (CBOR canonicalization) |
+| `docs/ADR_PLAYBOOK.md` | Architectural boundaries and code placement |
+| `vectors/` | Test vectors (JSON for readability, CBOR internally) |
 
 ## Design Principles
 
-1. **Canonicalization**: All hashing uses JCS (RFC 8785) for determinism
+1. **Canonicalization**: All hashing uses CBOR deterministic encoding (RFC 8949) for determinism. JSON is only for external adapters.
 2. **Composition**: Sequential (cod == dom) and parallel (tensor)
 3. **Transparency**: All economic decisions in `spend.justification`
 4. **Modularity**: One envelope, multiple kinds (no over-generalization)
 5. **Policy-driven**: Strategies controlled by policies, not hardcoded
+6. **Architectural boundaries**: Strict separation - receipts owns canonicalization, engine owns compute, storage owns persistence
+7. **Dependency direction**: Outer layers depend on inner layers, never reverse
+
+## Architectural Boundaries
+
+**Critical rules** (see `docs/ADR_PLAYBOOK.md`):
+
+- **Canonicalization**: Owned by `receipts` crate only (`src/canonical/`)
+- **Storage**: Depends on `receipts`, `commons` only (never `engine`)
+- **Engine**: Depends on `receipts`, `commons`, `policy` (never reverse)
+- **Receipts**: Depends on `commons` only (never `engine`)
+
+**Forbidden dependencies**:
+- ❌ `receipts` → `engine`
+- ❌ `storage` → `engine`
+- ❌ `policy` → `engine` (forbidden by playbook)
 
 ## Versioning
 
 - **Envelope version**: Changes only on canonicalization/envelope structure
 - **Kind payloads**: Version in schemas; evolve additively
 - **Receipts MUST validate** against both envelope + kind schema versions
+- **MSRV**: Rust 1.86 (recommended: 1.91.0)
 
 ## Testing
 
-- **Test vectors**: `vectors/` (canonical JSON examples)
-- **Validation tests**: `receipts/tests/test_vectors_validate.rs`
-- **Execution tests**: `engine/tests/test_execution_and_method.rs`
+- **Test vectors**: `vectors/` (JSON for readability, converted to CBOR internally)
+- **Validation tests**: `crates/northroot-receipts/tests/test_vectors_validate.rs`
+- **Drift detection**: `crates/northroot-receipts/tests/test_drift_detection.rs`
+- **Execution tests**: `crates/northroot-engine/tests/test_execution.rs`
+- **Storage tests**: `crates/northroot-storage/tests/test_sqlite.rs`
+- **Integrity checks**: `scripts/check-integrity.sh`
 
 ## Next Steps
 
 1. Read `docs/specs/proof_algebra.md` for algebra overview
-2. Examine `receipts/src/lib.rs` for type definitions
-3. Review `vectors/` for example receipts
-4. Check `engine/src/commitments.rs` for hashing primitives
+2. Examine `crates/northroot-receipts/src/lib.rs` for type definitions
+3. Review `vectors/` for example receipts (JSON format, CBOR internally)
+4. Check `crates/northroot-receipts/src/canonical/` for CBOR canonicalization
 5. Explore `docs/specs/` for detailed specifications
-
+6. Review `docs/ADR_PLAYBOOK.md` for architectural boundaries
