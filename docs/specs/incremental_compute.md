@@ -31,7 +31,7 @@ Pinned in operator manifests (and optionally referenced by policy):
 	•	Text normalization: UTF-8; LF endings; no trailing spaces; header rules.
 	•	Hashing: sha256 over canonical bytes.
 	•	Numerics: fp64 with rounding: tiesToEven, overflow: error, NaN/Inf: forbid (or pinned alternatives).
-	•	Canonicalization: JSON JCS (RFC 8785) for all committed bytes.
+	•	Canonicalization: CBOR deterministic encoding (RFC 8949) for all committed bytes.
 
 3) Overlap & Decision Rule
 

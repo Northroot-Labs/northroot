@@ -302,9 +302,9 @@ pub fn generate_settlement_receipt(prev_cod: &str) -> Receipt {
             cash_instr: {
                 // Convert JSON to CBOR Value for test
                 let json_val = serde_json::json!({
-                    "method": "ach",
-                    "routing": "021000021",
-                    "account": "****1234"
+                "method": "ach",
+                "routing": "021000021",
+                "account": "****1234"
                 });
                 let mut cbor_bytes = Vec::new();
                 if ciborium::ser::into_writer(&json_val, &mut cbor_bytes).is_ok() {

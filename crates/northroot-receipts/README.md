@@ -26,10 +26,11 @@ The `northroot-receipts` crate is the **source of truth** for receipt structure.
 
 **What this crate does**: Receipt structure, canonicalization, syntactic validation
 - Receipt envelope and payload types
-- Hash computation and canonicalization (JCS)
+- Hash computation and canonicalization (CBOR RFC 8949)
 - Format validation (timestamps, UUIDs, hash formats, policy_ref format)
 - Schema validation (JSON Schema)
 - Basic composition validation (cod/dom matching)
+- JSON adapter layer for external compatibility
 
 **What this crate does NOT do**:
 - **Policy validation** (see `northroot-policy`) - answers "is this allowed?" (semantic validation)
@@ -137,16 +138,38 @@ let chain = vec![receipt1, receipt2, receipt3];
 validate_composition(&chain)?;
 ```
 
-### Loading from JSON
+### Loading from JSON (Adapter Layer)
 
 ```rust
+use northroot_receipts::adapters::json;
 use std::fs;
 
+// Load receipt from JSON file (uses adapter layer)
 let json_str = fs::read_to_string("receipt.json")?;
-let receipt: Receipt = serde_json::from_str(&json_str)?;
+let receipt = json::receipt_from_json(&json_str)?;
 
 // Verify hash integrity
 receipt.validate()?;
+```
+
+### CBOR Serialization (Core Format)
+
+```rust
+use northroot_receipts::canonical;
+use ciborium::ser::into_writer;
+use std::fs::File;
+
+// Serialize receipt to CBOR (canonical format)
+let mut file = File::create("receipt.cbor")?;
+into_writer(&receipt, &mut file)?;
+
+// Compute canonical hash
+let hash = receipt.compute_hash()?; // Uses CBOR canonicalization
+
+// Pretty-print using CDN (CBOR Diagnostic Notation)
+let cbor_value = ciborium::value::Value::from(receipt);
+let cdn = canonical::to_cdn(&cbor_value);
+println!("Receipt (CDN):\n{}", cdn);
 ```
 
 ## Schemas

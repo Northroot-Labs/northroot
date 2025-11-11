@@ -51,7 +51,8 @@ fi
 # Check for modified test vectors
 echo ""
 echo "📋 Checking test vectors..."
-MODIFIED_VECTORS=$($DIFF_CMD 2>/dev/null | grep "^vectors/" || true)
+# Exclude README.md and other documentation files from vector checks
+MODIFIED_VECTORS=$($DIFF_CMD 2>/dev/null | grep "^vectors/" | grep -v "README.md" | grep -v "\.md$" || true)
 if [ -n "$MODIFIED_VECTORS" ]; then
     echo -e "${YELLOW}⚠️  WARNING: Test vectors were modified!${NC}"
     echo ""

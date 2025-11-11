@@ -547,7 +547,7 @@ pub struct ExecutionRoots {
     /// Trace set root: SHA-256 hash of sorted span commitments (set view)
     pub trace_set_root: String,
     /// Identity root: Merkle root over identity records (DID, kid, role, tenant)
-    ///
+    /// 
     /// This root commits to the set of actors/keys that participated in the execution,
     /// independent of trace ordering. See `identity_root_from_identities` for computation.
     pub identity_root: String,
@@ -716,8 +716,8 @@ where
     // Collect and sort identities by (did, kid)
     let mut sorted: Vec<IdentityRecord> = identities.collect();
     sorted.sort_by(|a, b| match a.did.cmp(&b.did) {
-        std::cmp::Ordering::Equal => a.kid.cmp(&b.kid),
-        other => other,
+            std::cmp::Ordering::Equal => a.kid.cmp(&b.kid),
+            other => other,
     });
 
     // Empty tree: H(0x00 || "")
@@ -733,7 +733,7 @@ where
     for identity in &sorted {
         // Canonicalize identity record with JCS
         let canonical = serde_json::to_string(identity).unwrap();
-
+        
         // Leaf hash = H(0x00 || canonical_bytes)
         let mut hasher = Sha256::new();
         hasher.update(&[0x00u8]);
@@ -745,7 +745,7 @@ where
     let mut current_level = leaf_hashes;
     while current_level.len() > 1 {
         let mut next_level = Vec::new();
-
+        
         // Pair hashes left-to-right
         for i in (0..current_level.len()).step_by(2) {
             if i + 1 < current_level.len() {
@@ -760,7 +760,7 @@ where
                 next_level.push(current_level[i]);
             }
         }
-
+        
         current_level = next_level;
     }
 

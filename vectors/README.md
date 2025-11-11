@@ -1,8 +1,8 @@
 # Test Vectors
 
-**Canonical JSON examples for receipt validation and testing.**
+**Test vectors for receipt validation and testing.**
 
-This directory contains golden test vectors (canonical JSON receipts) that engines and SDKs must round-trip correctly. All vectors are validated against their respective JSON schemas.
+This directory contains golden test vectors (JSON format for human readability) that engines and SDKs must round-trip correctly. All vectors are validated against their respective JSON schemas. Internally, receipts use CBOR canonicalization (RFC 8949) for hash computation, but test vectors are stored as JSON for readability and converted via adapter layer.
 
 ## Purpose
 
@@ -38,7 +38,7 @@ The `engine/` subdirectory contains test vectors for engine operations:
 - `tensor_composition.json`: Parallel composition example with multiple child receipts
 - `delta_compute_scenarios.json`: Delta compute test cases (Jaccard similarity, reuse decisions, economic delta)
 - `execution_roots.json`: Execution root computation examples
-- `merkle_row_map_examples.json`: Merkle Row-Map examples demonstrating RFC-6962 style Merkle tree computation
+- `merkle_row_map_examples.json`: Merkle Row-Map examples demonstrating CBOR canonicalization with domain-separated hashing
 
 ## Validation Requirements
 
@@ -46,7 +46,7 @@ All vectors must:
 
 1. **Parse correctly**: Valid JSON matching receipt structure
 2. **Validate against schemas**: Pass JSON Schema validation
-3. **Hash integrity**: `hash == sha256(canonical(body_without_sig_hash))`
+3. **Hash integrity**: `hash == sha256(cbor_canonical(body_without_sig_hash))` (CBOR canonicalization per RFC 8949)
 4. **Signature verification**: All signatures verify over `hash` (if present)
 5. **Kind validation**: Payload matches kind-specific rules
 
@@ -55,33 +55,45 @@ All vectors must:
 ### Testing Receipt Parsing
 
 ```rust
-use northroot_receipts::Receipt;
+use northroot_receipts::adapters::json;
 use std::fs;
 
+// Load receipt from JSON (uses adapter layer)
 let json = fs::read_to_string("vectors/data_shape.json")?;
-let receipt: Receipt = serde_json::from_str(&json)?;
+let receipt = json::receipt_from_json(&json)?;
 ```
 
 ### Validating Receipts
 
 ```rust
-// 1. Recompute hash
-let canonical = jcs(&receipt_body);
-let computed_hash = sha256_prefixed(canonical.as_bytes());
+use northroot_receipts::Receipt;
+
+// 1. Recompute hash (uses CBOR canonicalization)
+let computed_hash = receipt.compute_hash()?;
 assert_eq!(computed_hash, receipt.hash);
 
 // 2. Validate against schema
-validate_against_schema(&receipt.kind, &receipt.payload)?;
+receipt.validate()?;
 ```
 
 ### Round-Trip Testing
 
 ```rust
-// Serialize → deserialize → compare
-let receipt1: Receipt = serde_json::from_str(&json)?;
-let json2 = serde_json::to_string(&receipt1)?;
-let receipt2: Receipt = serde_json::from_str(&json2)?;
+use northroot_receipts::{Receipt, adapters::json};
+use ciborium::{ser::into_writer, de::from_reader};
+use std::io::Cursor;
+
+// JSON round-trip (via adapter)
+let receipt1 = json::receipt_from_json(&json)?;
+let json2 = json::receipt_to_json(&receipt1)?;
+let receipt2 = json::receipt_from_json(&json2)?;
 assert_eq!(receipt1, receipt2);
+
+// CBOR round-trip (core format)
+let mut cbor_bytes = Vec::new();
+into_writer(&receipt1, &mut cbor_bytes)?;
+let receipt3: Receipt = from_reader(Cursor::new(cbor_bytes))?;
+assert_eq!(receipt1, receipt3);
 ```
 
 ## Vector Structure
@@ -149,7 +161,7 @@ Multiple receipts composed in parallel:
 ### When to Regenerate
 
 - ✅ **DO regenerate** when:
-  - Canonicalization logic changes (JCS implementation updates)
+  - Canonicalization logic changes (CBOR canonicalization updates)
   - Receipt structure changes (new required fields)
   - Fixing bugs in hash computation
 
@@ -170,11 +182,11 @@ If `test_drift_detection` fails after regeneration:
 
 When adding new vectors:
 
-1. **Follow canonicalization**: Use JCS (RFC 8785) for deterministic JSON
+1. **Follow canonicalization**: Core uses CBOR (RFC 8949) for deterministic encoding. Test vectors are stored as JSON for readability and converted via adapter layer.
 2. **Validate against schema**: Ensure payload matches kind schema
-3. **Compute hash correctly**: `hash = sha256(canonical(body_without_sig_hash))`
+3. **Compute hash correctly**: `hash = sha256(cbor_canonical(body_without_sig_hash))` (CBOR canonicalization)
 4. **Document purpose**: Add comments explaining the vector's purpose
-5. **Test round-trip**: Verify serialization/deserialization preserves structure
+5. **Test round-trip**: Verify serialization/deserialization preserves structure (both JSON and CBOR)
 6. **Update baselines**: Add new vector to `BASELINE_HASHES` in drift detection test
 
 ## Schema References
@@ -203,7 +215,7 @@ Engine root computation functions have locked baseline values in `crates/northro
 - `commit_set_root()`: Order-independent set root computation
 - `commit_seq_root()`: Order-dependent sequence root computation
 - `compute_tensor_root()`: Parallel composition root
-- `MerkleRowMap::compute_root()`: RFC-6962 Merkle tree root
+- `MerkleRowMap::compute_root()`: CBOR canonicalization with domain-separated hashing (leaf:/node: prefixes)
 - `compute_execution_roots()`: Execution root combination
 
 To update baselines after intentional algorithm changes:

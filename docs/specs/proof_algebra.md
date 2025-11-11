@@ -19,7 +19,7 @@ Audience: Engine/SDK implementers • License: Apache-2.0 (intended)
 1. Core Sets & Commitments
 	•	Let \mathcal{S} be the set of shapes (canonical, hashable structures).
 	•	Each shape S has a canonical byte encoding \llbracket S \rrbracket \in \{0,1\}^*
-(JSON Canonicalization: sorted keys, stable DAG encoding, RFC3339 UTC timestamps).
+(CBOR canonicalization: RFC 8949 deterministic encoding, stable DAG encoding, RFC3339 UTC timestamps).
 	•	Commitment:
 C(S) \;=\; \texttt{“sha256:”} \,\|\, \mathrm{hex}(\mathrm{SHA256}(\llbracket S \rrbracket))
 
@@ -195,14 +195,15 @@ Any subchain that satisfies the above is independently valid and reusable.
 ⸻
 
 9. API Surface (Minimal)
-	•	POST /v1/receipts — ingest any kind; store canonical JSON.
-	•	GET /v1/receipts/{rid} — fetch by id.
+	•	POST /v1/receipts — ingest any kind; accepts JSON (converted to CBOR internally for storage).
+	•	GET /v1/receipts/{rid} — fetch by id; returns JSON or CBOR based on Accept header.
 	•	GET /v1/receipts?kind=&dom=&cod=&policy_ref=&trace_id= — query.
 	•	POST /v1/compose/seq — check cod==dom.
 	•	POST /v1/compose/tensor — return tensor commitment + Merkle bundle.
 
 Content types:
-	•	application/vnd.northroot.receipt+json
+	•	application/vnd.northroot.receipt+json (external API, adapter layer)
+	•	application/vnd.northroot.receipt+cbor (internal storage, canonical format)
 	•	(Optional) legacy endpoints map to/from unified receipts.
 
 ⸻
@@ -223,10 +224,11 @@ Content types:
 
 12. Testing (Golden Vectors)
 
-Provide canonical JSON vectors for:
+Provide test vectors (JSON format for readability, converted to CBOR internally):
 	•	data_shape, method_shape, reasoning_shape, execution, spend, settlement
 	•	A sequential chain with matching dom/cod
 	•	Parallel (tensor) example with Merkle bundle
+	•	All vectors use CBOR canonicalization (RFC 8949) for hash computation
 
 Engines/SDKs MUST round-trip hash and pass kind validators.
 

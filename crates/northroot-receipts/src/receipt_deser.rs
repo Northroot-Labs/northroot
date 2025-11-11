@@ -54,7 +54,7 @@ where
     let map = value.as_map().ok_or_else(|| {
         Error::invalid_type(
             serde::de::Unexpected::Other("expected object/map"),
-            &"an object",
+                &"an object",
         )
     })?;
 
@@ -82,19 +82,19 @@ where
     let kind_str = get_string(&map, "kind")
         .map_err(|e| Error::custom(format!("{}", e)))?;
     let kind = match kind_str.as_str() {
-        "data_shape" => ReceiptKind::DataShape,
-        "method_shape" => ReceiptKind::MethodShape,
-        "reasoning_shape" => ReceiptKind::ReasoningShape,
-        "execution" => ReceiptKind::Execution,
-        "spend" => ReceiptKind::Spend,
-        "settlement" => ReceiptKind::Settlement,
+            "data_shape" => ReceiptKind::DataShape,
+            "method_shape" => ReceiptKind::MethodShape,
+            "reasoning_shape" => ReceiptKind::ReasoningShape,
+            "execution" => ReceiptKind::Execution,
+            "spend" => ReceiptKind::Spend,
+            "settlement" => ReceiptKind::Settlement,
         _ => {
             return Err(Error::invalid_value(
                 serde::de::Unexpected::Str(&kind_str),
                 &"one of: data_shape, method_shape, reasoning_shape, execution, spend, settlement",
             ));
         }
-    };
+        };
 
     // Extract payload based on kind
     let payload_value = map.iter()
@@ -232,7 +232,7 @@ where
                                     let mut bytes = [0u8; 16];
                                     bytes.copy_from_slice(&b[..16]);
                                     out.push(Uuid::from_bytes(bytes));
-                                } else {
+        } else {
                                     // Invalid length, skip this item
                                     continue;
                                 }

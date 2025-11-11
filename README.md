@@ -17,7 +17,7 @@ Northroot implements a **unified receipt algebra** where all proofs are expresse
 ## Repository Map
 
 **Libraries (crates/):**
-- `northroot-receipts` — **Library. Publishable.** Canonical receipt data model & validation. Source of truth for receipt structure, canonicalization (JCS), and hash computation.
+- `northroot-receipts` — **Library. Publishable.** Canonical receipt data model & validation. Source of truth for receipt structure, canonicalization (CBOR RFC 8949), and hash computation.
 - `northroot-engine` — **Library. Private (publishable future).** Proof/compute kernel. Receipt validation, composition, commitment computation, and delta compute strategies.
 - `northroot-ops` — **Library. Internal.** Operator & method manifests (schemas, examples, validators).
 - `northroot-policy` — **Library. Internal.** Policies & strategies (cost models, reuse thresholds, allow/deny, FP tolerances).
@@ -67,9 +67,10 @@ A **receipt** is a unified envelope containing:
 - **Payload**: Kind-specific data (data_shape, method_shape, reasoning_shape, execution, spend, settlement)
 
 All receipts are:
-- **Canonical**: JSON Canonicalization (JCS) for deterministic hashing
+- **Canonical**: CBOR deterministic encoding (RFC 8949) for deterministic hashing
 - **Signed**: Detached signatures over canonical body hash
 - **Composable**: Sequential (cod == dom) and parallel (tensor) composition
+- **JSON Support**: JSON available via adapter layer for external compatibility only
 
 ### Shapes & Kinds
 

@@ -9,6 +9,9 @@
 //! 6. Emitting receipts with verifiable proof
 //!
 //! Expected ROI: 30-45% savings, $372K annual
+//!
+//! **Note**: Receipts use CBOR canonicalization (RFC 8949) internally.
+//! Hash computation uses deterministic CBOR encoding for stable, cross-language verification.
 
 use northroot_engine::delta::{
     chunk_id_from_str, decide_reuse, economic_delta, jaccard_similarity,
