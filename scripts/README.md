@@ -29,3 +29,37 @@ git diff HEAD | bash scripts/check-integrity.sh
 - [Integrity Checks Documentation](../docs/INTEGRITY_CHECKS.md)
 - [CI Vector Checks Documentation](../docs/CI_VECTOR_CHECKS.md)
 
+## update-changelog.sh
+
+Automatic changelog generation script that updates `CHANGELOG.md` based on git commit messages.
+
+**Usage:**
+```bash
+# Update changelog with commits since last release
+bash scripts/update-changelog.sh update
+
+# Create a new release section
+bash scripts/update-changelog.sh release 0.1.0
+```
+
+**What it does:**
+- Parses git commit messages since last release tag
+- Categorizes commits by type (feat, fix, refactor, etc.)
+- Updates the `[Unreleased]` section in `CHANGELOG.md`
+- Supports conventional commit format: `type(scope): description`
+
+**Commit message format:**
+- `feat(scope): add new feature` → Added category
+- `fix(scope): correct bug` → Fixed category
+- `refactor(scope): simplify code` → Changed category
+- `security(scope): fix vulnerability` → Security category
+- `BREAKING CHANGE:` prefix marks breaking changes
+
+**Configuration:**
+- Configuration file: `.changelog.toml`
+- Customize categories, patterns, and mappings
+
+**See also:**
+- [CHANGELOG.md](../CHANGELOG.md)
+- [Contributing Guide](../CONTRIBUTING.md#changelog-guidelines)
+

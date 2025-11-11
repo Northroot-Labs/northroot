@@ -94,6 +94,72 @@ See [docs/ADR_PLAYBOOK.md](docs/ADR_PLAYBOOK.md) for detailed guidance on where 
 - Update README.md files when adding significant features
 - Add ADRs for architectural decisions (see `ADRs/` directory)
 
+## Changelog Guidelines
+
+The project maintains an automatic changelog in `CHANGELOG.md`. Follow these guidelines for commit messages:
+
+### Commit Message Format
+
+Use conventional commit format for automatic changelog generation:
+
+```
+type(scope): description
+
+Optional body with more details.
+
+BREAKING CHANGE: description of breaking change (if applicable)
+```
+
+### Types
+
+- `feat` or `feature`: New features → **Added** category
+- `fix` or `bugfix`: Bug fixes → **Fixed** category
+- `refactor` or `change`: Code changes → **Changed** category
+- `remove`: Removed features → **Removed** category
+- `deprecate`: Deprecated features → **Deprecated** category
+- `security`: Security fixes → **Security** category
+
+### Scopes
+
+Use crate names or component names as scope:
+- `receipts` → `northroot-receipts`
+- `engine` → `northroot-engine`
+- `storage` → `northroot-storage`
+- `docs` → Documentation changes
+- `ci` → CI/CD changes (ignored in changelog)
+
+### Examples
+
+```bash
+# New feature
+git commit -m "feat(receipts): add CBOR canonicalization support"
+
+# Bug fix
+git commit -m "fix(engine): correct hash computation in Merkle tree"
+
+# Breaking change
+git commit -m "refactor(receipts): migrate from JCS to CBOR
+
+BREAKING CHANGE: Receipt canonicalization now uses CBOR instead of JSON"
+
+# Documentation
+git commit -m "docs(readme): update installation instructions"
+```
+
+### Updating the Changelog
+
+The changelog is automatically updated:
+
+```bash
+# Update changelog with commits since last release
+bash scripts/update-changelog.sh update
+
+# Before a release, create a release section
+bash scripts/update-changelog.sh release 0.1.0
+```
+
+**Note:** Merge commits, chore commits, and test commits are automatically excluded from the changelog.
+
 ## Questions?
 
 See the [ADR Playbook](docs/ADR_PLAYBOOK.md) for detailed guidance on code placement and architecture.

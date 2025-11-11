@@ -1,0 +1,81 @@
+# Changelog Configuration
+
+[changelog]
+# Path to changelog file
+file = "CHANGELOG.md"
+
+# Unreleased section header
+unreleased_header = "## [Unreleased]"
+
+# Date format for releases (strftime format)
+date_format = "%Y-%m-%d"
+
+# Categories to use in changelog
+categories = [
+    "Added",
+    "Changed",
+    "Deprecated",
+    "Removed",
+    "Fixed",
+    "Security",
+]
+
+# Commit message patterns
+[patterns]
+# Pattern: type(scope): description
+# Examples:
+#   feat(receipts): add CBOR canonicalization
+#   fix(engine): correct hash computation
+#   docs(readme): update installation instructions
+#   refactor(storage): simplify SQLite adapter
+
+# Type mappings to categories
+type_mapping = {
+    "feat" = "Added",
+    "feature" = "Added",
+    "add" = "Added",
+    "change" = "Changed",
+    "changed" = "Changed",
+    "refactor" = "Changed",
+    "deprecate" = "Deprecated",
+    "remove" = "Removed",
+    "removed" = "Removed",
+    "fix" = "Fixed",
+    "bugfix" = "Fixed",
+    "security" = "Security",
+}
+
+# Scope mappings (optional, for crate-specific entries)
+scope_mapping = {
+    "receipts" = "northroot-receipts",
+    "engine" = "northroot-engine",
+    "ops" = "northroot-ops",
+    "policy" = "northroot-policy",
+    "commons" = "northroot-commons",
+    "storage" = "northroot-storage",
+}
+
+# Ignore patterns (commits matching these will be skipped)
+ignore_patterns = [
+    "^Merge ",
+    "^Revert ",
+    "^chore",
+    "^ci",
+    "^test",
+    "^docs\\(changelog\\)",
+]
+
+# Breaking change indicator
+breaking_indicator = "BREAKING CHANGE:"
+
+# Version detection
+[version]
+# Auto-detect version from tags
+auto_detect = true
+
+# Version prefix (e.g., "v" for "v1.0.0")
+prefix = ""
+
+# Version pattern (regex)
+pattern = "^v?([0-9]+\\.[0-9]+\\.[0-9]+)"
+
