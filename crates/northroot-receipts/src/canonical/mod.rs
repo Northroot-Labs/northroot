@@ -82,7 +82,7 @@ pub fn validate_hash_format(hash: &str) -> bool {
 ///
 /// This is a utility function for computing hashes in the standard format
 /// used throughout the receipts system.
-pub(crate) fn sha256_prefixed(bytes: &[u8]) -> String {
+pub fn sha256_prefixed(bytes: &[u8]) -> String {
     let mut h = Sha256::new();
     h.update(bytes);
     format!("sha256:{:x}", h.finalize())

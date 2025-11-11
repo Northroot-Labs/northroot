@@ -666,8 +666,13 @@ pub fn detect_minhash_drift(
 
 #[test]
 fn test_minhash_sketch_divergence() {
-    use northroot_engine::delta::compute_minhash_sketch;
+    use northroot_receipts::canonical::sha256_prefixed;
     use std::collections::HashSet;
+
+    // Helper function to compute chunk ID (same logic as engine, but without dependency)
+    fn chunk_id_from_str(content: &str) -> String {
+        sha256_prefixed(content.as_bytes())
+    }
 
     // Create two billing runs with 80% overlap (should not trigger drift)
     let run1_tuples = vec![
@@ -685,17 +690,14 @@ fn test_minhash_sketch_divergence() {
         "acct6:ec2:us-east-1:instance", // Different tuple
     ];
 
-    let _sketch1 = compute_minhash_sketch(run1_tuples.iter());
-    let _sketch2 = compute_minhash_sketch(run2_tuples.iter());
-
     // Convert to chunk sets for comparison
     let chunk_set1: HashSet<String> = run1_tuples
         .iter()
-        .map(|t| northroot_engine::delta::chunk_id_from_str(t))
+        .map(|t| chunk_id_from_str(t))
         .collect();
     let chunk_set2: HashSet<String> = run2_tuples
         .iter()
-        .map(|t| northroot_engine::delta::chunk_id_from_str(t))
+        .map(|t| chunk_id_from_str(t))
         .collect();
 
     // 4 out of 6 unique tuples overlap = 4/6 = 0.667 < 0.95, so drift should be detected
@@ -728,11 +730,11 @@ fn test_minhash_sketch_divergence() {
 
     let chunk_set3: HashSet<String> = run3_tuples
         .iter()
-        .map(|t| northroot_engine::delta::chunk_id_from_str(t))
+        .map(|t| chunk_id_from_str(t))
         .collect();
     let chunk_set4: HashSet<String> = run4_tuples
         .iter()
-        .map(|t| northroot_engine::delta::chunk_id_from_str(t))
+        .map(|t| chunk_id_from_str(t))
         .collect();
 
     // 5 out of 5 tuples overlap = 5/5 = 1.0 >= 0.95, so no drift
@@ -760,11 +762,11 @@ fn test_minhash_sketch_divergence() {
 
     let chunk_set5: HashSet<String> = run5_tuples
         .iter()
-        .map(|t| northroot_engine::delta::chunk_id_from_str(t))
+        .map(|t| chunk_id_from_str(t))
         .collect();
     let chunk_set6: HashSet<String> = run6_tuples
         .iter()
-        .map(|t| northroot_engine::delta::chunk_id_from_str(t))
+        .map(|t| chunk_id_from_str(t))
         .collect();
 
     // 3 out of 7 unique tuples overlap = 3/7 = 0.429 < 0.95, so drift detected

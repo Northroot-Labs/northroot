@@ -1,18 +1,18 @@
 {
-  "description": "Merkle Row-Map examples demonstrating RFC-6962 style Merkle tree computation",
+  "description": "Merkle Row-Map examples demonstrating CBOR canonicalization (RFC 8949) for Merkle tree computation",
   "empty_map": {
     "description": "Empty Merkle Row-Map root",
     "entries": {},
-    "root": "sha256:6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
-    "note": "Empty tree root = H(0x00 || \"\")"
+    "root": "sha256:08679e383d66dbc4192bae473a37843066188e42635077349d1c7db7cf25b20c",
+    "note": "Empty tree root = H(\"leaf:\" || \"\")"
   },
   "single_entry": {
     "description": "Single entry Merkle Row-Map",
     "entries": {
       "key1": 42
     },
-    "root": "sha256:86485aab8bba735c846f58e5b6c768f8cb4a44bf526e90da31140f16d59816b4",
-    "note": "Leaf hash = H(0x00 || JCS({k, v}))"
+    "root": "sha256:efc2744e9b28f4e70e3fa27213eff9a64c98bae3fd14c159cde674dcb607d66d",
+    "note": "Leaf hash = H(\"leaf:\" || cbor_canonical({k, v}))"
   },
   "multiple_entries": {
     "description": "Multiple entries Merkle Row-Map",
@@ -21,8 +21,8 @@
       "key2": "value",
       "key3": true
     },
-    "root": "sha256:9394ea056c013c4d185d56bae350d6874c1653fee1ddaf7aba6a6afb58c82de4",
-    "note": "Parent hash = H(0x01 || left || right), odd nodes promoted upward"
+    "root": "sha256:a48477478dea2ee2360da4a3cd1ccfe278a49aa3be067d1286b6038e208fb600",
+    "note": "Parent hash = H(\"node:\" || left || right), odd nodes promoted upward"
   },
   "order_independence": {
     "description": "Demonstrates order independence (BTreeMap maintains sorted order)",
@@ -31,17 +31,16 @@
         "a": 1,
         "b": 2
       },
-      "root": "sha256:to_be_computed"
+      "root": "sha256:6ec2710445dd04ef7c157b5cbb2896590bcfb9dfa612f4754214de1c7da4ec99"
     },
     "map2": {
       "entries": {
         "b": 2,
         "a": 1
       },
-      "root": "sha256:to_be_computed"
+      "root": "sha256:6ec2710445dd04ef7c157b5cbb2896590bcfb9dfa612f4754214de1c7da4ec99"
     },
     "roots_match": true,
     "note": "BTreeMap maintains sorted key order, so insertion order doesn't affect root"
   }
 }
-

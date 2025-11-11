@@ -3,7 +3,7 @@
 //! This module defines the common interface for all compute strategies.
 
 use crate::execution::MerkleRowMap;
-use serde_json::Value;
+use serde_json::Value as JsonValue;
 
 /// Execution mode for strategies.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,10 +32,10 @@ pub trait Strategy {
     /// Output value and new state
     fn execute(
         &self,
-        input: &Value,
+        input: &JsonValue,
         mode: ExecutionMode,
         prev_state: Option<&MerkleRowMap>,
-    ) -> Result<(Value, MerkleRowMap), StrategyError>;
+    ) -> Result<(JsonValue, MerkleRowMap), StrategyError>;
 
     /// Get the strategy name.
     fn name(&self) -> &str;

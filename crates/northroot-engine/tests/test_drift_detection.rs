@@ -9,6 +9,37 @@ use northroot_engine::{
 use serde_json::json;
 use std::collections::HashMap;
 
+// Helper to convert JSON to CBOR
+fn json_to_cbor(json: &serde_json::Value) -> ciborium::value::Value {
+    match json {
+        serde_json::Value::Null => ciborium::value::Value::Null,
+        serde_json::Value::Bool(b) => ciborium::value::Value::Bool(*b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                ciborium::value::Value::Integer(i.into())
+            } else if let Some(f) = n.as_f64() {
+                ciborium::value::Value::Float(f)
+            } else {
+                ciborium::value::Value::Text(n.to_string())
+            }
+        }
+        serde_json::Value::String(s) => ciborium::value::Value::Text(s.clone()),
+        serde_json::Value::Array(a) => {
+            ciborium::value::Value::Array(a.iter().map(json_to_cbor).collect())
+        }
+        serde_json::Value::Object(o) => {
+            let mut map = Vec::new();
+            for (k, v) in o {
+                map.push((
+                    ciborium::value::Value::Text(k.clone()),
+                    json_to_cbor(v),
+                ));
+            }
+            ciborium::value::Value::Map(map)
+        }
+    }
+}
+
 /// Baseline roots for all root computation functions.
 ///
 /// These roots are computed from deterministic inputs. If root computation
@@ -59,18 +90,18 @@ const BASELINE_ROOTS: &[(&str, &str)] = &[
         "compute_tensor_root_three_items",
         "sha256:b294e910ea566785d193092a0f165f09d7aa909a44d6e41c1ab19846a9092bdb",
     ),
-    // MerkleRowMap baselines
+    // MerkleRowMap baselines (CBOR canonicalization)
     (
         "merkle_row_map_empty",
-        "sha256:6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+        "sha256:08679e383d66dbc4192bae473a37843066188e42635077349d1c7db7cf25b20c",
     ),
     (
         "merkle_row_map_single",
-        "sha256:86485aab8bba735c846f58e5b6c768f8cb4a44bf526e90da31140f16d59816b4",
+        "sha256:efc2744e9b28f4e70e3fa27213eff9a64c98bae3fd14c159cde674dcb607d66d",
     ),
     (
         "merkle_row_map_multiple",
-        "sha256:9394ea056c013c4d185d56bae350d6874c1653fee1ddaf7aba6a6afb58c82de4",
+        "sha256:a48477478dea2ee2360da4a3cd1ccfe278a49aa3be067d1286b6038e208fb600",
     ),
     // compute_execution_roots baselines (trace_set_root values)
     (
@@ -208,24 +239,24 @@ fn test_merkle_row_map_baselines() {
 
     // Single entry
     let mut single_map = MerkleRowMap::new();
-    single_map.insert("key1".to_string(), json!(42));
+    single_map.insert("key1".to_string(), json_to_cbor(&json!(42)));
     let single_root = single_map.compute_root();
 
     // Multiple entries
     let mut multi_map = MerkleRowMap::new();
-    multi_map.insert("key1".to_string(), json!(42));
-    multi_map.insert("key2".to_string(), json!("value"));
-    multi_map.insert("key3".to_string(), json!(true));
+    multi_map.insert("key1".to_string(), json_to_cbor(&json!(42)));
+    multi_map.insert("key2".to_string(), json_to_cbor(&json!("value")));
+    multi_map.insert("key3".to_string(), json_to_cbor(&json!(true)));
     let multi_root = multi_map.compute_root();
 
     // Order independence (BTreeMap maintains sorted order)
     let mut map1 = MerkleRowMap::new();
-    map1.insert("a".to_string(), json!(1));
-    map1.insert("b".to_string(), json!(2));
+    map1.insert("a".to_string(), json_to_cbor(&json!(1)));
+    map1.insert("b".to_string(), json_to_cbor(&json!(2)));
 
     let mut map2 = MerkleRowMap::new();
-    map2.insert("b".to_string(), json!(2));
-    map2.insert("a".to_string(), json!(1));
+    map2.insert("b".to_string(), json_to_cbor(&json!(2)));
+    map2.insert("a".to_string(), json_to_cbor(&json!(1)));
 
     assert_eq!(
         map1.compute_root(),
@@ -378,7 +409,7 @@ fn test_root_computation_baselines() {
     }
 
     let mut single_map = MerkleRowMap::new();
-    single_map.insert("key1".to_string(), json!(42));
+    single_map.insert("key1".to_string(), json_to_cbor(&json!(42)));
     let single_map_root = single_map.compute_root();
     if let Some(expected) = baseline_map.get("merkle_row_map_single") {
         if single_map_root != *expected {
@@ -387,9 +418,9 @@ fn test_root_computation_baselines() {
     }
 
     let mut multi_map = MerkleRowMap::new();
-    multi_map.insert("key1".to_string(), json!(42));
-    multi_map.insert("key2".to_string(), json!("value"));
-    multi_map.insert("key3".to_string(), json!(true));
+    multi_map.insert("key1".to_string(), json_to_cbor(&json!(42)));
+    multi_map.insert("key2".to_string(), json_to_cbor(&json!("value")));
+    multi_map.insert("key3".to_string(), json_to_cbor(&json!(true)));
     let multi_map_root = multi_map.compute_root();
     if let Some(expected) = baseline_map.get("merkle_row_map_multiple") {
         if multi_map_root != *expected {
@@ -520,11 +551,11 @@ fn test_root_computations_are_deterministic() {
 
     // MerkleRowMap
     let mut map1 = MerkleRowMap::new();
-    map1.insert("key1".to_string(), json!(42));
+    map1.insert("key1".to_string(), json_to_cbor(&json!(42)));
     let root7 = map1.compute_root();
 
     let mut map2 = MerkleRowMap::new();
-    map2.insert("key1".to_string(), json!(42));
+    map2.insert("key1".to_string(), json_to_cbor(&json!(42)));
     let root8 = map2.compute_root();
     assert_eq!(
         root7, root8,

@@ -9,8 +9,41 @@
 use northroot_engine::*;
 use northroot_receipts::{Receipt, adapters::json};
 use serde_json::Value;
+use ciborium::value::Value as CborValue;
 use std::collections::HashSet;
 use std::fs;
+
+// Helper to convert JSON Value to CBOR Value
+fn json_to_cbor_value(json: &Value) -> CborValue {
+    match json {
+        Value::Null => CborValue::Null,
+        Value::Bool(b) => CborValue::Bool(*b),
+        Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                CborValue::Integer(i.into())
+            } else if let Some(f) = n.as_f64() {
+                CborValue::Float(f)
+            } else {
+                // Fallback: try to parse as string
+                CborValue::Text(n.to_string())
+            }
+        }
+        Value::String(s) => CborValue::Text(s.clone()),
+        Value::Array(a) => {
+            CborValue::Array(a.iter().map(json_to_cbor_value).collect())
+        }
+        Value::Object(o) => {
+            let mut map = Vec::new();
+            for (k, v) in o {
+                map.push((
+                    CborValue::Text(k.clone()),
+                    json_to_cbor_value(v),
+                ));
+            }
+            CborValue::Map(map)
+        }
+    }
+}
 
 fn load_vector(path: &str) -> Result<Vec<Receipt>, Box<dyn std::error::Error>> {
     let json_str = fs::read_to_string(path)?;
@@ -255,7 +288,7 @@ fn test_merkle_row_map_integrity() {
     let mut single_map = MerkleRowMap::new();
     let single_entries = merkle_data["single_entry"]["entries"].as_object().unwrap();
     for (key, value) in single_entries {
-        single_map.insert(key.clone(), value.clone());
+        single_map.insert(key.clone(), json_to_cbor_value(value));
     }
     let single_expected = merkle_data["single_entry"]["root"].as_str().unwrap();
     assert_eq!(
@@ -270,7 +303,7 @@ fn test_merkle_row_map_integrity() {
         .as_object()
         .unwrap();
     for (key, value) in multi_entries {
-        multi_map.insert(key.clone(), value.clone());
+        multi_map.insert(key.clone(), json_to_cbor_value(value));
     }
     let multi_expected = merkle_data["multiple_entries"]["root"].as_str().unwrap();
     assert_eq!(
@@ -286,12 +319,12 @@ fn test_merkle_row_map_integrity() {
 
     let mut map1 = MerkleRowMap::new();
     for (key, value) in map1_entries {
-        map1.insert(key.clone(), value.clone());
+        map1.insert(key.clone(), json_to_cbor_value(value));
     }
 
     let mut map2 = MerkleRowMap::new();
     for (key, value) in map2_entries {
-        map2.insert(key.clone(), value.clone());
+        map2.insert(key.clone(), json_to_cbor_value(value));
     }
 
     assert_eq!(

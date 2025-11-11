@@ -7,7 +7,7 @@ use crate::delta::{chunk_id_from_bytes, jaccard_similarity, OverlapMetric};
 use crate::execution::MerkleRowMap;
 use crate::strategies::trait_::{ExecutionMode, Strategy, StrategyError};
 use crate::ReuseIndexed;
-use serde_json::Value;
+use serde_json::Value as JsonValue;
 use std::collections::HashSet;
 use std::sync::RwLock;
 
@@ -49,10 +49,10 @@ impl Default for PartitionStrategy {
 impl Strategy for PartitionStrategy {
     fn execute(
         &self,
-        input: &Value,
+        input: &JsonValue,
         _mode: ExecutionMode,
         prev_state: Option<&MerkleRowMap>,
-    ) -> Result<(Value, MerkleRowMap), StrategyError> {
+    ) -> Result<(JsonValue, MerkleRowMap), StrategyError> {
         // Parse input as array of rows
         let rows = input
             .as_array()
@@ -76,7 +76,7 @@ impl Strategy for PartitionStrategy {
             let chunk_id = chunk_id_from_bytes(row_bytes.as_bytes());
 
             // Store in chunk index: chunk_id -> row index
-            chunk_index.insert(chunk_id, Value::Number(idx.into()));
+            chunk_index.insert_number(chunk_id, idx as f64);
         }
 
         // Compute overlap metric: compare current chunks with previous chunks

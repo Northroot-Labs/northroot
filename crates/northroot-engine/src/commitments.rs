@@ -7,7 +7,7 @@
 //! ## Core Functions
 //!
 //! - **`sha256_prefixed()`**: SHA-256 hash with `sha256:` prefix format
-//! - **`jcs()`**: JSON Canonicalization (RFC 8785) with sorted keys
+//! - **`jcs()`**: JSON Canonicalization (RFC 8785) with sorted keys - **for engine internal computations only, NOT receipt canonicalization**
 //! - **`cbor_deterministic()`**: CBOR deterministic encoding (RFC 8949) - *re-exported from `northroot-receipts`*
 //! - **`cbor_hash()`**: SHA-256 hash of deterministic CBOR - *re-exported from `northroot-receipts`*
 //! - **`validate_cbor_deterministic()`**: Validate CBOR deterministic encoding - *re-exported from `northroot-receipts`*
@@ -15,8 +15,9 @@
 //! - **`commit_seq_root()`**: Merkle root for ordered sequences (order-dependent)
 //!
 //! **Note:** CBOR canonicalization functions are re-exported from `northroot-receipts` per ADR-002,
-//! which states that canonicalization belongs in the receipts crate. This maintains backward
-//! compatibility while respecting architectural boundaries.
+//! which states that receipt canonicalization belongs in the receipts crate. The `jcs()` function
+//! in this module is for engine-internal computations (e.g., Merkle tree leaf hashing) and is
+//! separate from receipt canonicalization, which always uses CBOR.
 //!
 //! ## Domain Separation
 //!

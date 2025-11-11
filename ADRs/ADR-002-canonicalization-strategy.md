@@ -1,87 +1,88 @@
-# ADR-002: Canonicalization Strategy (JCS)
+# ADR-002: Canonicalization Strategy (CBOR)
 
-**Date:** 2025-11-08 
-**Status:** Accepted  
-**Context:** Need deterministic serialization for hash computation
+**Date:** 2025-11-08 (Updated: 2025-01-XX)  
+**Status:** Accepted (Supersedes JCS)  
+**Context:** Need deterministic serialization for hash computation with better performance and storage efficiency
 
 ## Context
 
-Receipts must have deterministic hashes for verification and composition. Different JSON serializations of the same data can produce different byte sequences, leading to different hashes. We need a canonicalization strategy.
+Receipts must have deterministic hashes for verification and composition. Different serializations of the same data can produce different byte sequences, leading to different hashes. We need a canonicalization strategy that provides:
+- Deterministic encoding for stable hashes
+- Better performance than JSON
+- Storage efficiency
+- Cross-organizational verification
 
 ## Decision
 
-Use **JSON Canonicalization Scheme (JCS)** as defined in [RFC 8785](https://tools.ietf.org/html/rfc8785):
+Use **CBOR Deterministic Encoding (RFC 8949)** as the primary canonicalization method:
 
-1. **Key sorting**: Object keys are sorted lexicographically
-2. **No whitespace**: Compact JSON (no extra spaces)
-3. **Deterministic formatting**: Consistent representation of numbers, strings, arrays, objects
+1. **Key sorting**: Map keys sorted by canonical CBOR byte order (not UTF-8)
+2. **Minimal integers**: Integers encoded in minimal form
+3. **No indefinite-length items**: All items have definite length
 4. **Exclusion**: `sig` and `hash` fields are excluded from canonical body before hashing
+5. **Hash format**: `sha256:<64hex>` (SHA-256 hash with "sha256:" prefix)
 
-**Implementation location:** `northroot-receipts` crate (canonicalization is part of receipt structure)
+**Implementation location:** `northroot-receipts/src/canonical/` (canonicalization is part of receipt structure, per ADR_PLAYBOOK.md)
 
-**Hash format:** `sha256:<64hex>` (SHA-256 hash with "sha256:" prefix)
+**JSON Support**: JSON is available only through adapter layer (`northroot-receipts/src/adapters/json.rs`) for external API boundaries. Core always uses CBOR.
+
+**Human Readability**: CBOR Diagnostic Notation (CDN) is used for debugging and logs instead of JSON.
+
+## Migration from JCS
+
+This ADR supersedes the previous JCS-based canonicalization. All receipt hashes changed during migration. Test vectors and hash baselines were updated accordingly.
 
 ## Consequences
 
 ### Pros
-- Standardized approach (RFC 8785)
+- Standardized approach (RFC 8949)
+- Better performance than JSON canonicalization
+- Storage efficiency (binary format)
 - Deterministic hashing for verification
 - Enables receipt composition and chaining
 - Self-verifying receipts (hash integrity)
+- Native support for binary data (no base64 encoding needed)
 
 ### Cons
-- Slightly more complex than naive JSON serialization
-- Requires careful implementation to match RFC exactly
-- All consumers must use same canonicalization
+- Breaking change: all receipt hashes changed from JCS-based hashes
+- Requires migration of existing receipts and test vectors
+- Less human-readable than JSON (mitigated by CDN pretty-printing)
 
-## CBOR Experimental Support
+## JSON Adapter Layer
 
-While JCS remains the default and canonical form, we provide experimental CBOR support behind a feature flag for performance evaluation:
+JSON is preserved for external compatibility through an adapter layer:
 
-### Feature Flag: `c14n_cbor`
+- **Input**: JSON can be converted to CBOR via `adapters::json::json_to_cbor()`
+- **Output**: CBOR can be converted to JSON via `adapters::json::cbor_to_json()`
+- **Receipt loading**: `adapters::json::receipt_from_json()` loads JSON and converts internally
+- **Core principle**: Core always uses CBOR; JSON is adapter-only
 
-When enabled, CBOR deterministic encoding can be used for internal canonicalization. This is **experimental** and subject to change.
+## Engine Internal Computations
 
-### Hash Namespace Separation
+The `northroot-engine` crate maintains a `jcs()` function for internal engine computations (e.g., Merkle tree leaf hashing). This is **not** receipt canonicalization and is separate from the receipt canonicalization strategy documented here. Receipt canonicalization always uses CBOR.
 
-To prevent ambiguity and ensure compatibility:
+## Alternatives Considered
 
-- **`sha256:`** → JCS canonicalization (default, always available)
-- **`sha256cbor:`** → CBOR deterministic canonicalization (experimental, requires `c14n_cbor` feature)
+**Alternative 1:** Keep JCS as primary canonicalization
+- Rejected: CBOR provides better performance and storage efficiency while maintaining determinism
 
-### Restrictions
+**Alternative 2:** Use both JCS and CBOR with feature flags
+- Rejected: Adds complexity and potential for confusion. Single canonicalization method is clearer.
 
-1. **Golden vectors**: Never emit CBOR-based hashes (`sha256cbor:`) into golden test vectors
-2. **Public API**: JCS remains the public, canonical form for v0.1
-3. **Versioning**: If CBOR becomes default, it's a MAJOR version change (different hashes)
-4. **Benchmarking**: Add benchmark harness to measure JCS vs CBOR performance before considering default flip
-
-### Implementation Plan
-
-1. Add `c14n_cbor` feature flag to `northroot-receipts`
-2. Implement CBOR deterministic canonicalization alongside JCS
-3. Add benchmark suite comparing JCS vs CBOR performance
-4. Document feature flag usage and limitations
-5. Keep JCS as default for all public interfaces
-
-## Alternatives
-
-**Alternative 1:** Use CBOR with deterministic encoding (as default)
-- Rejected: Less human-readable, JSON is more widely supported. However, experimental support via feature flag is acceptable for performance evaluation.
-
-**Alternative 2:** Custom canonicalization rules
+**Alternative 3:** Custom canonicalization rules
 - Rejected: Non-standard, harder to verify, potential compatibility issues
 
-**Alternative 3:** No canonicalization (use serde_json default)
-- Rejected: Non-deterministic, breaks hash verification
+## Migration Notes
 
-## Migration
-
-No migration needed - this is the initial design. Future changes to canonicalization are breaking (MAJOR version bump).
+- All receipt hashes changed (breaking change)
+- Test vectors updated with new CBOR-based hashes
+- Hash baselines in tests updated
+- Storage backends use CBOR for serialization
+- JSON adapters provided for external compatibility
 
 ## References
 
-- [RFC 8785: JSON Canonicalization Scheme](https://tools.ietf.org/html/rfc8785)
+- [RFC 8949: CBOR Deterministic Encoding](https://www.rfc-editor.org/rfc/rfc8949.html#section-4.2)
 - [Receipt Data Model](crates/northroot-receipts/docs/specs/data_model.md)
-- [Canonicalization Implementation](crates/northroot-receipts/src/canonical.rs)
-
+- [Canonicalization Implementation](crates/northroot-receipts/src/canonical/)
+- [ADR_PLAYBOOK.md](docs/ADR_PLAYBOOK.md)

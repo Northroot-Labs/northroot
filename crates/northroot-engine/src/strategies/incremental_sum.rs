@@ -8,7 +8,8 @@ use crate::execution::MerkleRowMap;
 use crate::strategies::trait_::{ExecutionMode, Strategy, StrategyError};
 use crate::ReuseIndexed;
 use northroot_policy::CostModel;
-use serde_json::Value;
+use serde_json::Value as JsonValue;
+use ciborium::value::Value as CborValue;
 use std::collections::HashSet;
 use std::sync::RwLock;
 
@@ -124,10 +125,10 @@ impl Default for IncrementalSumStrategy {
 impl Strategy for IncrementalSumStrategy {
     fn execute(
         &self,
-        input: &Value,
+        input: &JsonValue,
         mode: ExecutionMode,
         prev_state: Option<&MerkleRowMap>,
-    ) -> Result<(Value, MerkleRowMap), StrategyError> {
+    ) -> Result<(JsonValue, MerkleRowMap), StrategyError> {
         // Validate input format
         let rows = input
             .as_array()
@@ -179,7 +180,7 @@ impl Strategy for IncrementalSumStrategy {
             let is_new_or_changed = match mode {
                 ExecutionMode::Delta => {
                     // In delta mode, check if row is new or changed
-                    let prev_value = state.get(&row_id).and_then(|v| v.as_f64());
+                    let prev_value = state.get_number(&row_id);
                     prev_value.is_none() || prev_value != Some(value)
                 }
                 ExecutionMode::Full => {
@@ -189,17 +190,29 @@ impl Strategy for IncrementalSumStrategy {
             };
 
             if is_new_or_changed {
-                // Update state: row_id -> value
-                let prev_value = state.insert(
-                    row_id.clone(),
-                    Value::Number(serde_json::Number::from_f64(value).unwrap()),
-                );
+                // Update state: row_id -> value (using convenience method)
+                let prev_value = state.insert_number(row_id.clone(), value);
 
                 // Track incremental sum (delta mode) or total sum (full mode)
                 match mode {
                     ExecutionMode::Delta => {
                         // In delta mode, only sum the change
-                        if let Some(prev) = prev_value.and_then(|v| v.as_f64()) {
+                        // Extract previous value from CBOR
+                        let prev = prev_value.and_then(|v| match v {
+                            CborValue::Integer(i) => {
+                                // Extract integer value from debug string
+                                let debug_str = format!("{:?}", i);
+                                debug_str
+                                    .trim_start_matches("Integer(")
+                                    .trim_end_matches(")")
+                                    .parse::<i64>()
+                                    .ok()
+                                    .map(|n| n as f64)
+                            }
+                            CborValue::Float(f) => Some(f),
+                            _ => None,
+                        });
+                        if let Some(prev) = prev {
                             incremental_sum += value - prev; // Change in value
                         } else {
                             incremental_sum += value; // New row

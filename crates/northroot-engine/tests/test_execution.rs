@@ -7,6 +7,38 @@
 use northroot_engine::execution::*;
 use northroot_receipts::{Context, MethodRef};
 use serde_json::json;
+use ciborium::value::Value as CborValue;
+
+// Helper to convert JSON Value to CBOR Value
+fn json_to_cbor_value(json: &serde_json::Value) -> CborValue {
+    match json {
+        serde_json::Value::Null => CborValue::Null,
+        serde_json::Value::Bool(b) => CborValue::Bool(*b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                CborValue::Integer(i.into())
+            } else if let Some(f) = n.as_f64() {
+                CborValue::Float(f)
+            } else {
+                CborValue::Text(n.to_string())
+            }
+        }
+        serde_json::Value::String(s) => CborValue::Text(s.clone()),
+        serde_json::Value::Array(a) => {
+            CborValue::Array(a.iter().map(json_to_cbor_value).collect())
+        }
+        serde_json::Value::Object(o) => {
+            let mut map = Vec::new();
+            for (k, v) in o {
+                map.push((
+                    CborValue::Text(k.clone()),
+                    json_to_cbor_value(v),
+                ));
+            }
+            CborValue::Map(map)
+        }
+    }
+}
 
 #[test]
 fn test_validate_method_ref() {
@@ -41,16 +73,16 @@ fn test_compute_execution_roots() {
 #[test]
 fn test_merkle_row_map() {
     let mut map = MerkleRowMap::new();
-    map.insert("key1".to_string(), json!(42));
-    map.insert("key2".to_string(), json!("value"));
+    map.insert("key1".to_string(), json_to_cbor_value(&json!(42)));
+    map.insert("key2".to_string(), json_to_cbor_value(&json!("value")));
 
     let root1 = map.compute_root();
     assert!(root1.starts_with("sha256:"));
 
     // Same entries should produce same root
     let mut map2 = MerkleRowMap::new();
-    map2.insert("key1".to_string(), json!(42));
-    map2.insert("key2".to_string(), json!("value"));
+    map2.insert("key1".to_string(), json_to_cbor_value(&json!(42)));
+    map2.insert("key2".to_string(), json_to_cbor_value(&json!("value")));
     let root2 = map2.compute_root();
 
     assert_eq!(root1, root2);
@@ -59,12 +91,12 @@ fn test_merkle_row_map() {
 #[test]
 fn test_merkle_row_map_deterministic() {
     let mut map1 = MerkleRowMap::new();
-    map1.insert("a".to_string(), json!(1));
-    map1.insert("b".to_string(), json!(2));
+    map1.insert("a".to_string(), json_to_cbor_value(&json!(1)));
+    map1.insert("b".to_string(), json_to_cbor_value(&json!(2)));
 
     let mut map2 = MerkleRowMap::new();
-    map2.insert("b".to_string(), json!(2));
-    map2.insert("a".to_string(), json!(1));
+    map2.insert("b".to_string(), json_to_cbor_value(&json!(2)));
+    map2.insert("a".to_string(), json_to_cbor_value(&json!(1)));
 
     // BTreeMap maintains sorted order, so roots should be same
     assert_eq!(map1.compute_root(), map2.compute_root());

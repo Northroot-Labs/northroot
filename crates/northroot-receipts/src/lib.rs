@@ -29,8 +29,8 @@ pub mod uuid_serde;
 pub mod validation;
 
 pub use canonical::{
-    cbor_deterministic, cbor_hash, compute_hash, encode_canonical, hash_canonical, to_cdn,
-    validate_cbor_deterministic, validate_hash_format, CanonError,
+    cbor_deterministic, cbor_hash, compute_hash, encode_canonical, hash_canonical, sha256_prefixed,
+    to_cdn, validate_cbor_deterministic, validate_hash_format, CanonError,
 };
 pub use error::ValidationError;
 #[cfg(feature = "jsonschema")]
