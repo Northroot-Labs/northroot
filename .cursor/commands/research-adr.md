@@ -1,0 +1,1 @@
+research adr for most up to date decisions and to dos. use index as guide. 

@@ -3,7 +3,11 @@ phase_id: ADR-0009-P05
 adr_id: ADR-0009
 sequence: 5
 title: Summarized manifests for fast overlap
-status: proposed
+status: implemented
+decided_at: '2025-11-12T06:41:23Z'
 summary: Implement ManifestSummary structure with MinHash sketches, HLL cardinality,
   and Bloom filters.
 proposed_at: '2025-11-12T06:41:23Z'
+implemented_at: '2025-11-12T07:42:44Z'
+implemented_in: 0.1.0
+implementation_commit: 864b54a55fb142872fc45bb44afea88efdb53ae8

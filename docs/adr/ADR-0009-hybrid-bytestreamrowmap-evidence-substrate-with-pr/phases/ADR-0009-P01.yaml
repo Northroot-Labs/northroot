@@ -8,3 +8,6 @@ summary: Added shapes.rs module with DataShape enum and compute_data_shape_hash(
   function.
 proposed_at: '2025-11-11T00:00:00Z'
 decided_at: '2025-11-11T00:00:00Z'
+implemented_at: '2025-11-12T07:41:08Z'
+implemented_in: 0.1.0
+implementation_commit: 864b54a55fb142872fc45bb44afea88efdb53ae8

@@ -1,7 +1,7 @@
 {
   "$schema": "./adr.index.schema.json",
   "version": "0.3",
-  "generated_at": "2025-11-12T07:10:11Z",
+  "generated_at": "2025-11-12T07:42:44Z",
   "adrs": [
     {
       "adr_id": "ADR-0001",
@@ -98,7 +98,7 @@
       "adr_id": "ADR-0007",
       "slug": "delta-compute-implementation-strategy",
       "title": "Delta Compute Implementation Strategy",
-      "status": "proposed",
+      "status": "superseded",
       "tags": [
         "canonicalization",
         "delta-compute"
@@ -111,7 +111,7 @@
       "adr_id": "ADR-0008",
       "slug": "proof-addressable-storage-and-incremental-compute-",
       "title": "Proof-Addressable Storage and Incremental Compute Hardening",
-      "status": "proposed",
+      "status": "superseded",
       "tags": [
         "canonicalization",
         "delta-compute",
@@ -143,37 +143,55 @@
           "phase_id": "ADR-0009-P01",
           "sequence": 1,
           "status": "implemented",
-          "timestamp": "2025-11-11T00:00:00Z"
+          "timestamp": "2025-11-11T00:00:00Z",
+          "implemented_at": "2025-11-12T07:41:08Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
         },
         {
           "phase_id": "ADR-0009-P02",
           "sequence": 2,
           "status": "implemented",
-          "timestamp": "2025-11-11T00:00:00Z"
+          "timestamp": "2025-11-11T00:00:00Z",
+          "implemented_at": "2025-11-12T07:41:54Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
         },
         {
           "phase_id": "ADR-0009-P03",
           "sequence": 3,
           "status": "implemented",
-          "timestamp": "2025-11-11T00:00:00Z"
+          "timestamp": "2025-11-11T00:00:00Z",
+          "implemented_at": "2025-11-12T07:41:54Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
         },
         {
           "phase_id": "ADR-0009-P04",
           "sequence": 4,
           "status": "implemented",
-          "timestamp": "2025-11-11T00:00:00Z"
+          "timestamp": "2025-11-11T00:00:00Z",
+          "implemented_at": "2025-11-12T07:41:54Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
         },
         {
           "phase_id": "ADR-0009-P05",
           "sequence": 5,
-          "status": "proposed",
-          "timestamp": "2025-11-12T06:41:23Z"
+          "status": "implemented",
+          "timestamp": "2025-11-12T06:41:23Z",
+          "implemented_at": "2025-11-12T07:42:44Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
         },
         {
           "phase_id": "ADR-0009-P06",
           "sequence": 6,
           "status": "implemented",
-          "timestamp": "2025-11-11T00:00:00Z"
+          "timestamp": "2025-11-11T00:00:00Z",
+          "implemented_at": "2025-11-12T07:41:54Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
         },
         {
           "phase_id": "ADR-0009-P07",
@@ -187,7 +205,8 @@
           "status": "proposed",
           "timestamp": "2025-11-12T06:41:23Z"
         }
-      ]
+      ],
+      "realized_at": "2025-11-12T07:41:08Z"
     }
   ]
 }

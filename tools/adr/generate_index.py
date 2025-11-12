@@ -8,6 +8,8 @@ import os
 import sys
 import yaml
 import glob
+import subprocess
+import re
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -32,6 +34,49 @@ def parse_args():
 # Auto-detect repo root and ADR directory
 SCRIPT_DIR = Path(__file__).parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
+
+def get_version():
+    """Get current version from Cargo.toml."""
+    cargo_toml = REPO_ROOT / "Cargo.toml"
+    if cargo_toml.exists():
+        with open(cargo_toml, 'r') as f:
+            content = f.read()
+            match = re.search(r'version\s*=\s*"([^"]+)"', content)
+            if match:
+                return match.group(1)
+    return "0.1.0"  # Default fallback
+
+def get_git_commit(file_path: Path):
+    """Get git commit SHA for a file (most recent commit that touched it)."""
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--format=%H", "--", str(file_path)],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
+
+def get_current_commit():
+    """Get current git commit SHA."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()
+    except Exception:
+        pass
+    return None
 
 def generate_index(adr_dir: Path, write: bool = True):
     """Generate the ADR index."""
@@ -82,26 +127,90 @@ def generate_index(adr_dir: Path, write: bool = True):
                 print(f"Warning: Failed to parse frontmatter in {adr_file}: {e}")
                 continue
         
-        # Collect phases
+        # Collect phases and track implementation metadata
         phases = []
+        first_implemented_at = None
         phases_dir = adr_dir_item / "phases"
+        current_version = get_version()
+        current_commit = get_current_commit()
+        
         if phases_dir.is_dir():
             for phase_file in sorted(phases_dir.glob("ADR-*-P*.yaml")):
                 try:
                     with open(phase_file, 'r', encoding='utf-8') as pf:
-                        phase_data = yaml.safe_load(pf)
-                        if phase_data:
-                            phases.append({
-                                "phase_id": phase_data.get("phase_id", ""),
-                                "sequence": phase_data.get("sequence", 0),
-                                "status": phase_data.get("status", "unknown"),
-                                "timestamp": phase_data.get("decided_at") or phase_data.get("proposed_at") or ""
-                            })
+                        phase_data = yaml.safe_load(pf) or {}
+                    
+                    phase_status = phase_data.get("status", "unknown")
+                    needs_write = False
+                    
+                    # Auto-set implemented_at if status is "implemented" and not already set
+                    if phase_status == "implemented" and not phase_data.get("implemented_at"):
+                        phase_data["implemented_at"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                        needs_write = True
+                    
+                    # Auto-set implemented_in if status is "implemented" and not already set
+                    if phase_status == "implemented" and not phase_data.get("implemented_in"):
+                        phase_data["implemented_in"] = current_version
+                        needs_write = True
+                    
+                    # Auto-set implementation_commit if status is "implemented" and not already set
+                    if phase_status == "implemented" and not phase_data.get("implementation_commit"):
+                        commit_sha = get_git_commit(phase_file) or current_commit
+                        if commit_sha:
+                            phase_data["implementation_commit"] = commit_sha
+                            needs_write = True
+                    
+                    # Write back to file if we made changes
+                    if needs_write and write:
+                        # Read original file to preserve format
+                        with open(phase_file, 'r', encoding='utf-8') as orig:
+                            original_lines = orig.readlines()
+                        
+                        # Write back preserving order, updating only changed fields
+                        with open(phase_file, 'w', encoding='utf-8') as pf:
+                            for line in original_lines:
+                                # Skip lines for fields we're updating
+                                if line.startswith("implemented_at:") or line.startswith("implemented_in:") or line.startswith("implementation_commit:"):
+                                    continue
+                                pf.write(line)
+                            
+                            # Append new fields at end (before any trailing newlines)
+                            if "implemented_at" in phase_data:
+                                pf.write(f"implemented_at: '{phase_data['implemented_at']}'\n")
+                            if "implemented_in" in phase_data:
+                                pf.write(f"implemented_in: {phase_data['implemented_in']}\n")
+                            if "implementation_commit" in phase_data:
+                                pf.write(f"implementation_commit: {phase_data['implementation_commit']}\n")
+                    
+                    # Track first implemented phase for realized_at
+                    if phase_status == "implemented":
+                        implemented_at = phase_data.get("implemented_at")
+                        if implemented_at and (not first_implemented_at or implemented_at < first_implemented_at):
+                            first_implemented_at = implemented_at
+                    
+                    # Build phase entry for index
+                    phase_entry = {
+                        "phase_id": phase_data.get("phase_id", ""),
+                        "sequence": phase_data.get("sequence", 0),
+                        "status": phase_status,
+                        "timestamp": phase_data.get("decided_at") or phase_data.get("proposed_at") or ""
+                    }
+                    
+                    # Add implementation metadata if implemented
+                    if phase_status == "implemented":
+                        if phase_data.get("implemented_at"):
+                            phase_entry["implemented_at"] = phase_data["implemented_at"]
+                        if phase_data.get("implemented_in"):
+                            phase_entry["implemented_in"] = phase_data["implemented_in"]
+                        if phase_data.get("implementation_commit"):
+                            phase_entry["implementation_commit"] = phase_data["implementation_commit"]
+                    
+                    phases.append(phase_entry)
                 except Exception as e:
                     print(f"Warning: Failed to parse phase file {phase_file}: {e}")
         
-        # Add to index
-        index["adrs"].append({
+        # Build ADR entry
+        adr_entry = {
             "adr_id": frontmatter.get("adr_id", ""),
             "slug": frontmatter.get("slug", ""),
             "title": frontmatter.get("title", ""),
@@ -110,7 +219,13 @@ def generate_index(adr_dir: Path, write: bool = True):
             "domain": frontmatter.get("domain", ""),
             "created_at": frontmatter.get("created_at", ""),
             "phases": phases
-        })
+        }
+        
+        # Add realized_at if any phase is implemented
+        if first_implemented_at:
+            adr_entry["realized_at"] = first_implemented_at
+        
+        index["adrs"].append(adr_entry)
     
     # Sort by ADR ID
     index["adrs"].sort(key=lambda x: x["adr_id"])

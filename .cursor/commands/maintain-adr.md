@@ -1,1 +1,1 @@
-update and validate adr index. 
+update and validate adr index and any relevant adr documentation. use makefile for target reference. 

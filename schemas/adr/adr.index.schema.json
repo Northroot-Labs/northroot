@@ -48,6 +48,11 @@
             "type": "string",
             "format": "date-time"
           },
+          "realized_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When first phase was implemented (realization timestamp)"
+          },
           "phases": {
             "type": "array",
             "items": {
@@ -64,6 +69,16 @@
                   "type": "string"
                 },
                 "timestamp": {
+                  "type": "string"
+                },
+                "implemented_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "implemented_in": {
+                  "type": "string"
+                },
+                "implementation_commit": {
                   "type": "string"
                 }
               }

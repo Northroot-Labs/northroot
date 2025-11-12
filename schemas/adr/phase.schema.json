@@ -44,6 +44,21 @@
       "format": "date-time",
       "description": "When decision was made"
     },
+    "implemented_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When phase was implemented (auto-set when status is 'implemented')"
+    },
+    "implemented_in": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(-.*)?$",
+      "description": "Version in which phase was implemented (e.g., '0.1.0')"
+    },
+    "implementation_commit": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$",
+      "description": "Git commit SHA where phase was implemented"
+    },
     "effective_from": {
       "type": "string",
       "description": "When this phase becomes effective (e.g., 'next minor release')"

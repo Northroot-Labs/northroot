@@ -5,11 +5,13 @@
 
 pub mod chunking;
 pub mod decision;
+pub mod manifest_summary;
 pub mod overlap;
 pub mod pac;
 
 pub use chunking::*;
 pub use decision::*;
+pub use manifest_summary::*;
 pub use overlap::*;
 pub use pac::*;
 
