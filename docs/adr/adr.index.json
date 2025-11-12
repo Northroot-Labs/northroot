@@ -1,7 +1,7 @@
 {
   "$schema": "./adr.index.schema.json",
   "version": "0.4",
-  "generated_at": "2025-11-12T21:05:58Z",
+  "generated_at": "2025-11-12T21:16:41Z",
   "adrs": [
     {
       "adr_id": "ADR-0001",
@@ -366,8 +366,11 @@
         {
           "phase_id": "ADR-0011-P02",
           "sequence": 2,
-          "status": "proposed",
-          "timestamp": "2025-11-12T19:00:00Z",
+          "status": "implemented",
+          "timestamp": "2025-11-12T21:10:00Z",
+          "implemented_at": "2025-11-12T21:14:23Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "a1f61f168cfbaaf8570abe8ff86bba7f1a51c38d",
           "decision_drivers": [
             "Latency: Fast reuse decisions from manifest sketch alone",
             "Efficiency: Avoid CAS fetch for most overlap checks",
