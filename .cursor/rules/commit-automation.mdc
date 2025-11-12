@@ -35,6 +35,7 @@ BREAKING CHANGE: description (if applicable)
 - **`add(scope)`**: Additive changes → Changelog: **Added**
 - **`remove(scope)`**: Removals → Changelog: **Removed**
 - **`security(scope)`**: Security fixes → Changelog: **Security**
+- **`adr(####)`**: ADR changes → Changelog: **Changed** (e.g., `adr(0009): implement phase 4`)
 
 ### Scope Guidelines
 

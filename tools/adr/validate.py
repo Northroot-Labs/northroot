@@ -9,8 +9,27 @@ import sys
 from pathlib import Path
 from jsonschema import validate, ValidationError
 
-REPO_ROOT = Path(__file__).parent.parent
-ADR_DIR = REPO_ROOT / "docs" / "adr"
+import argparse
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Validate ADR structure")
+    parser.add_argument(
+        "--root",
+        type=str,
+        default=None,
+        help="Root directory for ADRs (default: auto-detect)"
+    )
+    parser.add_argument(
+        "--strict",
+        action="store_true",
+        help="Exit with error code on validation failures"
+    )
+    return parser.parse_args()
+
+# Auto-detect repo root
+SCRIPT_DIR = Path(__file__).parent
+REPO_ROOT = SCRIPT_DIR.parent.parent
 SCHEMA_DIR = REPO_ROOT / "schemas" / "adr"
 
 def load_schema(schema_file: Path):
@@ -89,6 +108,13 @@ def validate_index(index_file: Path, index_schema: dict) -> bool:
 
 def main():
     """Main validation function."""
+    args = parse_args()
+    
+    if args.root:
+        adr_dir = Path(args.root)
+    else:
+        adr_dir = REPO_ROOT / "docs" / "adr"
+    
     print("Validating ADR structure...\n")
     
     # Load schemas
@@ -104,30 +130,30 @@ def main():
     
     # Validate ADRs
     print("Validating ADR files:")
-    for adr_dir in sorted(ADR_DIR.glob("ADR-*")):
-        if not adr_dir.is_dir():
+    for adr_dir_item in sorted(adr_dir.glob("ADR-*")):
+        if not adr_dir_item.is_dir():
             continue
         
-        adr_num = adr_dir.name.split('-')[1]
-        adr_file = adr_dir / f"ADR-{adr_num}.md"
+        adr_num = adr_dir_item.name.split('-')[1]
+        adr_file = adr_dir_item / f"ADR-{adr_num}.md"
         
         if adr_file.exists():
             if not validate_adr(adr_file, adr_schema):
                 all_valid = False
             
             # Validate phases
-            phases_dir = adr_dir / "phases"
+            phases_dir = adr_dir_item / "phases"
             if phases_dir.is_dir():
                 for phase_file in sorted(phases_dir.glob("*.yaml")):
                     if not validate_phase(phase_file, phase_schema):
                         all_valid = False
         else:
-            print(f"✗ {adr_dir.name}: ADR file not found")
+            print(f"✗ {adr_dir_item.name}: ADR file not found")
             all_valid = False
     
     # Validate index
     print("\nValidating index:")
-    index_file = ADR_DIR / "adr.index.json"
+    index_file = adr_dir / "adr.index.json"
     if index_file.exists():
         if not validate_index(index_file, index_schema):
             all_valid = False

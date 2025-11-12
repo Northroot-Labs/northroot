@@ -1,0 +1,44 @@
+name: ADR CI
+
+on:
+  pull_request:
+    paths:
+      - "docs/adr/**"
+      - "schemas/adr/**"
+      - "tools/adr/**"
+      - "Makefile"
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/adr/**"
+      - "schemas/adr/**"
+      - "tools/adr/**"
+      - "Makefile"
+
+jobs:
+  adr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install dependencies
+        run: |
+          pip install -r tools/adr/requirements.txt
+
+      - name: Validate ADRs
+        run: make adr.validate
+
+      - name: Re-generate index and check diff
+        run: |
+          make adr.index
+          if [ -n "$(git status --porcelain docs/adr/adr.index.json)" ]; then
+            echo "::error::adr.index.json is out of date. Run 'make adr.index' and commit the result."
+            git --no-pager diff docs/adr/adr.index.json
+            exit 1
+          fi
+

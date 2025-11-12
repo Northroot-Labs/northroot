@@ -1,0 +1,14 @@
+# Pre-commit hooks for Northroot
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  - repo: local
+    hooks:
+      - id: adr-validate
+        name: ADR validate and index
+        entry: bash -lc 'make adr.index && make adr.validate'
+        language: system
+        pass_filenames: false
+        stages: [pre-commit]
+        files: ^docs/adr/
+

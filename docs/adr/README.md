@@ -85,19 +85,25 @@ The `adr.index.json` file provides a machine-readable index of all ADRs and thei
 ### Generate Index
 
 ```bash
-./scripts/generate-adr-index.py
+make adr.index
 ```
 
 ### Validate Structure
 
 ```bash
-./scripts/validate-adrs.py
+make adr.validate
 ```
 
 ### Migrate Existing ADRs
 
 ```bash
-./scripts/migrate-adrs.py
+make adr.migrate
+```
+
+### Watch for Changes
+
+```bash
+make adr.watch  # Requires watchexec: brew install watchexec
 ```
 
 ## Schemas

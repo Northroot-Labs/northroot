@@ -53,6 +53,7 @@ bash scripts/update-changelog.sh release 0.1.0
 - `fix(scope): correct bug` → Fixed category
 - `refactor(scope): simplify code` → Changed category
 - `security(scope): fix vulnerability` → Security category
+- `adr(####): change description` → Changed category (ADR changes)
 - `BREAKING CHANGE:` prefix marks breaking changes
 
 **Configuration:**
@@ -62,4 +63,22 @@ bash scripts/update-changelog.sh release 0.1.0
 **See also:**
 - [CHANGELOG.md](../CHANGELOG.md)
 - [Contributing Guide](../CONTRIBUTING.md#changelog-guidelines)
+
+## install-adr-hooks.sh
+
+Install git hooks for automatic ADR validation.
+
+**Usage:**
+```bash
+bash scripts/install-adr-hooks.sh
+```
+
+**What it does:**
+- Installs pre-commit hook to validate ADRs before commit
+- Installs pre-push hook for extra validation before push
+- Ensures ADR index stays up-to-date
+
+**See also:**
+- [ADR Tools](../tools/adr/README.md)
+- [ADR Maintenance Rules](../.cursor/rules/adr-maintenance.mdc)
 

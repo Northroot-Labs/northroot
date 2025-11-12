@@ -12,9 +12,23 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, List, Optional, Tuple
 
-REPO_ROOT = Path(__file__).parent.parent
+import argparse
+
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Migrate ADRs to new format")
+    parser.add_argument(
+        "--root",
+        type=str,
+        default=None,
+        help="Root directory for ADRs (default: docs/adr)"
+    )
+    return parser.parse_args()
+
+# Auto-detect repo root
+SCRIPT_DIR = Path(__file__).parent
+REPO_ROOT = SCRIPT_DIR.parent.parent
 OLD_ADR_DIR = REPO_ROOT / "ADRs"
-NEW_ADR_DIR = REPO_ROOT / "docs" / "adr"
 SCHEMA_DIR = REPO_ROOT / "schemas" / "adr"
 
 # ADR metadata extraction patterns
@@ -139,13 +153,13 @@ def parse_adr_file(filepath: Path) -> Dict:
     }
 
 # Create new ADR structure
-def create_adr_structure(adr_data: Dict, content: str) -> None:
+def create_adr_structure(adr_data: Dict, content: str, base_dir: Path) -> None:
     """Create new ADR directory structure with markdown and frontmatter."""
     adr_id = adr_data["adr_id"]
     slug = adr_data["slug"]
     
     # Create directory
-    adr_dir = NEW_ADR_DIR / f"{adr_id}-{slug}"
+    adr_dir = base_dir / f"{adr_id}-{slug}"
     adr_dir.mkdir(parents=True, exist_ok=True)
     (adr_dir / "phases").mkdir(exist_ok=True)
     (adr_dir / "attachments").mkdir(exist_ok=True)
@@ -269,12 +283,19 @@ def create_adr009_phases(adr_dir: Path) -> None:
 
 def main():
     """Main migration function."""
+    args = parse_args()
+    
+    if args.root:
+        new_adr_dir = Path(args.root)
+    else:
+        new_adr_dir = REPO_ROOT / "docs" / "adr"
+    
     print("Migrating ADRs to new format...")
     print(f"Source: {OLD_ADR_DIR}")
-    print(f"Destination: {NEW_ADR_DIR}\n")
+    print(f"Destination: {new_adr_dir}\n")
     
     # Ensure new directory exists
-    NEW_ADR_DIR.mkdir(parents=True, exist_ok=True)
+    new_adr_dir.mkdir(parents=True, exist_ok=True)
     
     # Process each ADR file
     adr_files = sorted(OLD_ADR_DIR.glob("ADR-*.md"))
@@ -283,11 +304,11 @@ def main():
         print(f"Processing {adr_file.name}...")
         try:
             adr_data = parse_adr_file(adr_file)
-            create_adr_structure(adr_data, adr_data["content"])
+            create_adr_structure(adr_data, adr_data["content"], new_adr_dir)
             
             # Special handling for ADR-009 (has phases)
             if adr_data["adr_id"] == "ADR-0009":
-                adr_dir = NEW_ADR_DIR / f"{adr_data['adr_id']}-{adr_data['slug']}"
+                adr_dir = new_adr_dir / f"{adr_data['adr_id']}-{adr_data['slug']}"
                 create_adr009_phases(adr_dir)
         except Exception as e:
             print(f"  ✗ Error processing {adr_file.name}: {e}")
@@ -296,8 +317,8 @@ def main():
     
     print("\n✓ Migration complete!")
     print(f"\nNext steps:")
-    print(f"1. Review migrated ADRs in {NEW_ADR_DIR}")
-    print(f"2. Run: ./scripts/generate-adr-index.sh")
+    print(f"1. Review migrated ADRs in {new_adr_dir}")
+    print(f"2. Run: make adr.index && make adr.validate")
     print(f"3. Update any cross-references in code/docs")
 
 if __name__ == "__main__":

@@ -1,0 +1,58 @@
+---
+alwaysApply: false
+description: Auto-enforcement rules for ADR indexing and maintenance
+---
+
+# ADR Maintenance Protocol
+
+**Purpose**: Ensure ADR index and structure remain valid and up-to-date.
+
+## When Editing ADRs
+
+If you create or modify any ADR or phase file under `docs/adr/`, you MUST:
+
+1. **Regenerate index and validate**:
+   ```bash
+   make adr.index && make adr.validate
+   ```
+
+2. **Include updated index in commit**: The `adr.index.json` file must be updated and committed alongside ADR changes.
+
+3. **Never hand-edit `adr.index.json`**: Always regenerate using `make adr.index`.
+
+## Schema Drift Detection
+
+If validation fails due to schema drift or layout issues:
+
+```bash
+make adr.migrate && make adr.index && make adr.validate
+```
+
+## Commit Message Format
+
+Use Conventional Commits with ADR namespace:
+
+- `adr(0001): propose unified config layer`
+- `adr(0001): accept P02`
+- `adr(0001): deprecate in favor of ADR-0017`
+- `adr(0009): implement phase 4 resolver API`
+
+## File Patterns
+
+This rule applies when editing:
+- `docs/adr/**/*.md` - ADR markdown files
+- `docs/adr/**/*.yml` - Phase YAML files
+- `docs/adr/**/*.yaml` - Phase YAML files
+
+## Validation Requirements
+
+Before committing ADR changes:
+- ✅ Index is up to date (`make adr.index`)
+- ✅ All files validate against schemas (`make adr.validate`)
+- ✅ No schema drift detected
+
+## Automated Enforcement
+
+- **Pre-commit hook**: Runs `make adr.index && make adr.validate` automatically
+- **CI/CD**: Validates and checks index freshness on PR/push
+- **Local watcher**: Use `make adr.watch` for live feedback during editing

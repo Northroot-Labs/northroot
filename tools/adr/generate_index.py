@@ -5,18 +5,42 @@ Generate ADR index from all ADR directories.
 
 import json
 import os
+import sys
 import yaml
 import glob
 from pathlib import Path
 from datetime import datetime, timezone
 
-REPO_ROOT = Path(__file__).parent.parent
-ADR_DIR = REPO_ROOT / "docs" / "adr"
-INDEX_FILE = ADR_DIR / "adr.index.json"
+import argparse
 
-def generate_index():
+def parse_args():
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description="Generate ADR index")
+    parser.add_argument(
+        "--root",
+        type=str,
+        default=None,
+        help="Root directory for ADRs (default: auto-detect from script location)"
+    )
+    parser.add_argument(
+        "--write",
+        action="store_true",
+        help="Write index file (default: just validate)"
+    )
+    return parser.parse_args()
+
+# Auto-detect repo root and ADR directory
+SCRIPT_DIR = Path(__file__).parent
+REPO_ROOT = SCRIPT_DIR.parent.parent
+
+def generate_index(adr_dir: Path, write: bool = True):
     """Generate the ADR index."""
-    print("Generating ADR index...")
+    index_file = adr_dir / "adr.index.json"
+    
+    if write:
+        print("Generating ADR index...")
+    else:
+        print("Validating ADR index...")
     
     index = {
         "$schema": "./adr.index.schema.json",
@@ -26,13 +50,13 @@ def generate_index():
     }
     
     # Process each ADR directory
-    for adr_dir in sorted(ADR_DIR.glob("ADR-*")):
-        if not adr_dir.is_dir():
+    for adr_dir_item in sorted(adr_dir.glob("ADR-*")):
+        if not adr_dir_item.is_dir():
             continue
         
         # Find ADR markdown file
-        adr_num = adr_dir.name.split('-')[1]
-        adr_file = adr_dir / f"ADR-{adr_num}.md"
+        adr_num = adr_dir_item.name.split('-')[1]
+        adr_file = adr_dir_item / f"ADR-{adr_num}.md"
         
         if not adr_file.exists():
             print(f"Warning: ADR file not found: {adr_file}")
@@ -60,7 +84,7 @@ def generate_index():
         
         # Collect phases
         phases = []
-        phases_dir = adr_dir / "phases"
+        phases_dir = adr_dir_item / "phases"
         if phases_dir.is_dir():
             for phase_file in sorted(phases_dir.glob("ADR-*-P*.yaml")):
                 try:
@@ -91,13 +115,41 @@ def generate_index():
     # Sort by ADR ID
     index["adrs"].sort(key=lambda x: x["adr_id"])
     
-    # Write index
-    with open(INDEX_FILE, 'w', encoding='utf-8') as f:
-        json.dump(index, f, indent=2)
+    if write:
+        # Write index
+        with open(index_file, 'w', encoding='utf-8') as f:
+            json.dump(index, f, indent=2)
+        print(f"✓ Generated ADR index: {index_file}")
+    else:
+        # Validate existing index
+        if not index_file.exists():
+            print(f"✗ Index file not found: {index_file}")
+            return False
+        
+        with open(index_file, 'r', encoding='utf-8') as f:
+            existing = json.load(f)
+        
+        # Compare (ignore generated_at)
+        existing_copy = existing.copy()
+        index_copy = index.copy()
+        existing_copy.pop("generated_at", None)
+        index_copy.pop("generated_at", None)
+        
+        if existing_copy != index_copy:
+            print(f"✗ Index is out of date")
+            return False
+        print(f"✓ Index is up to date")
     
-    print(f"✓ Generated ADR index: {INDEX_FILE}")
     print(f"  Found {len(index['adrs'])} ADRs")
+    return True
 
 if __name__ == "__main__":
-    generate_index()
+    args = parse_args()
+    if args.root:
+        adr_dir = Path(args.root)
+    else:
+        adr_dir = REPO_ROOT / "docs" / "adr"
+    
+    success = generate_index(adr_dir, write=args.write)
+    sys.exit(0 if success else 1)
 
