@@ -1,0 +1,9 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0009-P04
+adr_id: ADR-0009
+sequence: 4
+title: Privacy-Preserving Resolver API
+status: implemented
+summary: Created resolver.rs module with ArtifactResolver and ManagedCache traits.
+proposed_at: '2025-11-11T00:00:00Z'
+decided_at: '2025-11-11T00:00:00Z'

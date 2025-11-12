@@ -1,0 +1,9 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0009-P05
+adr_id: ADR-0009
+sequence: 5
+title: Summarized manifests for fast overlap
+status: proposed
+summary: Implement ManifestSummary structure with MinHash sketches, HLL cardinality,
+  and Bloom filters.
+proposed_at: '2025-11-12T06:41:23Z'

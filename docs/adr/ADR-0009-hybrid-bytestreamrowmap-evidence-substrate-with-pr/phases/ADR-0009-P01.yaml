@@ -1,0 +1,10 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0009-P01
+adr_id: ADR-0009
+sequence: 1
+title: Engine-internal DataShape enum + hash helper
+status: implemented
+summary: Added shapes.rs module with DataShape enum and compute_data_shape_hash()
+  function.
+proposed_at: '2025-11-11T00:00:00Z'
+decided_at: '2025-11-11T00:00:00Z'

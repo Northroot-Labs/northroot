@@ -1,0 +1,8 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0009-P08
+adr_id: ADR-0009
+sequence: 8
+title: Helper functions for shape hash computation
+status: proposed
+summary: Add data shape and method shape hash helpers.
+proposed_at: '2025-11-12T06:41:23Z'

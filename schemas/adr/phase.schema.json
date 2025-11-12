@@ -1,0 +1,120 @@
+{
+  "$id": "https://northroot.dev/schemas/phase.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "Phase Schema",
+  "description": "Schema for ADR Phase entries",
+  "required": ["phase_id", "adr_id", "sequence", "title", "status"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Path to schema file"
+    },
+    "phase_id": {
+      "type": "string",
+      "pattern": "^ADR-\\d{4}-P\\d{2}(-[0-9A-HJKMNP-TV-Z]{26})?$",
+      "description": "Canonical phase identifier with optional ULID"
+    },
+    "adr_id": {
+      "type": "string",
+      "pattern": "^ADR-\\d{4}$",
+      "description": "Parent ADR identifier"
+    },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Local ordinal within this ADR"
+    },
+    "title": {
+      "type": "string",
+      "description": "Phase title"
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "proposed", "accepted", "rejected", "implemented", "deprecated", "superseded"],
+      "description": "Phase lifecycle status"
+    },
+    "proposed_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When phase was proposed"
+    },
+    "decided_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When decision was made"
+    },
+    "effective_from": {
+      "type": "string",
+      "description": "When this phase becomes effective (e.g., 'next minor release')"
+    },
+    "summary": {
+      "type": "string",
+      "description": "Summary of the phase"
+    },
+    "decision_drivers": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Key factors driving the decision"
+    },
+    "options_considered": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string" },
+          "pros": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "cons": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "ref"],
+        "properties": {
+          "type": { "type": "string" },
+          "ref": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    },
+    "supersedes_phases": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Phase IDs this phase supersedes"
+    },
+    "ai_provenance": {
+      "type": "object",
+      "description": "AI agent provenance tracking",
+      "additionalProperties": true
+    },
+    "source_commit": {
+      "type": "string",
+      "description": "Git commit SHA where this phase was created"
+    },
+    "signing": {
+      "type": "object",
+      "description": "Content signing information",
+      "properties": {
+        "content_sha256": { "type": "string" },
+        "signed_by": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": false
+}
+

@@ -1,0 +1,8 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0009-P07
+adr_id: ADR-0009
+sequence: 7
+title: Reuse reconciliation flow
+status: proposed
+summary: Implement ReuseReconciliation + check_reuse() helpers with manifest summaries.
+proposed_at: '2025-11-12T06:41:23Z'

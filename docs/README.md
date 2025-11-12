@@ -16,8 +16,11 @@ Continuous Integration and Deployment documentation:
 - **CI_VECTOR_CHECKS.md** - CI checks for test vector integrity
 
 ### `/phases/` - Phase-Specific Documentation
-Documentation for specific implementation phases:
-- **PHASE_4_PREPARATION.md** - Phase 4 (Privacy-Preserving Resolver API) preparation and spec-first tests
+Documentation for specific implementation phases from ADRs and plans:
+- **README.md** - Phase documentation standards and identification system
+- **ADR-009-P4.md** - ADR-009 Phase 4 (Privacy-Preserving Resolver API) - ✅ Complete
+
+> **Note**: Phases are ADR/plan-specific, not global. Each phase has a canonical unique ID: `ADR-XXX-PN`. Always reference phases using their canonical ID (e.g., `ADR-009-P4`). See [ADR and Phase ID Standards](../docs/process/ADR_PHASE_ID_STANDARDS.md).
 
 ### `/analysis/` - Analysis Documents
 Technical analysis and assessment documents:

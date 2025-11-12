@@ -1,0 +1,10 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0009-P06
+adr_id: ADR-0009
+sequence: 6
+title: Storage extensions
+status: implemented
+summary: Extended ReceiptStore trait with encrypted locators, output digests, and
+  manifest summaries.
+proposed_at: '2025-11-11T00:00:00Z'
+decided_at: '2025-11-11T00:00:00Z'

@@ -1,0 +1,10 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0009-P03
+adr_id: ADR-0009
+sequence: 3
+title: Refactor Merkle Row-Map and ByteStream manifest builders
+status: implemented
+summary: Moved MerkleRowMap to rowmap.rs with RFC-6962 domain separation. Created
+  cas.rs for ByteStream manifests.
+proposed_at: '2025-11-11T00:00:00Z'
+decided_at: '2025-11-11T00:00:00Z'

@@ -1,0 +1,9 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0009-P02
+adr_id: ADR-0009
+sequence: 2
+title: Extend ExecutionPayload to differentiate byte-level commitments
+status: implemented
+summary: Updated ExecutionPayload with output_digest, manifest_root, and locator refs.
+proposed_at: '2025-11-11T00:00:00Z'
+decided_at: '2025-11-11T00:00:00Z'

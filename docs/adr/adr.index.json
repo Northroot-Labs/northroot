@@ -1,0 +1,193 @@
+{
+  "$schema": "./adr.index.schema.json",
+  "version": "0.3",
+  "generated_at": "2025-11-12T06:43:57Z",
+  "adrs": [
+    {
+      "adr_id": "ADR-0001",
+      "slug": "receipts-vs-engine-boundaries",
+      "title": "Receipts vs Engine Boundaries",
+      "status": "accepted",
+      "tags": [
+        "canonicalization",
+        "delta-compute",
+        "receipts",
+        "engine",
+        "proofs"
+      ],
+      "domain": "engine",
+      "created_at": "2025-11-08T00:00:00Z",
+      "phases": []
+    },
+    {
+      "adr_id": "ADR-0002",
+      "slug": "canonicalization-strategy-cbor",
+      "title": "Canonicalization Strategy (CBOR)",
+      "status": "accepted",
+      "tags": [
+        "canonicalization",
+        "storage",
+        "receipts",
+        "engine"
+      ],
+      "domain": "engine",
+      "created_at": "2025-11-08T00:00:00Z",
+      "phases": []
+    },
+    {
+      "adr_id": "ADR-0003",
+      "slug": "delta-compute-decisions-recorded-under-spendjustif",
+      "title": "Delta Compute Decisions Recorded Under spend.justification",
+      "status": "accepted",
+      "tags": [
+        "delta-compute",
+        "receipts",
+        "engine"
+      ],
+      "domain": "engine",
+      "created_at": "2025-11-08T00:00:00Z",
+      "phases": []
+    },
+    {
+      "adr_id": "ADR-0004",
+      "slug": "identity-root-commitment",
+      "title": "Identity Root Commitment",
+      "status": "accepted",
+      "tags": [
+        "canonicalization",
+        "receipts",
+        "engine",
+        "proofs"
+      ],
+      "domain": "engine",
+      "created_at": "2025-11-08T00:00:00Z",
+      "phases": []
+    },
+    {
+      "adr_id": "ADR-0005",
+      "slug": "engine-architecture",
+      "title": "Engine Architecture",
+      "status": "accepted",
+      "tags": [
+        "canonicalization",
+        "delta-compute",
+        "receipts",
+        "engine",
+        "proofs"
+      ],
+      "domain": "engine",
+      "created_at": "2025-01-15T00:00:00Z",
+      "phases": []
+    },
+    {
+      "adr_id": "ADR-0006",
+      "slug": "signature-verification-strategy",
+      "title": "Signature Verification Strategy",
+      "status": "accepted",
+      "tags": [
+        "delta-compute",
+        "receipts",
+        "engine",
+        "proofs"
+      ],
+      "domain": "engine",
+      "created_at": "2025-11-08T00:00:00Z",
+      "phases": []
+    },
+    {
+      "adr_id": "ADR-0007",
+      "slug": "delta-compute-implementation-strategy",
+      "title": "Delta Compute Implementation Strategy",
+      "status": "proposed",
+      "tags": [
+        "canonicalization",
+        "delta-compute"
+      ],
+      "domain": "core",
+      "created_at": "2025-11-08T00:00:00Z",
+      "phases": []
+    },
+    {
+      "adr_id": "ADR-0008",
+      "slug": "proof-addressable-storage-and-incremental-compute-",
+      "title": "Proof-Addressable Storage and Incremental Compute Hardening",
+      "status": "proposed",
+      "tags": [
+        "canonicalization",
+        "delta-compute",
+        "storage",
+        "receipts",
+        "proofs"
+      ],
+      "domain": "engine",
+      "created_at": "2025-11-09T00:00:00Z",
+      "phases": []
+    },
+    {
+      "adr_id": "ADR-0009",
+      "slug": "hybrid-bytestreamrowmap-evidence-substrate-with-pr",
+      "title": "Hybrid ByteStream/RowMap Evidence Substrate with Privacy-Preserving Resolver and Reuse Pipeline",
+      "status": "accepted",
+      "tags": [
+        "canonicalization",
+        "delta-compute",
+        "storage",
+        "receipts",
+        "engine",
+        "proofs"
+      ],
+      "domain": "engine",
+      "created_at": "2025-11-12T01:26:46Z",
+      "phases": [
+        {
+          "phase_id": "ADR-0009-P01",
+          "sequence": 1,
+          "status": "implemented",
+          "timestamp": "2025-11-11T00:00:00Z"
+        },
+        {
+          "phase_id": "ADR-0009-P02",
+          "sequence": 2,
+          "status": "implemented",
+          "timestamp": "2025-11-11T00:00:00Z"
+        },
+        {
+          "phase_id": "ADR-0009-P03",
+          "sequence": 3,
+          "status": "implemented",
+          "timestamp": "2025-11-11T00:00:00Z"
+        },
+        {
+          "phase_id": "ADR-0009-P04",
+          "sequence": 4,
+          "status": "implemented",
+          "timestamp": "2025-11-11T00:00:00Z"
+        },
+        {
+          "phase_id": "ADR-0009-P05",
+          "sequence": 5,
+          "status": "proposed",
+          "timestamp": "2025-11-12T06:41:23Z"
+        },
+        {
+          "phase_id": "ADR-0009-P06",
+          "sequence": 6,
+          "status": "implemented",
+          "timestamp": "2025-11-11T00:00:00Z"
+        },
+        {
+          "phase_id": "ADR-0009-P07",
+          "sequence": 7,
+          "status": "proposed",
+          "timestamp": "2025-11-12T06:41:23Z"
+        },
+        {
+          "phase_id": "ADR-0009-P08",
+          "sequence": 8,
+          "status": "proposed",
+          "timestamp": "2025-11-12T06:41:23Z"
+        }
+      ]
+    }
+  ]
+}

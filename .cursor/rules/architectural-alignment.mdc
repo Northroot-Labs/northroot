@@ -1,7 +1,7 @@
 ---
-alwaysApply: true
+description: Best Practices for Architecture Alignment and separation of concerns.
+alwaysApply: false
 ---
-
 # Architectural Alignment Rules
 
 **Purpose**: Ensure all code changes maintain invariants, preserve contracts, and are properly tested before moving to next phase.

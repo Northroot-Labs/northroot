@@ -1,12 +1,13 @@
-//! Spec-first tests for Phase 4: Privacy-Preserving Resolver API and Storage Extensions
+//! Spec-first tests for ADR-009-P4: Privacy-Preserving Resolver API and Storage Extensions
 //!
-//! These tests specify the expected behavior and will fail until Phase 4 is implemented.
+//! Phase ID: ADR-009-P4
+//! These tests specify the expected behavior and will fail until ADR-009-P4 is implemented.
 //! Mark with #[ignore] until implementation, then remove ignore to verify.
 
 use northroot_receipts::EncryptedLocatorRef;
 use uuid::Uuid;
 
-/// Phase 4.1: ArtifactResolver Trait Contract Tests
+/// ADR-009-P4.1: ArtifactResolver Trait Contract Tests
 ///
 /// SPEC: ArtifactResolver trait must provide privacy-preserving artifact resolution.
 /// Tenants implement this trait; engine only depends on the trait, never implementations.
@@ -81,7 +82,7 @@ mod resolver_trait_contract {
     }
 }
 
-/// Phase 4.2: ManagedCache Trait Contract Tests
+/// ADR-009-P4.2: ManagedCache Trait Contract Tests
 ///
 /// SPEC: ManagedCache trait provides optional caching for hot artifacts.
 mod managed_cache_contract {
@@ -115,7 +116,7 @@ mod managed_cache_contract {
     }
 }
 
-/// Phase 4.3: Storage Extensions Contract Tests
+/// ADR-009-P4.3: Storage Extensions Contract Tests
 ///
 /// SPEC: Storage must support encrypted locators, output digests, and manifest summaries.
 mod storage_extensions_contract {
@@ -181,7 +182,7 @@ mod storage_extensions_contract {
     }
 }
 
-/// Phase 4.4: Privacy Invariant Tests
+/// ADR-009-P4.4: Privacy Invariant Tests
 ///
 /// SPEC: Receipts must never contain plain storage locations, only encrypted locators.
 mod privacy_invariants {
@@ -285,7 +286,7 @@ mod privacy_invariants {
     }
 }
 
-/// Phase 4.5: Backward Compatibility Tests
+/// ADR-009-P4.5: Backward Compatibility Tests
 ///
 /// SPEC: Existing receipts without locators must continue to work.
 mod backward_compatibility {
@@ -381,14 +382,14 @@ mod backward_compatibility {
     }
 }
 
-/// Phase 4.6: Integration Contract Tests
+/// ADR-009-P4.6: Integration Contract Tests
 ///
 /// SPEC: End-to-end flow from receipt creation to artifact resolution.
 mod integration_contracts {
     use super::*;
 
     #[test]
-    #[ignore] // Remove when Phase 4 is implemented
+    #[ignore] // Remove when ADR-009-P4 is implemented
     fn test_end_to_end_resolver_flow() {
         // SPEC: Complete flow: create receipt → store artifact → encrypt locator → 
         //       store in receipt → retrieve from storage → resolve via resolver
@@ -403,7 +404,7 @@ mod integration_contracts {
     }
 
     #[test]
-    #[ignore] // Remove when Phase 4 is implemented
+    #[ignore] // Remove when ADR-009-P4 is implemented
     fn test_output_digest_lookup_flow() {
         // SPEC: Query receipts by output_digest for fast exact-hit cache lookup
         
@@ -414,7 +415,7 @@ mod integration_contracts {
     }
 
     #[test]
-    #[ignore] // Remove when Phase 4 is implemented
+    #[ignore] // Remove when ADR-009-P4 is implemented
     fn test_manifest_summary_storage_flow() {
         // SPEC: Store and retrieve manifest summaries for fast overlap computation
         
