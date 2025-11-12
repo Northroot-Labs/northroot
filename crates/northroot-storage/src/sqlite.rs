@@ -1,8 +1,8 @@
 //! SQLite backend for receipt and manifest storage.
 
 use crate::error::StorageError;
-use crate::traits::{ManifestMeta, ReceiptQuery, ReceiptStore};
-use northroot_receipts::Receipt;
+use crate::traits::{ManifestMeta, ManifestSummary, ReceiptQuery, ReceiptStore};
+use northroot_receipts::{EncryptedLocatorRef, Receipt};
 use rusqlite::{params, Connection, Row};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -123,6 +123,62 @@ impl SqliteStore {
             [],
         )?;
 
+        // --- Phase 4: Encrypted Locators Table ---
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS encrypted_locators (
+                execution_rid TEXT PRIMARY KEY,
+                encrypted_data BLOB NOT NULL,
+                content_hash TEXT NOT NULL,
+                encryption_scheme TEXT NOT NULL,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY (execution_rid) REFERENCES receipts(rid)
+            )",
+            [],
+        )?;
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_locators_content_hash ON encrypted_locators(content_hash)",
+            [],
+        )?;
+
+        // --- Phase 4: Output Digests Table ---
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS output_digests (
+                execution_rid TEXT PRIMARY KEY,
+                output_digest TEXT NOT NULL,
+                manifest_root BLOB,
+                output_mime_type TEXT,
+                output_size_bytes INTEGER,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY (execution_rid) REFERENCES receipts(rid)
+            )",
+            [],
+        )?;
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_output_digests_digest ON output_digests(output_digest)",
+            [],
+        )?;
+
+        // --- Phase 4: Manifest Summaries Table ---
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS manifest_summaries (
+                manifest_hash BLOB PRIMARY KEY,
+                pac BLOB NOT NULL,
+                chunk_count INTEGER NOT NULL,
+                minhash_sketch BLOB NOT NULL,
+                hll_cardinality INTEGER,
+                bloom_filter BLOB,
+                created_at INTEGER NOT NULL
+            )",
+            [],
+        )?;
+
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_manifest_summaries_pac ON manifest_summaries(pac)",
+            [],
+        )?;
+
         Ok(())
     }
 
@@ -137,7 +193,7 @@ impl SqliteStore {
     }
 
     /// Extract change_epoch from receipt (from ExecutionPayload if present).
-    fn extract_change_epoch(receipt: &Receipt) -> Option<String> {
+    fn extract_change_epoch(_receipt: &Receipt) -> Option<String> {
         // TODO: Extract from ExecutionPayload.change_epoch when Phase 3 is complete
         None
     }
@@ -181,6 +237,42 @@ impl SqliteStore {
     fn extract_prev_execution_rid(_receipt: &Receipt) -> Option<Uuid> {
         // TODO: Extract from ExecutionPayload.prev_execution_rid when Phase 3 is complete
         None
+    }
+
+    /// Extract output_digest from receipt (from ExecutionPayload if present).
+    fn extract_output_digest(receipt: &Receipt) -> Option<String> {
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            exec.output_digest.clone()
+        } else {
+            None
+        }
+    }
+
+    /// Extract manifest_root from receipt (from ExecutionPayload if present).
+    fn extract_manifest_root(receipt: &Receipt) -> Option<[u8; 32]> {
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            exec.manifest_root
+        } else {
+            None
+        }
+    }
+
+    /// Extract output_mime_type from receipt (from ExecutionPayload if present).
+    fn extract_output_mime_type(receipt: &Receipt) -> Option<String> {
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            exec.output_mime_type.clone()
+        } else {
+            None
+        }
+    }
+
+    /// Extract output_size_bytes from receipt (from ExecutionPayload if present).
+    fn extract_output_size_bytes(receipt: &Receipt) -> Option<u64> {
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            exec.output_size_bytes
+        } else {
+            None
+        }
     }
 
     /// Parse timestamp to Unix epoch seconds.
@@ -262,6 +354,44 @@ impl ReceiptStore for SqliteStore {
             created_at,
             ],
         )?;
+
+        // --- Phase 4: Automatically store output digest if present ---
+        if let Some(output_digest) = Self::extract_output_digest(r) {
+            let manifest_root = Self::extract_manifest_root(r);
+            let output_mime_type = Self::extract_output_mime_type(r);
+            let output_size_bytes = Self::extract_output_size_bytes(r);
+
+            let created_at = Self::parse_timestamp(&r.ctx.timestamp)?;
+            let manifest_root_vec = manifest_root.map(|r| r.to_vec());
+
+            conn.execute(
+                "INSERT OR REPLACE INTO output_digests (
+                    execution_rid, output_digest, manifest_root,
+                    output_mime_type, output_size_bytes, created_at
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![
+                    r.rid.to_string(),
+                    output_digest,
+                    manifest_root_vec,
+                    output_mime_type,
+                    output_size_bytes.map(|s| s as i64),
+                    created_at,
+                ],
+            )?;
+        }
+
+        // --- Phase 4: Automatically store encrypted locator if present ---
+        if let northroot_receipts::Payload::Execution(exec) = &r.payload {
+            if let Some(ref output_locator_ref) = exec.output_locator_ref {
+                // Store the output locator reference
+                // Note: We need to drop the connection lock first
+                let execution_rid = r.rid;
+                let locator_ref = output_locator_ref.clone();
+                drop(conn); // Release lock before calling trait method
+                self.store_encrypted_locator(&execution_rid, &locator_ref)?;
+                return Ok(()); // Already stored, return early
+            }
+        }
 
         Ok(())
     }
@@ -510,5 +640,253 @@ impl ReceiptStore for SqliteStore {
             params![before],
         )?;
         Ok(count)
+    }
+
+    // --- Phase 4: Encrypted Locator Storage ---
+
+    fn store_encrypted_locator(
+        &self,
+        execution_rid: &Uuid,
+        locator_ref: &EncryptedLocatorRef,
+    ) -> Result<(), StorageError> {
+        let conn = self.conn.lock().unwrap();
+
+        // Verify receipt exists
+        let receipt_exists: bool = conn.query_row(
+            "SELECT EXISTS(SELECT 1 FROM receipts WHERE rid = ?1)",
+            params![execution_rid.to_string()],
+            |row| row.get(0),
+        )?;
+
+        if !receipt_exists {
+            return Err(StorageError::NotFound(format!(
+                "Receipt {} not found",
+                execution_rid
+            )));
+        }
+
+        let created_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .map_err(|_| StorageError::InvalidInput("Failed to get current time".to_string()))?;
+
+        // Serialize encrypted_data to BLOB
+        let encrypted_data_blob = &locator_ref.encrypted_data;
+
+        conn.execute(
+            "INSERT OR REPLACE INTO encrypted_locators (
+                execution_rid, encrypted_data, content_hash, encryption_scheme, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![
+                execution_rid.to_string(),
+                encrypted_data_blob,
+                locator_ref.content_hash,
+                locator_ref.encryption_scheme,
+                created_at,
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    fn get_encrypted_locator(
+        &self,
+        execution_rid: &Uuid,
+    ) -> Result<Option<EncryptedLocatorRef>, StorageError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT encrypted_data, content_hash, encryption_scheme 
+             FROM encrypted_locators WHERE execution_rid = ?1",
+        )?;
+
+        let mut rows = stmt.query_map(params![execution_rid.to_string()], |row| {
+            Ok(EncryptedLocatorRef {
+                encrypted_data: row.get("encrypted_data")?,
+                content_hash: row.get("content_hash")?,
+                encryption_scheme: row.get("encryption_scheme")?,
+            })
+        })?;
+
+        match rows.next() {
+            Some(Ok(locator)) => Ok(Some(locator)),
+            Some(Err(e)) => Err(StorageError::DatabaseError(e)),
+            None => Ok(None),
+        }
+    }
+
+    // --- Phase 4: Output Digest Storage ---
+
+    fn query_by_output_digest(
+        &self,
+        output_digest: &str,
+    ) -> Result<Vec<Receipt>, StorageError> {
+        let conn = self.conn.lock().unwrap();
+
+        // Join output_digests with receipts to get full receipt data
+        let mut stmt = conn.prepare(
+            "SELECT r.canonical_cbor 
+             FROM receipts r
+             INNER JOIN output_digests od ON r.rid = od.execution_rid
+             WHERE od.output_digest = ?1
+             ORDER BY od.created_at DESC",
+        )?;
+
+        let rows = stmt.query_map(params![output_digest], |row| {
+            Self::receipt_from_row(row).map_err(|e| match e {
+                StorageError::DatabaseError(db_err) => db_err,
+                StorageError::SerializationError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::CompressionError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::InvalidInput(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::NotFound(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+            })
+        })?;
+
+        let mut receipts = Vec::new();
+        for row_result in rows {
+            match row_result {
+                Ok(receipt) => receipts.push(receipt),
+                Err(e) => return Err(StorageError::DatabaseError(e)),
+            }
+        }
+
+        Ok(receipts)
+    }
+
+    fn get_output_info(
+        &self,
+        execution_rid: &Uuid,
+    ) -> Result<Option<(String, EncryptedLocatorRef)>, StorageError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT od.output_digest, el.encrypted_data, el.content_hash, el.encryption_scheme
+             FROM output_digests od
+             LEFT JOIN encrypted_locators el ON od.execution_rid = el.execution_rid
+             WHERE od.execution_rid = ?1",
+        )?;
+
+        let mut rows = stmt.query_map(params![execution_rid.to_string()], |row| {
+            let output_digest: String = row.get("output_digest")?;
+            let encrypted_data: Option<Vec<u8>> = row.get("encrypted_data")?;
+            let content_hash: Option<String> = row.get("content_hash")?;
+            let encryption_scheme: Option<String> = row.get("encryption_scheme")?;
+
+            if let (Some(encrypted_data), Some(content_hash), Some(encryption_scheme)) =
+                (encrypted_data, content_hash, encryption_scheme)
+            {
+                Ok(Some((
+                    output_digest,
+                    EncryptedLocatorRef {
+                        encrypted_data,
+                        content_hash,
+                        encryption_scheme,
+                    },
+                )))
+            } else {
+                Ok(None)
+            }
+        })?;
+
+        match rows.next() {
+            Some(Ok(result)) => Ok(result),
+            Some(Err(e)) => Err(StorageError::DatabaseError(e)),
+            None => Ok(None),
+        }
+    }
+
+    // --- Phase 4: Manifest Summary Storage ---
+
+    fn store_manifest_summary(
+        &self,
+        manifest_hash: &[u8; 32],
+        pac: &[u8; 32],
+        chunk_count: u64,
+        minhash_sketch: &[u8],
+        hll_cardinality: Option<u64>,
+        bloom_filter: Option<&[u8]>,
+    ) -> Result<(), StorageError> {
+        let conn = self.conn.lock().unwrap();
+
+        let created_at = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map(|d| d.as_secs() as i64)
+            .map_err(|_| StorageError::InvalidInput("Failed to get current time".to_string()))?;
+
+        conn.execute(
+            "INSERT OR REPLACE INTO manifest_summaries (
+                manifest_hash, pac, chunk_count, minhash_sketch, 
+                hll_cardinality, bloom_filter, created_at
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                manifest_hash.as_slice(),
+                pac.as_slice(),
+                chunk_count as i64,
+                minhash_sketch,
+                hll_cardinality.map(|c| c as i64),
+                bloom_filter,
+                created_at,
+            ],
+        )?;
+
+        Ok(())
+    }
+
+    fn get_manifest_summary(
+        &self,
+        manifest_hash: &[u8; 32],
+    ) -> Result<Option<ManifestSummary>, StorageError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT manifest_hash, pac, chunk_count, minhash_sketch, 
+                    hll_cardinality, bloom_filter, created_at
+             FROM manifest_summaries WHERE manifest_hash = ?1",
+        )?;
+
+        let mut rows = stmt.query_map(params![manifest_hash.as_slice()], |row| {
+            let manifest_hash_bytes: Vec<u8> = row.get("manifest_hash")?;
+            let pac_bytes: Vec<u8> = row.get("pac")?;
+            let chunk_count: i64 = row.get("chunk_count")?;
+            let minhash_sketch: Vec<u8> = row.get("minhash_sketch")?;
+            let hll_cardinality: Option<i64> = row.get("hll_cardinality")?;
+            let bloom_filter: Option<Vec<u8>> = row.get("bloom_filter")?;
+            let created_at: i64 = row.get("created_at")?;
+
+            // Convert Vec<u8> to [u8; 32]
+            let mut manifest_hash_array = [0u8; 32];
+            let mut pac_array = [0u8; 32];
+            if manifest_hash_bytes.len() == 32 && pac_bytes.len() == 32 {
+                manifest_hash_array.copy_from_slice(&manifest_hash_bytes);
+                pac_array.copy_from_slice(&pac_bytes);
+            } else {
+                return Err(rusqlite::Error::InvalidColumnType(
+                    0,
+                    "Invalid hash length".to_string(),
+                    rusqlite::types::Type::Blob,
+                ));
+            }
+
+            Ok(ManifestSummary {
+                manifest_hash: manifest_hash_array,
+                pac: pac_array,
+                chunk_count: chunk_count as u64,
+                minhash_sketch,
+                hll_cardinality: hll_cardinality.map(|c| c as u64),
+                bloom_filter,
+                created_at,
+            })
+        })?;
+
+        match rows.next() {
+            Some(Ok(summary)) => Ok(Some(summary)),
+            Some(Err(e)) => Err(StorageError::DatabaseError(e)),
+            None => Ok(None),
+        }
     }
 }

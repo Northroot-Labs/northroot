@@ -1,0 +1,7 @@
+---
+alwaysApply: true
+---
+
+keep accurate date formatting across docs when adding new doc or making modification. 
+
+Format: yyy-mm-dd

@@ -947,6 +947,7 @@ dependencies = [
  "northroot-commons",
  "northroot-policy",
  "northroot-receipts",
+ "northroot-storage",
  "serde",
  "serde_json",
  "sha2",

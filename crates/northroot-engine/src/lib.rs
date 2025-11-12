@@ -29,6 +29,7 @@ pub mod commitments;
 pub mod composition;
 pub mod delta;
 pub mod execution;
+pub mod resolver;
 pub mod rowmap;
 pub mod shapes;
 pub mod signature;
@@ -73,6 +74,11 @@ pub use rowmap::{DeltaUpdate, MerkleFrontier, RowMapError, normalize_row};
 pub use cas::{
     build_bytestream_manifest, build_manifest_from_data, chunk_by_cdc, chunk_by_fixed,
     ByteStreamManifest, CasError, Chunk,
+};
+
+// Re-export resolver module items
+pub use resolver::{
+    ArtifactLocation, ArtifactMetadata, ArtifactResolver, CacheError, ManagedCache, ResolverError,
 };
 
 // Re-export shapes module items

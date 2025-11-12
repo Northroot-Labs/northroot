@@ -1,7 +1,7 @@
 //! Storage traits and query types.
 
 use crate::error::StorageError;
-use northroot_receipts::Receipt;
+use northroot_receipts::{EncryptedLocatorRef, Receipt};
 use uuid::Uuid;
 
 /// Storage backend for receipts and manifests.
@@ -51,6 +51,135 @@ pub trait ReceiptStore: Send + Sync {
     /// Removes manifests with expires_at < before timestamp.
     /// Returns the number of manifests removed.
     fn gc_manifests(&self, before: i64) -> Result<usize, StorageError>;
+
+    // --- Phase 4: Encrypted Locator Storage ---
+
+    /// Store encrypted locator reference for an execution receipt.
+    ///
+    /// Associates an encrypted locator with an execution receipt RID.
+    /// Used for privacy-preserving artifact resolution.
+    ///
+    /// # Arguments
+    ///
+    /// * `execution_rid` - Execution receipt ID
+    /// * `locator_ref` - Encrypted locator reference
+    ///
+    /// # Errors
+    ///
+    /// Returns error if storage operation fails or execution_rid doesn't exist
+    fn store_encrypted_locator(
+        &self,
+        execution_rid: &Uuid,
+        locator_ref: &EncryptedLocatorRef,
+    ) -> Result<(), StorageError>;
+
+    /// Retrieve encrypted locator reference for an execution receipt.
+    ///
+    /// # Arguments
+    ///
+    /// * `execution_rid` - Execution receipt ID
+    ///
+    /// # Returns
+    ///
+    /// Some(EncryptedLocatorRef) if found, None if not found
+    ///
+    /// # Errors
+    ///
+    /// Returns error if storage operation fails
+    fn get_encrypted_locator(
+        &self,
+        execution_rid: &Uuid,
+    ) -> Result<Option<EncryptedLocatorRef>, StorageError>;
+
+    // --- Phase 4: Output Digest Storage ---
+
+    /// Query receipts by output digest for fast exact-hit cache lookup.
+    ///
+    /// Returns all execution receipts with matching output_digest.
+    /// Used for finding receipts that produced the same output.
+    ///
+    /// # Arguments
+    ///
+    /// * `output_digest` - Output digest in format "sha256:<64hex>"
+    ///
+    /// # Returns
+    ///
+    /// Vector of receipts with matching output digest
+    ///
+    /// # Errors
+    ///
+    /// Returns error if storage operation fails
+    fn query_by_output_digest(
+        &self,
+        output_digest: &str,
+    ) -> Result<Vec<Receipt>, StorageError>;
+
+    /// Get output information for an execution receipt.
+    ///
+    /// Returns output digest and encrypted locator reference if available.
+    ///
+    /// # Arguments
+    ///
+    /// * `execution_rid` - Execution receipt ID
+    ///
+    /// # Returns
+    ///
+    /// Some((output_digest, locator_ref)) if found, None if not found
+    ///
+    /// # Errors
+    ///
+    /// Returns error if storage operation fails
+    fn get_output_info(
+        &self,
+        execution_rid: &Uuid,
+    ) -> Result<Option<(String, EncryptedLocatorRef)>, StorageError>;
+
+    // --- Phase 4: Manifest Summary Storage ---
+
+    /// Store manifest summary for fast overlap computation.
+    ///
+    /// Manifest summaries contain MinHash sketches, HLL cardinality estimates,
+    /// and Bloom filters for efficient overlap detection without loading full manifests.
+    ///
+    /// # Arguments
+    ///
+    /// * `manifest_hash` - Hash of the manifest (32 bytes)
+    /// * `pac` - Proof-addressable cache key (32 bytes)
+    /// * `chunk_count` - Number of chunks in manifest
+    /// * `minhash_sketch` - MinHash sketch bytes
+    /// * `hll_cardinality` - HyperLogLog cardinality estimate (optional)
+    /// * `bloom_filter` - Bloom filter bytes (optional)
+    ///
+    /// # Errors
+    ///
+    /// Returns error if storage operation fails
+    fn store_manifest_summary(
+        &self,
+        manifest_hash: &[u8; 32],
+        pac: &[u8; 32],
+        chunk_count: u64,
+        minhash_sketch: &[u8],
+        hll_cardinality: Option<u64>,
+        bloom_filter: Option<&[u8]>,
+    ) -> Result<(), StorageError>;
+
+    /// Retrieve manifest summary by manifest hash.
+    ///
+    /// # Arguments
+    ///
+    /// * `manifest_hash` - Hash of the manifest (32 bytes)
+    ///
+    /// # Returns
+    ///
+    /// Some(ManifestSummary) if found, None if not found
+    ///
+    /// # Errors
+    ///
+    /// Returns error if storage operation fails
+    fn get_manifest_summary(
+        &self,
+        manifest_hash: &[u8; 32],
+    ) -> Result<Option<ManifestSummary>, StorageError>;
 }
 
 /// Query criteria for searching receipts.
@@ -85,4 +214,26 @@ pub struct ManifestMeta {
     pub size_uncompressed: usize,
     /// Expiration timestamp (Unix epoch seconds), None = never expire
     pub expires_at: Option<i64>,
+}
+
+/// Manifest summary for fast overlap computation.
+///
+/// Contains reduced manifest data (MinHash, HLL, Bloom filters) for
+/// efficient overlap estimation without loading full manifests.
+#[derive(Debug, Clone)]
+pub struct ManifestSummary {
+    /// Manifest hash (32 bytes)
+    pub manifest_hash: [u8; 32],
+    /// Proof-addressable cache key (32 bytes)
+    pub pac: [u8; 32],
+    /// Number of chunks in manifest
+    pub chunk_count: u64,
+    /// MinHash sketch bytes
+    pub minhash_sketch: Vec<u8>,
+    /// HyperLogLog cardinality estimate (optional)
+    pub hll_cardinality: Option<u64>,
+    /// Bloom filter bytes (optional)
+    pub bloom_filter: Option<Vec<u8>>,
+    /// Timestamp when summary was created (Unix epoch seconds)
+    pub created_at: i64,
 }

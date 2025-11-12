@@ -1,0 +1,177 @@
+---
+alwaysApply: true
+---
+
+# Architectural Alignment Rules
+
+**Purpose**: Ensure all code changes maintain invariants, preserve contracts, and are properly tested before moving to next phase.
+
+## Phase Classification (Required)
+
+Every change must be classified before implementation:
+
+- **`refactor`**: Structural changes that preserve behavior (e.g., moving code, renaming, extracting modules)
+- **`change`**: Behavioral changes that modify outputs or contracts (e.g., algorithm changes, format changes, breaking changes)
+- **`additive`**: New functionality that doesn't affect existing code (e.g., new optional fields, new modules)
+
+## Pre-Implementation Requirements
+
+### For All Phases
+
+1. **Document Expected Changes**
+   - List all behavioral changes (if any)
+   - Identify breaking changes explicitly
+   - Note backward compatibility requirements
+
+2. **Identify Affected Components**
+   - List all crates/modules that will be modified
+   - Identify dependent code (strategies, tests, examples)
+   - Note test vectors that may need updates
+
+3. **Review ADR Alignment**
+   - Verify changes align with relevant ADRs
+   - Update ADR if phase introduces new architectural decisions
+   - Document any ADR supersessions
+
+## Phase-Specific Requirements
+
+### For `refactor` Phases
+
+- [ ] Generate coverage baseline before refactor
+- [ ] Generate coverage diff after refactor (no regressions)
+- [ ] Add property tests for invariants (determinism, idempotency, commutativity)
+- [ ] Add contract tests (serialization, API, trait, storage contracts)
+- [ ] Run cargo-mutants (no surviving mutants)
+- [ ] Update golden vectors if needed
+- [ ] Verify all tests pass
+
+### For `change` Phases
+
+- [ ] Write spec-first tests (fail now, pass later)
+- [ ] Add compatibility tests (old vs new outputs)
+- [ ] Add temporary feature flag if breaking change
+- [ ] Verify deltas match specification exactly
+- [ ] Update test vectors with new values
+- [ ] Write migration guide if breaking change
+- [ ] Remove feature flag after migration
+
+### For `additive` Phases
+
+- [ ] Write spec-first tests for new functionality
+- [ ] Add contract tests for new interfaces
+- [ ] Add integration tests for end-to-end flows
+- [ ] Verify backward compatibility (old code still works)
+- [ ] Update documentation
+
+## Post-Implementation Verification (All Phases)
+
+1. **Run Full Test Suite**
+   ```bash
+   cargo test --workspace --all-features
+   ```
+
+2. **Check Linter**
+   ```bash
+   cargo clippy --workspace --all-features -- -D warnings
+   ```
+
+3. **Verify Documentation**
+   ```bash
+   cargo doc --workspace --no-deps
+   ```
+
+4. **Update ADR**
+   - Mark phase as complete
+   - Document any deviations from plan
+   - Note any follow-up work needed
+
+## Testing Requirements
+
+### Property Tests (for `refactor` and critical `change` phases)
+
+Verify invariants:
+- **Determinism**: Same input → same output
+- **Idempotency**: f(f(x)) == f(x)
+- **Commutativity**: Order independence where applicable
+- **Associativity**: Grouping independence where applicable
+
+### Contract Tests (for all phases)
+
+Verify external interfaces:
+- **Serialization contracts**: CBOR/JSON round-trips
+- **API contracts**: Public function signatures and behaviors
+- **Trait contracts**: Trait implementations meet specifications
+- **Storage contracts**: Data persistence and retrieval
+
+### Spec-First Tests (for `change` phases)
+
+1. Document the specification in test name/comments
+2. Write test that fails with current implementation
+3. Mark with `#[ignore]` until implemented
+4. Implement feature to make test pass
+5. Remove `#[ignore]` marker
+
+### Compatibility Tests (for `change` phases)
+
+- Verify new format is correct
+- Verify old outputs are rejected/invalid (if breaking)
+- Test migration paths (if provided)
+- Verify backward compatibility (if applicable)
+
+## Mutation Testing
+
+For `refactor` phases and critical `change` phases:
+
+```bash
+cargo install cargo-mutants
+cargo mutants --package <crate> --lib
+```
+
+**Action Items**:
+- Fix any surviving mutants
+- Add missing test cases
+- Document any intentionally ignored mutations
+
+## Golden Vectors
+
+Ensure all golden vectors are:
+- [ ] Present for all data structures
+- [ ] Include edge cases (empty, single, multiple)
+- [ ] Document expected outputs
+- [ ] Versioned (if format changes)
+- [ ] Referenced in tests
+
+## Breaking Changes
+
+For breaking changes:
+1. Use temporary feature flag for gradual migration
+2. Implement new behavior behind flag
+3. Update tests to use new behavior
+4. After migration period, remove flag and old code
+5. Document breaking change in ADR
+6. Write migration guide
+7. Update test vectors
+
+## Automation Scripts
+
+Use provided scripts:
+- `scripts/coverage-diff.sh` - Generate coverage diffs
+- `scripts/mutation-test.sh` - Run mutation testing
+- `scripts/check-golden-vectors.sh` - Verify vector references
+
+## Key Principles
+
+1. **Test First**: Write spec-first tests before implementation
+2. **Verify Invariants**: Ensure core properties always hold
+3. **Maintain Contracts**: Preserve external interfaces
+4. **Document Changes**: Update ADRs and documentation
+5. **Backward Compatibility**: Preserve existing behavior unless explicitly breaking
+6. **Coverage**: Maintain or improve test coverage
+7. **Mutation Testing**: Verify test quality catches bugs
+
+## Enforcement
+
+- All phases must be classified before implementation
+- All checklist items must be completed before marking phase complete
+- ADR must be updated when phase completes
+- Breaking changes must be explicitly documented
