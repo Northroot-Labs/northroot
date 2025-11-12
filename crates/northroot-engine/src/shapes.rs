@@ -35,6 +35,7 @@
 //! ```
 
 use crate::commitments::{jcs, sha256_prefixed};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use thiserror::Error;
 
@@ -66,7 +67,8 @@ pub enum DataShape {
 }
 
 /// Chunking scheme for ByteStream
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum ChunkScheme {
     /// Content-Defined Chunking (Rabin fingerprinting)
     CDC { avg_size: u64 },

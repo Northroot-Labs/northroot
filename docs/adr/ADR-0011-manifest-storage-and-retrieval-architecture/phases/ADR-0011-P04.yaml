@@ -7,10 +7,10 @@ status: proposed
 summary: Implement decision rule for when to inline chunk sets vs storing externally in CAS. MEDIUM PRIORITY - Depends on P01-P03.
 proposed_at: "2025-11-12T19:00:00Z"
 decision_drivers:
-  - Performance: Inline sets avoid CAS lookup for small sets
-  - Efficiency: Decision rule balances latency vs manifest size
-  - Practical defaults: τ ≈ 2-5 ms, size ≤ 8 KB or ≤ 256 IDs
-  - Implementation: Decision rule (O_fetch > τ and size ≤ threshold → inline), inline_set field, ExternalSetRef struct, default threshold ≤ 256 IDs or ≤ 8 KB
-  - Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/delta/decision.rs
-  - Success: Decision rule works correctly, small sets inlined, large sets in CAS, manifest size < 10 KB
+  - "Performance: Inline sets avoid CAS lookup for small sets"
+  - "Efficiency: Decision rule balances latency vs manifest size"
+  - "Practical defaults: τ ≈ 2-5 ms, size ≤ 8 KB or ≤ 256 IDs"
+  - "Implementation: Decision rule (O_fetch > τ and size ≤ threshold → inline), inline_set field, ExternalSetRef struct, default threshold ≤ 256 IDs or ≤ 8 KB"
+  - "Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/delta/decision.rs"
+  - "Success: Decision rule works correctly, small sets inlined, large sets in CAS, manifest size < 10 KB"
 

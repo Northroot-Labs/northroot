@@ -7,10 +7,10 @@ status: proposed
 summary: Add MinHash sketch generation to manifests for fast-path reuse decisions without fetching full chunk sets. HIGH PRIORITY - Depends on P01, blocks P04-P05.
 proposed_at: "2025-11-12T19:00:00Z"
 decision_drivers:
-  - Latency: Fast reuse decisions from manifest sketch alone
-  - Efficiency: Avoid CAS fetch for most overlap checks
-  - Performance: Sketch-based Jaccard estimation is O(k) vs O(n) for full sets
-  - Implementation: Add OverlapIndex struct, MinHash sketch (k=128), SketchData, integrate into build_manifest_from_data, sketch-based Jaccard estimation
-  - Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/delta/overlap.rs
-  - Success: All manifests include MinHash sketch (k=128, ~2 KB), estimation within 5% of exact J, fast-path decisions work
+  - "Latency: Fast reuse decisions from manifest sketch alone"
+  - "Efficiency: Avoid CAS fetch for most overlap checks"
+  - "Performance: Sketch-based Jaccard estimation is O(k) vs O(n) for full sets"
+  - "Implementation: Add OverlapIndex struct, MinHash sketch (k=128), SketchData, integrate into build_manifest_from_data, sketch-based Jaccard estimation"
+  - "Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/delta/overlap.rs"
+  - "Success: All manifests include MinHash sketch (k=128, ~2 KB), estimation within 5% of exact J, fast-path decisions work"
 

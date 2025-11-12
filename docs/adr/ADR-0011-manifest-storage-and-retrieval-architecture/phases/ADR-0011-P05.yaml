@@ -10,19 +10,19 @@ priority: medium
 depends_on: [ADR-0011-P02, ADR-0011-P03]
 blocks: []
 decision_drivers:
-  - Latency: Fast-path decisions from sketch alone (no CAS fetch)
-  - Accuracy: Exact Jaccard for close calls via CAS retrieval
-  - Performance: Sketch comparison is O(k) vs O(n) for full sets
+  - "Latency: Fast-path decisions from sketch alone (no CAS fetch)"
+  - "Accuracy: Exact Jaccard for close calls via CAS retrieval"
+  - "Performance: Sketch comparison is O(k) vs O(n) for full sets"
 
 tasks:
-  - Implement fast-path: compute J from sketch vs candidate sketch
-  - Add threshold-based decision (clearly above/below → decide immediately)
-  - Implement close-call path: fetch external set(s) from CAS
-  - Add exact Jaccard computation from full chunk sets
-  - Integrate LRU cache into retrieval path
-  - Update reuse decision logic to use tiered retrieval
-  - Add performance tests for fast-path vs close-call latency
-  - Record J, decision, and costs in receipts
+  - "Implement fast-path: compute J from sketch vs candidate sketch"
+  - "Add threshold-based decision (clearly above/below → decide immediately)"
+  - "Implement close-call path: fetch external set(s) from CAS"
+  - "Add exact Jaccard computation from full chunk sets"
+  - "Integrate LRU cache into retrieval path"
+  - "Update reuse decision logic to use tiered retrieval"
+  - "Add performance tests for fast-path vs close-call latency"
+  - "Record J, decision, and costs in receipts"
 
 files:
   - crates/northroot-engine/src/delta/overlap.rs

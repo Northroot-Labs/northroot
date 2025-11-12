@@ -7,11 +7,11 @@ status: proposed
 summary: Implement content-addressed storage for full chunk sets with LRU caching and GC support. HIGH PRIORITY - Depends on P01, blocks P04-P05.
 proposed_at: "2025-11-12T19:00:00Z"
 decision_drivers:
-  - Efficiency: Content-addressed storage enables deduplication
-  - Performance: LRU cache for hot chunk sets
-  - GC: Easy to expire large sets without rewriting manifests
-  - Scalability: Supports large chunk sets without bloating manifests
-  - Implementation: Add CAS methods to ReceiptStore, implement CAS backend with path /.nr/cas/aa/bb/<sha256>.cbor, LRU cache (1-5 GB), reference counting, GC policy
-  - Files: crates/northroot-storage/src/traits.rs, crates/northroot-storage/src/sqlite.rs, crates/northroot-storage/src/cas.rs (new)
-  - Success: Chunk sets stored as CBOR CAS objects, content-addressed by SHA-256, LRU cache working, reference counting, GC policy
+  - "Efficiency: Content-addressed storage enables deduplication"
+  - "Performance: LRU cache for hot chunk sets"
+  - "GC: Easy to expire large sets without rewriting manifests"
+  - "Scalability: Supports large chunk sets without bloating manifests"
+  - "Implementation: Add CAS methods to ReceiptStore, implement CAS backend with path /.nr/cas/aa/bb/<sha256>.cbor, LRU cache (1-5 GB), reference counting, GC policy"
+  - "Files: crates/northroot-storage/src/traits.rs, crates/northroot-storage/src/sqlite.rs, crates/northroot-storage/src/cas.rs (new)"
+  - "Success: Chunk sets stored as CBOR CAS objects, content-addressed by SHA-256, LRU cache working, reference counting, GC policy"
 

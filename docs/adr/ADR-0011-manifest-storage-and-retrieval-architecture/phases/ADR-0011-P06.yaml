@@ -10,9 +10,9 @@ priority: low
 depends_on: [ADR-0011-P01, ADR-0011-P02, ADR-0011-P03, ADR-0011-P04, ADR-0011-P05]
 blocks: []
 decision_drivers:
-  - Production readiness: Example demonstrates real-world usage
-  - Completeness: Remove workarounds and use proper storage
-  - Documentation: Example serves as reference implementation
+  - "Production readiness: Example demonstrates real-world usage"
+  - "Completeness: Remove workarounds and use proper storage"
+  - "Documentation: Example serves as reference implementation"
 
 tasks:
   - Update example to generate manifests with overlap_index sketches

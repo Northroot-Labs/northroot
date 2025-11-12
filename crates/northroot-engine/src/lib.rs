@@ -31,6 +31,7 @@ pub mod delta;
 pub mod execution;
 pub mod resolver;
 pub mod rowmap;
+pub mod serde_helpers;
 pub mod shapes;
 pub mod signature;
 pub mod strategies;
@@ -73,7 +74,7 @@ pub use rowmap::{normalize_row, DeltaUpdate, MerkleFrontier, RowMapError};
 // Re-export cas module items
 pub use cas::{
     build_bytestream_manifest, build_manifest_from_data, chunk_by_cdc, chunk_by_fixed,
-    ByteStreamManifest, CasError, Chunk,
+    deserialize_manifest_from_cbor, serialize_manifest_to_cbor, ByteStreamManifest, CasError, Chunk,
 };
 
 // Re-export resolver module items

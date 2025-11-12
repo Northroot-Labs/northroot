@@ -3,14 +3,15 @@ phase_id: ADR-0011-P01
 adr_id: ADR-0011
 sequence: 1
 title: CBOR Serialization Foundation
-status: proposed
+status: implemented
 summary: Add CBOR serialization to ByteStreamManifest for consistency with receipts and enable tiered chunk set storage. HIGHEST PRIORITY - Foundation that blocks all other phases (P02-P06).
 proposed_at: "2025-11-12T19:00:00Z"
+decided_at: "2025-11-12T19:00:00Z"
 decision_drivers:
-  - Consistency: Manifests should use same canonicalization as receipts (CBOR)
-  - Foundation: Required for all other phases (blocks P02-P06)
-  - Production readiness: Eliminates manual JSON workarounds
-  - Implementation: Add serde derives, hex_serde helper, CBOR canonicalization, update storage, add migration path
-  - Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/shapes.rs, crates/northroot-storage/src/sqlite.rs
-  - Success: ByteStreamManifest implements Serialize/Deserialize with CBOR, manifests stored as CBOR, no JSON workarounds, backward compatibility
+  - "Consistency: Manifests should use same canonicalization as receipts (CBOR)"
+  - "Foundation: Required for all other phases (blocks P02-P06)"
+  - "Production readiness: Eliminates manual JSON workarounds"
+  - "Implementation: Add serde derives, hex_serde helper, CBOR canonicalization, update storage, add migration path"
+  - "Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/shapes.rs, crates/northroot-storage/src/sqlite.rs"
+  - "Success: ByteStreamManifest implements Serialize/Deserialize with CBOR, manifests stored as CBOR, no JSON workarounds, backward compatibility"
 

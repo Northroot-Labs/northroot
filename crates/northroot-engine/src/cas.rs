@@ -13,6 +13,7 @@
 
 use crate::delta::chunk_id_from_bytes;
 use crate::shapes::ChunkScheme;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use thiserror::Error;
 
@@ -75,7 +76,7 @@ impl CasError {
 }
 
 /// Chunk for ByteStream
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Chunk {
     /// Chunk ID (sha256:<64hex>)
     pub id: String,
@@ -84,11 +85,12 @@ pub struct Chunk {
     /// Length of chunk in bytes
     pub len: u64,
     /// Chunk hash (binary, 32 bytes)
+    #[serde(with = "crate::serde_helpers")]
     pub hash: [u8; 32],
 }
 
 /// ByteStream manifest
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ByteStreamManifest {
     /// Merkle root over chunk list (RFC-6962 style)
     pub manifest_root: String, // sha256:<64hex>
@@ -97,6 +99,7 @@ pub struct ByteStreamManifest {
     /// Chunks in the manifest
     pub chunks: Vec<Chunk>,
     /// Chunking scheme used
+    #[serde(flatten)]
     pub chunk_scheme: ChunkScheme,
 }
 
@@ -375,6 +378,46 @@ pub fn build_manifest_from_data(
     build_bytestream_manifest(&chunks, scheme)
 }
 
+/// Serialize ByteStreamManifest to CBOR bytes.
+///
+/// Uses canonical CBOR encoding (RFC 8949) for deterministic serialization.
+///
+/// # Arguments
+///
+/// * `manifest` - Manifest to serialize
+///
+/// # Returns
+///
+/// CBOR-encoded bytes
+///
+/// # Errors
+///
+/// Returns error if serialization fails
+pub fn serialize_manifest_to_cbor(manifest: &ByteStreamManifest) -> Result<Vec<u8>, CasError> {
+    let mut buffer = Vec::new();
+    ciborium::ser::into_writer(manifest, &mut buffer)
+        .map_err(|e| CasError::manifest(format!("CBOR serialization failed: {}", e), None))?;
+    Ok(buffer)
+}
+
+/// Deserialize ByteStreamManifest from CBOR bytes.
+///
+/// # Arguments
+///
+/// * `data` - CBOR-encoded bytes
+///
+/// # Returns
+///
+/// Deserialized manifest
+///
+/// # Errors
+///
+/// Returns error if deserialization fails
+pub fn deserialize_manifest_from_cbor(data: &[u8]) -> Result<ByteStreamManifest, CasError> {
+    ciborium::de::from_reader(data)
+        .map_err(|e| CasError::manifest(format!("CBOR deserialization failed: {}", e), None))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -500,5 +543,76 @@ mod tests {
 
         assert_eq!(manifest1.manifest_root, manifest2.manifest_root);
         assert_eq!(manifest1.manifest_len, manifest2.manifest_len);
+    }
+
+    #[test]
+    fn test_manifest_cbor_serialization() {
+        let data = b"test data for CBOR serialization";
+        let manifest = build_manifest_from_data(data, ChunkScheme::Fixed { size: 8 }).unwrap();
+
+        // Serialize to CBOR
+        let cbor_bytes = serialize_manifest_to_cbor(&manifest).unwrap();
+        assert!(!cbor_bytes.is_empty());
+
+        // Deserialize from CBOR
+        let deserialized = deserialize_manifest_from_cbor(&cbor_bytes).unwrap();
+        assert_eq!(manifest, deserialized);
+    }
+
+    #[test]
+    fn test_manifest_cbor_roundtrip() {
+        let data = b"roundtrip test data";
+        let manifest1 = build_manifest_from_data(data, ChunkScheme::CDC { avg_size: 16 }).unwrap();
+
+        // Round trip through CBOR
+        let cbor_bytes = serialize_manifest_to_cbor(&manifest1).unwrap();
+        let manifest2 = deserialize_manifest_from_cbor(&cbor_bytes).unwrap();
+
+        assert_eq!(manifest1.manifest_root, manifest2.manifest_root);
+        assert_eq!(manifest1.manifest_len, manifest2.manifest_len);
+        assert_eq!(manifest1.chunks.len(), manifest2.chunks.len());
+        assert_eq!(manifest1.chunk_scheme, manifest2.chunk_scheme);
+
+        // Verify chunks match
+        for (c1, c2) in manifest1.chunks.iter().zip(manifest2.chunks.iter()) {
+            assert_eq!(c1.id, c2.id);
+            assert_eq!(c1.offset, c2.offset);
+            assert_eq!(c1.len, c2.len);
+            assert_eq!(c1.hash, c2.hash);
+        }
+    }
+
+    #[test]
+    fn test_manifest_cbor_deterministic() {
+        let data = b"deterministic test";
+        let manifest = build_manifest_from_data(data, ChunkScheme::Fixed { size: 8 }).unwrap();
+
+        // Serialize multiple times - should produce same bytes
+        let cbor1 = serialize_manifest_to_cbor(&manifest).unwrap();
+        let cbor2 = serialize_manifest_to_cbor(&manifest).unwrap();
+        assert_eq!(cbor1, cbor2);
+    }
+
+    #[test]
+    fn test_chunk_hash_serialization() {
+        use crate::serde_helpers;
+        use serde::{Deserialize, Serialize};
+
+        #[derive(Debug, Serialize, Deserialize, PartialEq)]
+        struct TestChunk {
+            #[serde(with = "serde_helpers")]
+            hash: [u8; 32],
+        }
+
+        let hash = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c,
+                    0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
+                    0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20];
+        let test = TestChunk { hash };
+
+        // Test CBOR serialization (should use byte string)
+        let mut cbor_bytes = Vec::new();
+        ciborium::ser::into_writer(&test, &mut cbor_bytes).unwrap();
+        let deserialized: TestChunk = ciborium::de::from_reader(cbor_bytes.as_slice()).unwrap();
+        assert_eq!(test, deserialized);
     }
 }
