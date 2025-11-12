@@ -50,6 +50,24 @@ Before committing ADR changes:
 - ✅ Index is up to date (`make adr.index`)
 - ✅ All files validate against schemas (`make adr.validate`)
 - ✅ No schema drift detected
+- ✅ All `implementation_commit` SHAs reference actual git commits (validated by `make adr.validate`)
+
+## Commit SHA Provenance Rules
+
+**CRITICAL**: When marking a phase as `implemented` with an `implementation_commit`:
+
+1. **Commit MUST exist first**: The commit SHA must reference an actual commit in the git repository
+2. **Correct workflow**:
+   ```
+   Step 1: Implement the phase (code changes)
+   Step 2: Commit implementation: git commit -m "feat(scope): implement ADR-XXXX-PYY"
+   Step 3: Get commit SHA: git rev-parse HEAD
+   Step 4: Update ADR index with the commit SHA
+   Step 5: Commit index update: git commit -m "docs(adr): mark ADR-XXXX-PYY as implemented"
+   ```
+3. **Never** add `implementation_commit` before the commit exists
+4. **Never** use a commit SHA that doesn't contain the implementation
+5. **Validation**: `make adr.validate` will verify all commit SHAs exist in git
 
 ## Automated Enforcement
 

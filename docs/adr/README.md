@@ -80,6 +80,39 @@ decided_at: 2025-11-11T00:00:00Z
 
 The `adr.index.json` file provides a machine-readable index of all ADRs and their phases. It's automatically generated and should not be edited manually.
 
+### Index Version 0.4
+
+The index (version 0.4) includes rich metadata:
+
+- **ADR-level fields**: `accepted_at`, `implemented_at`, `phase_ids`, `depends_on`, `code_refs`
+- **Phase-level fields**: `decision_drivers`, `tasks`, `files`, `success_criteria`
+- **Code references**: Links to files and symbols touched by implementation commits
+
+## Graph Structure
+
+The ADR system generates graph files for efficient traversal and analysis:
+
+- **`graph.nodes.jsonl`**: JSONL file with node entries (ADR, PHASE, COMMIT, FILE, SYMBOL)
+- **`graph.edges.jsonl`**: JSONL file with edge entries (HAS_PHASE, IMPLEMENTS_IN, TOUCHES_FILE, TOUCHES_SYMBOL, DEPENDS_ON)
+
+### Node Types
+
+- **ADR**: `{"id":"adr:0001","type":"ADR","adr_id":"ADR-0001",...}`
+- **PHASE**: `{"id":"phase:0001:P03","type":"PHASE","phase_id":"ADR-0001-P03-...",...}`
+- **COMMIT**: `{"id":"commit:4d5e6f","type":"COMMIT","sha":"4d5e6f...",...}`
+- **FILE**: `{"id":"file:crates/config/src/validator.rs","type":"FILE","path":"..."}`
+- **SYMBOL**: `{"id":"sym:ConfigValidator::validate","type":"SYMBOL","path":"...","symbol":"..."}`
+
+### Edge Types
+
+- **HAS_PHASE**: `{"src":"adr:0001","dst":"phase:0001:P01","type":"HAS_PHASE"}`
+- **IMPLEMENTS_IN**: `{"src":"phase:0001:P03","dst":"commit:4d5e6f","type":"IMPLEMENTS_IN"}`
+- **TOUCHES_FILE**: `{"src":"commit:4d5e6f","dst":"file:...","type":"TOUCHES_FILE"}`
+- **TOUCHES_SYMBOL**: `{"src":"commit:4d5e6f","dst":"sym:...","type":"TOUCHES_SYMBOL"}`
+- **DEPENDS_ON**: `{"src":"adr:0001","dst":"adr:0003","type":"DEPENDS_ON"}`
+
+The JSONL format enables streaming and chunking for large graphs.
+
 ## Tools
 
 ### Generate Index
@@ -88,11 +121,39 @@ The `adr.index.json` file provides a machine-readable index of all ADRs and thei
 make adr.index
 ```
 
+Generates the ADR index (`adr.index.json`) with all metadata from ADR and phase files.
+
+### Generate Graph
+
+```bash
+make adr.graph
+```
+
+Generates graph files (`graph.nodes.jsonl`, `graph.edges.jsonl`) from the index.
+
+### Link Commits to Code
+
+```bash
+make adr.link
+```
+
+Links implementation commits to files and symbols, updating graph files and populating `code_refs` in the index. Uses `git` to map commits to files, and optionally `ctags` for symbol extraction.
+
+### Full Pipeline
+
+```bash
+make adr.all
+```
+
+Runs the complete pipeline: `adr.index` → `adr.graph` → `adr.link`
+
 ### Validate Structure
 
 ```bash
 make adr.validate
 ```
+
+Validates ADR structure, schemas, commit SHA provenance, and graph consistency.
 
 ### Migrate Existing ADRs
 
@@ -112,7 +173,9 @@ JSON schemas for validation are in `schemas/adr/`:
 
 - `adr.schema.json` - ADR frontmatter schema
 - `phase.schema.json` - Phase file schema
-- `adr.index.schema.json` - Index file schema
+- `adr.index.schema.json` - Index file schema (version 0.4)
+- `graph.nodes.schema.json` - Graph node schema
+- `graph.edges.schema.json` - Graph edge schema
 
 ## References
 

@@ -1,0 +1,38 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0011-P06
+adr_id: ADR-0011
+sequence: 6
+title: Update Example to Use New Architecture
+status: proposed
+summary: Update FinOps cost attribution example to use tiered chunk set storage and remove CSV re-reading workaround.
+proposed_at: "2025-11-12T19:00:00Z"
+priority: low
+depends_on: [ADR-0011-P01, ADR-0011-P02, ADR-0011-P03, ADR-0011-P04, ADR-0011-P05]
+blocks: []
+decision_drivers:
+  - Production readiness: Example demonstrates real-world usage
+  - Completeness: Remove workarounds and use proper storage
+  - Documentation: Example serves as reference implementation
+
+tasks:
+  - Update example to generate manifests with overlap_index sketches
+  - Store chunk sets in CAS when generating receipts
+  - Retrieve chunk sets from storage for overlap computation
+  - Remove CSV re-reading workaround
+  - Use fast-path sketch-based decisions where possible
+  - Fall back to CAS retrieval for close calls
+  - Update example documentation
+  - Add example output showing tiered storage in action
+
+files:
+  - examples/finops_cost_attribution/main.rs
+  - examples/finops_cost_attribution/README.md
+
+success_criteria:
+  - Example uses tiered chunk set storage (no CSV re-reading)
+  - Manifests include overlap_index sketches
+  - Chunk sets stored in CAS and retrieved correctly
+  - Fast-path decisions work for clear cases
+  - Close calls trigger CAS retrieval
+  - Example documentation updated
+  - Example runs successfully end-to-end

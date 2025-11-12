@@ -107,3 +107,24 @@ table.
 - One logical change per commit
 - Include phase/ADR references in commit messages
 - Mark breaking changes explicitly
+
+## ADR Index Commit SHA Workflow
+
+**When implementing an ADR phase:**
+
+1. **Implement the phase** (code changes, tests, etc.)
+2. **Commit the implementation** with descriptive message:
+   ```bash
+   git commit -m "feat(engine): implement ADR-0010-P03 - property tests"
+   ```
+3. **Get the commit SHA**:
+   ```bash
+   git rev-parse HEAD
+   ```
+4. **Update ADR index** with the actual commit SHA (not a placeholder)
+5. **Commit the index update**:
+   ```bash
+   git commit -m "docs(adr): mark ADR-0010-P03 as implemented"
+   ```
+
+**Validation**: `make adr.validate` will verify commit SHAs exist in git before allowing commits.

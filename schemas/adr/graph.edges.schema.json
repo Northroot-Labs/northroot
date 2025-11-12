@@ -1,0 +1,25 @@
+{
+  "$id": "https://northroot.dev/schemas/graph.edges.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "Graph Edge Schema",
+  "description": "Schema for a single edge in the ADR graph (JSONL format)",
+  "required": ["src", "dst", "type"],
+  "properties": {
+    "src": {
+      "type": "string",
+      "description": "Source node ID"
+    },
+    "dst": {
+      "type": "string",
+      "description": "Destination node ID"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["HAS_PHASE", "IMPLEMENTS_IN", "TOUCHES_FILE", "TOUCHES_SYMBOL", "DEPENDS_ON"],
+      "description": "Edge type"
+    }
+  },
+  "additionalProperties": false
+}
+

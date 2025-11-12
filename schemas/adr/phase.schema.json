@@ -72,6 +72,36 @@
       "items": { "type": "string" },
       "description": "Key factors driving the decision"
     },
+    "tasks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Tasks or work items for this phase"
+    },
+    "files": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Files modified or created in this phase"
+    },
+    "success_criteria": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Success criteria for this phase"
+    },
+    "priority": {
+      "type": "string",
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "Priority level for this phase"
+    },
+    "depends_on": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Phase IDs this phase depends on"
+    },
+    "blocks": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Phase IDs this phase blocks"
+    },
     "options_considered": {
       "type": "array",
       "items": {

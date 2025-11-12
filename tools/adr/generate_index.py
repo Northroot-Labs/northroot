@@ -89,7 +89,7 @@ def generate_index(adr_dir: Path, write: bool = True):
     
     index = {
         "$schema": "./adr.index.schema.json",
-        "version": "0.3",
+        "version": "0.4",
         "generated_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "adrs": []
     }
@@ -129,7 +129,9 @@ def generate_index(adr_dir: Path, write: bool = True):
         
         # Collect phases and track implementation metadata
         phases = []
+        phase_ids = []
         first_implemented_at = None
+        all_phases_implemented = True
         phases_dir = adr_dir_item / "phases"
         current_version = get_version()
         current_commit = get_current_commit()
@@ -141,6 +143,10 @@ def generate_index(adr_dir: Path, write: bool = True):
                         phase_data = yaml.safe_load(pf) or {}
                     
                     phase_status = phase_data.get("status", "unknown")
+                    phase_id = phase_data.get("phase_id", "")
+                    if phase_id:
+                        phase_ids.append(phase_id)
+                    
                     needs_write = False
                     
                     # Auto-set implemented_at if status is "implemented" and not already set
@@ -187,10 +193,12 @@ def generate_index(adr_dir: Path, write: bool = True):
                         implemented_at = phase_data.get("implemented_at")
                         if implemented_at and (not first_implemented_at or implemented_at < first_implemented_at):
                             first_implemented_at = implemented_at
+                    else:
+                        all_phases_implemented = False
                     
                     # Build phase entry for index
                     phase_entry = {
-                                "phase_id": phase_data.get("phase_id", ""),
+                                "phase_id": phase_id,
                                 "sequence": phase_data.get("sequence", 0),
                         "status": phase_status,
                                 "timestamp": phase_data.get("decided_at") or phase_data.get("proposed_at") or ""
@@ -204,6 +212,46 @@ def generate_index(adr_dir: Path, write: bool = True):
                             phase_entry["implemented_in"] = phase_data["implemented_in"]
                         if phase_data.get("implementation_commit"):
                             phase_entry["implementation_commit"] = phase_data["implementation_commit"]
+                    
+                    # Add new metadata fields
+                    # Normalize array fields to always be strings (handle YAML parsing issues)
+                    def normalize_string_array(arr):
+                        """Convert array that may contain dicts to array of strings."""
+                        if not arr:
+                            return []
+                        result = []
+                        for item in arr:
+                            if isinstance(item, str):
+                                result.append(item)
+                            elif isinstance(item, dict):
+                                # Handle YAML parsing issue where key-value pairs become dicts
+                                # Convert dict entries to strings
+                                for key, value in item.items():
+                                    if value:
+                                        result.append(f"{key}: {value}")
+                                    else:
+                                        result.append(key)
+                        return result
+                    
+                    if phase_data.get("decision_drivers"):
+                        drivers = normalize_string_array(phase_data["decision_drivers"])
+                        if drivers:
+                            phase_entry["decision_drivers"] = drivers
+                    
+                    if phase_data.get("tasks"):
+                        tasks = normalize_string_array(phase_data["tasks"])
+                        if tasks:
+                            phase_entry["tasks"] = tasks
+                    
+                    if phase_data.get("files"):
+                        files = normalize_string_array(phase_data["files"])
+                        if files:
+                            phase_entry["files"] = files
+                    
+                    if phase_data.get("success_criteria"):
+                        criteria = normalize_string_array(phase_data["success_criteria"])
+                        if criteria:
+                            phase_entry["success_criteria"] = criteria
                     
                     phases.append(phase_entry)
                 except Exception as e:
@@ -220,6 +268,36 @@ def generate_index(adr_dir: Path, write: bool = True):
             "created_at": frontmatter.get("created_at", ""),
             "phases": phases
         }
+        
+        # Add new metadata fields
+        if frontmatter.get("accepted_at"):
+            adr_entry["accepted_at"] = frontmatter.get("accepted_at")
+        elif frontmatter.get("status") == "accepted":
+            # If status is accepted but no accepted_at, use created_at as fallback
+            adr_entry["accepted_at"] = frontmatter.get("created_at", "")
+        
+        # Add implemented_at if all phases are implemented
+        if all_phases_implemented and phases:
+            # Use the latest implemented_at from phases
+            latest_implemented = None
+            for phase in phases:
+                if phase.get("implemented_at"):
+                    if not latest_implemented or phase["implemented_at"] > latest_implemented:
+                        latest_implemented = phase["implemented_at"]
+            if latest_implemented:
+                adr_entry["implemented_at"] = latest_implemented
+        
+        # Add phase_ids
+        if phase_ids:
+            adr_entry["phase_ids"] = phase_ids
+        
+        # Add depends_on from related.depends_on
+        related = frontmatter.get("related", {})
+        if related.get("depends_on"):
+            adr_entry["depends_on"] = related["depends_on"]
+        
+        # Add code_refs (initially empty, populated by linker)
+        adr_entry["code_refs"] = []
         
         # Add realized_at if any phase is implemented
         if first_implemented_at:

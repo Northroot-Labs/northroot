@@ -11,3 +11,6 @@ decision_drivers:
   - Storage integration - Proves persistence works end-to-end
   - Reuse decisions - Shows reuse logic in action
   - User guidance - Provides concrete example for users
+implemented_at: '2025-11-12T19:11:19Z'
+implemented_in: 0.1.0
+implementation_commit: 8c2594a6e859a4c996b4307f1461267d2249d0e8

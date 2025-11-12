@@ -1,0 +1,39 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0011-P05
+adr_id: ADR-0011
+sequence: 5
+title: Fast-Path Retrieval Implementation
+status: proposed
+summary: Implement sketch-based overlap computation with fast-path decisions and CAS fallback for close calls.
+proposed_at: "2025-11-12T19:00:00Z"
+priority: medium
+depends_on: [ADR-0011-P02, ADR-0011-P03]
+blocks: []
+decision_drivers:
+  - Latency: Fast-path decisions from sketch alone (no CAS fetch)
+  - Accuracy: Exact Jaccard for close calls via CAS retrieval
+  - Performance: Sketch comparison is O(k) vs O(n) for full sets
+
+tasks:
+  - Implement fast-path: compute J from sketch vs candidate sketch
+  - Add threshold-based decision (clearly above/below → decide immediately)
+  - Implement close-call path: fetch external set(s) from CAS
+  - Add exact Jaccard computation from full chunk sets
+  - Integrate LRU cache into retrieval path
+  - Update reuse decision logic to use tiered retrieval
+  - Add performance tests for fast-path vs close-call latency
+  - Record J, decision, and costs in receipts
+
+files:
+  - crates/northroot-engine/src/delta/overlap.rs
+  - crates/northroot-engine/src/delta/reuse.rs
+  - crates/northroot-storage/src/cas.rs
+
+success_criteria:
+  - Fast-path decisions made from sketch alone (no CAS fetch)
+  - Close calls trigger CAS retrieval for exact J
+  - LRU cache reduces CAS fetch latency
+  - Exact Jaccard computed correctly from full sets
+  - Performance tests show fast-path < 1ms, close-call < 10ms
+  - Receipts record J, decision, and costs
+

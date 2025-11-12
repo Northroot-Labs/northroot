@@ -1,0 +1,79 @@
+{
+  "$id": "https://northroot.dev/schemas/graph.nodes.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "title": "Graph Node Schema",
+  "description": "Schema for a single node in the ADR graph (JSONL format)",
+  "required": ["id", "type"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique node identifier (e.g., 'adr:0001', 'phase:0001:P03', 'commit:4d5e6f')"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["ADR", "PHASE", "COMMIT", "FILE", "SYMBOL"],
+      "description": "Node type"
+    },
+    "adr_id": {
+      "type": "string",
+      "pattern": "^ADR-\\d{4}$",
+      "description": "ADR identifier (for ADR nodes)"
+    },
+    "phase_id": {
+      "type": "string",
+      "description": "Phase identifier (for PHASE nodes)"
+    },
+    "sha": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{40}$",
+      "description": "Git commit SHA (for COMMIT nodes)"
+    },
+    "path": {
+      "type": "string",
+      "description": "File path (for FILE and SYMBOL nodes)"
+    },
+    "symbol": {
+      "type": "string",
+      "description": "Symbol name (for SYMBOL nodes, e.g., 'ConfigValidator::validate')"
+    },
+    "title": {
+      "type": "string",
+      "description": "Title (for ADR and PHASE nodes)"
+    },
+    "status": {
+      "type": "string",
+      "description": "Status (for ADR and PHASE nodes)"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Creation timestamp"
+    },
+    "accepted_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Acceptance timestamp (for ADR nodes)"
+    },
+    "implemented_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Implementation timestamp (for ADR and PHASE nodes)"
+    },
+    "message": {
+      "type": "string",
+      "description": "Commit message (for COMMIT nodes)"
+    },
+    "when": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Timestamp (for COMMIT nodes)"
+    },
+    "text": {
+      "type": "string",
+      "description": "Text content (summary, rationale, etc.)"
+    }
+  },
+  "additionalProperties": true
+}
+

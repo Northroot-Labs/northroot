@@ -48,10 +48,88 @@
             "type": "string",
             "format": "date-time"
           },
+          "accepted_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When ADR was accepted"
+          },
+          "implemented_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When ADR was fully implemented (all phases complete)"
+          },
           "realized_at": {
             "type": "string",
             "format": "date-time",
             "description": "When first phase was implemented (realization timestamp)"
+          },
+          "phase_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of phase IDs for this ADR (references to phase entries)"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": { 
+              "type": "string",
+              "pattern": "^ADR-\\d{4}$"
+            },
+            "description": "List of ADR IDs this ADR depends on"
+          },
+          "code_refs": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "path", "commit"],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": ["file", "symbol"]
+                },
+                "path": {
+                  "type": "string",
+                  "description": "Relative path to file"
+                },
+                "commit": {
+                  "type": "string",
+                  "pattern": "^[a-f0-9]{40}$",
+                  "description": "Git commit SHA"
+                },
+                "lines": {
+                  "type": "array",
+                  "items": { "type": "integer" },
+                  "description": "Line numbers (e.g., [12, 98])"
+                },
+                "symbol": {
+                  "type": "string",
+                  "description": "Symbol name (e.g., 'ConfigValidator::validate')"
+                },
+                "range": {
+                  "type": "object",
+                  "properties": {
+                    "start": {
+                      "type": "object",
+                      "properties": {
+                        "line": { "type": "integer" },
+                        "col": { "type": "integer" }
+                      },
+                      "required": ["line", "col"]
+                    },
+                    "end": {
+                      "type": "object",
+                      "properties": {
+                        "line": { "type": "integer" },
+                        "col": { "type": "integer" }
+                      },
+                      "required": ["line", "col"]
+                    }
+                  },
+                  "required": ["start", "end"]
+                }
+              },
+              "additionalProperties": false
+            },
+            "description": "Code references (files and symbols) related to this ADR"
           },
           "phases": {
             "type": "array",
@@ -80,9 +158,30 @@
                 },
                 "implementation_commit": {
                   "type": "string"
+                },
+                "decision_drivers": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Key factors driving the decision"
+                },
+                "tasks": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Tasks or work items for this phase"
+                },
+                "files": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Files modified or created in this phase"
+                },
+                "success_criteria": {
+                  "type": "array",
+                  "items": { "type": "string" },
+                  "description": "Success criteria for this phase"
                 }
               }
-            }
+            },
+            "description": "Phase entries (kept for backward compatibility)"
           }
         }
       }

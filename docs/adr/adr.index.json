@@ -1,7 +1,7 @@
 {
   "$schema": "./adr.index.schema.json",
-  "version": "0.3",
-  "generated_at": "2025-11-12T18:18:53Z",
+  "version": "0.4",
+  "generated_at": "2025-11-12T20:46:52Z",
   "adrs": [
     {
       "adr_id": "ADR-0001",
@@ -17,7 +17,9 @@
       ],
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
-      "phases": []
+      "phases": [],
+      "accepted_at": "2025-11-08T00:00:00Z",
+      "code_refs": []
     },
     {
       "adr_id": "ADR-0002",
@@ -32,7 +34,9 @@
       ],
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
-      "phases": []
+      "phases": [],
+      "accepted_at": "2025-11-08T00:00:00Z",
+      "code_refs": []
     },
     {
       "adr_id": "ADR-0003",
@@ -46,7 +50,9 @@
       ],
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
-      "phases": []
+      "phases": [],
+      "accepted_at": "2025-11-08T00:00:00Z",
+      "code_refs": []
     },
     {
       "adr_id": "ADR-0004",
@@ -61,7 +67,9 @@
       ],
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
-      "phases": []
+      "phases": [],
+      "accepted_at": "2025-11-08T00:00:00Z",
+      "code_refs": []
     },
     {
       "adr_id": "ADR-0005",
@@ -77,7 +85,9 @@
       ],
       "domain": "engine",
       "created_at": "2025-01-15T00:00:00Z",
-      "phases": []
+      "phases": [],
+      "accepted_at": "2025-01-15T00:00:00Z",
+      "code_refs": []
     },
     {
       "adr_id": "ADR-0006",
@@ -92,7 +102,9 @@
       ],
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
-      "phases": []
+      "phases": [],
+      "accepted_at": "2025-11-08T00:00:00Z",
+      "code_refs": []
     },
     {
       "adr_id": "ADR-0007",
@@ -105,7 +117,8 @@
       ],
       "domain": "core",
       "created_at": "2025-11-08T00:00:00Z",
-      "phases": []
+      "phases": [],
+      "code_refs": []
     },
     {
       "adr_id": "ADR-0008",
@@ -121,7 +134,8 @@
       ],
       "domain": "engine",
       "created_at": "2025-11-09T00:00:00Z",
-      "phases": []
+      "phases": [],
+      "code_refs": []
     },
     {
       "adr_id": "ADR-0009",
@@ -212,6 +226,95 @@
           "implementation_commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
         }
       ],
+      "accepted_at": "2025-11-12T01:26:46Z",
+      "implemented_at": "2025-11-12T07:57:26Z",
+      "phase_ids": [
+        "ADR-0009-P01",
+        "ADR-0009-P02",
+        "ADR-0009-P03",
+        "ADR-0009-P04",
+        "ADR-0009-P05",
+        "ADR-0009-P06",
+        "ADR-0009-P07",
+        "ADR-0009-P08"
+      ],
+      "code_refs": [
+        {
+          "type": "file",
+          "path": ".cursor/rules/architectural-alignment.mdc",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "ADRs/ADR-009.md",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/tests/test_phase4_spec.rs",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "docs/README.md",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "docs/phases/ADR-009-P4.md",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "docs/phases/PHASE_4_PREPARATION.md",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "docs/phases/README.md",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "docs/process/ADR_PHASE_ID_STANDARDS.md",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "schemas/adr/adr.index.schema.json",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "schemas/adr/adr.schema.json",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "schemas/adr/phase.schema.json",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "scripts/generate-adr-index.py",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "scripts/generate-adr-index.sh",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "scripts/migrate-adrs.py",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        },
+        {
+          "type": "file",
+          "path": "scripts/validate-adrs.py",
+          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
+        }
+      ],
       "realized_at": "2025-11-12T07:41:08Z"
     },
     {
@@ -236,7 +339,13 @@
           "timestamp": "2025-11-12T08:00:00Z",
           "implemented_at": "2025-11-12T12:00:00Z",
           "implemented_in": "0.1.0",
-          "implementation_commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
+          "implementation_commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679",
+          "decision_drivers": [
+            "Foundation first - Must have clean codebase before building features",
+            "Error handling - SDK depends on good error messages",
+            "API stability - SDK APIs must be well-designed",
+            "Code quality - Technical debt blocks productivity"
+          ]
         },
         {
           "phase_id": "ADR-0010-P02",
@@ -245,26 +354,310 @@
           "timestamp": "2025-11-12T08:00:00Z",
           "implemented_at": "2025-11-12T13:00:00Z",
           "implemented_in": "0.1.0",
-          "implementation_commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
+          "implementation_commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679",
+          "decision_drivers": [
+            "Developer ergonomics - Python provides better DX than low-level Rust APIs",
+            "Faster adoption - Python ecosystem is larger and more accessible",
+            "Launch readiness - Enables meaningful adoption at v0.1.0 launch",
+            "User base - Targets larger Python developer community"
+          ]
         },
         {
           "phase_id": "ADR-0010-P03",
           "sequence": 3,
           "status": "implemented",
           "timestamp": "2025-11-12T08:00:00Z",
-          "implemented_at": "2025-11-12T18:30:05Z",
-          "implemented_in": "0.1.0"
+          "implemented_at": "2025-11-12T19:11:19Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8",
+          "decision_drivers": [
+            "Production robustness - Property tests catch bugs unit tests miss",
+            "Edge case coverage - Comprehensive testing prevents production failures",
+            "Invariant validation - Ensures critical properties hold under all conditions",
+            "Quality assurance - Essential for v0.1.0 release readiness"
+          ]
         },
         {
           "phase_id": "ADR-0010-P04",
           "sequence": 4,
           "status": "implemented",
           "timestamp": "2025-11-12T08:00:00Z",
-          "implemented_at": "2025-11-12T18:51:43Z",
-          "implemented_in": "0.1.0"
+          "implemented_at": "2025-11-12T19:11:19Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8",
+          "decision_drivers": [
+            "Demonstrates real value - Shows actual use case with real data",
+            "Storage integration - Proves persistence works end-to-end",
+            "Reuse decisions - Shows reuse logic in action",
+            "User guidance - Provides concrete example for users"
+          ]
+        }
+      ],
+      "implemented_at": "2025-11-12T19:11:19Z",
+      "phase_ids": [
+        "ADR-0010-P01",
+        "ADR-0010-P02",
+        "ADR-0010-P03",
+        "ADR-0010-P04"
+      ],
+      "depends_on": [
+        "ADR-0009"
+      ],
+      "code_refs": [
+        {
+          "type": "file",
+          "path": "Cargo.lock",
+          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/Cargo.toml",
+          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/src/delta/data_shape.rs",
+          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/src/delta/method_shape.rs",
+          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/src/delta/mod.rs",
+          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
+        },
+        {
+          "type": "file",
+          "path": "Cargo.lock",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/Cargo.toml",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/tests/property/edge_cases.rs",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/tests/property/generators.rs",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/tests/property/invariants.rs",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-engine/tests/test_property.rs",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "crates/northroot-storage/src/sqlite.rs",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "examples/finops_cost_attribution/README.md",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "examples/finops_cost_attribution/data/billing_run1.csv",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "examples/finops_cost_attribution/data/billing_run2.csv",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "examples/finops_cost_attribution/main.rs",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "examples/finops_cost_attribution/northroot.db",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "examples/finops_cost_attribution/output/aggregated_run1.csv",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
+        },
+        {
+          "type": "file",
+          "path": "examples/finops_cost_attribution/output/aggregated_run2.csv",
+          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
         }
       ],
       "realized_at": "2025-11-12T12:00:00Z"
+    },
+    {
+      "adr_id": "ADR-0011",
+      "slug": "manifest-storage-and-retrieval-architecture",
+      "title": "Manifest Storage and Retrieval Architecture",
+      "status": "proposed",
+      "tags": [
+        "storage",
+        "manifests",
+        "retrieval",
+        "cbor",
+        "bytestream",
+        "architecture"
+      ],
+      "domain": "storage",
+      "created_at": "2025-11-12T19:00:00Z",
+      "phases": [
+        {
+          "phase_id": "ADR-0011-P01",
+          "sequence": 1,
+          "status": "proposed",
+          "timestamp": "2025-11-12T19:00:00Z",
+          "decision_drivers": [
+            "Consistency: Manifests should use same canonicalization as receipts (CBOR)",
+            "Foundation: Required for all other phases (blocks P02-P06)",
+            "Production readiness: Eliminates manual JSON workarounds",
+            "Implementation: Add serde derives, hex_serde helper, CBOR canonicalization, update storage, add migration path",
+            "Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/shapes.rs, crates/northroot-storage/src/sqlite.rs",
+            "Success: ByteStreamManifest implements Serialize/Deserialize with CBOR, manifests stored as CBOR, no JSON workarounds, backward compatibility"
+          ]
+        },
+        {
+          "phase_id": "ADR-0011-P02",
+          "sequence": 2,
+          "status": "proposed",
+          "timestamp": "2025-11-12T19:00:00Z",
+          "decision_drivers": [
+            "Latency: Fast reuse decisions from manifest sketch alone",
+            "Efficiency: Avoid CAS fetch for most overlap checks",
+            "Performance: Sketch-based Jaccard estimation is O(k) vs O(n) for full sets",
+            "Implementation: Add OverlapIndex struct, MinHash sketch (k=128), SketchData, integrate into build_manifest_from_data, sketch-based Jaccard estimation",
+            "Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/delta/overlap.rs",
+            "Success: All manifests include MinHash sketch (k=128, ~2 KB), estimation within 5% of exact J, fast-path decisions work"
+          ]
+        },
+        {
+          "phase_id": "ADR-0011-P03",
+          "sequence": 3,
+          "status": "proposed",
+          "timestamp": "2025-11-12T19:00:00Z",
+          "decision_drivers": [
+            "Efficiency: Content-addressed storage enables deduplication",
+            "Performance: LRU cache for hot chunk sets",
+            "GC: Easy to expire large sets without rewriting manifests",
+            "Scalability: Supports large chunk sets without bloating manifests",
+            "Implementation: Add CAS methods to ReceiptStore, implement CAS backend with path /.nr/cas/aa/bb/<sha256>.cbor, LRU cache (1-5 GB), reference counting, GC policy",
+            "Files: crates/northroot-storage/src/traits.rs, crates/northroot-storage/src/sqlite.rs, crates/northroot-storage/src/cas.rs (new)",
+            "Success: Chunk sets stored as CBOR CAS objects, content-addressed by SHA-256, LRU cache working, reference counting, GC policy"
+          ]
+        },
+        {
+          "phase_id": "ADR-0011-P04",
+          "sequence": 4,
+          "status": "proposed",
+          "timestamp": "2025-11-12T19:00:00Z",
+          "decision_drivers": [
+            "Performance: Inline sets avoid CAS lookup for small sets",
+            "Efficiency: Decision rule balances latency vs manifest size",
+            "Practical defaults: \u03c4 \u2248 2-5 ms, size \u2264 8 KB or \u2264 256 IDs",
+            "Implementation: Decision rule (O_fetch > \u03c4 and size \u2264 threshold \u2192 inline), inline_set field, ExternalSetRef struct, default threshold \u2264 256 IDs or \u2264 8 KB",
+            "Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/delta/decision.rs",
+            "Success: Decision rule works correctly, small sets inlined, large sets in CAS, manifest size < 10 KB"
+          ]
+        },
+        {
+          "phase_id": "ADR-0011-P05",
+          "sequence": 5,
+          "status": "proposed",
+          "timestamp": "2025-11-12T19:00:00Z",
+          "decision_drivers": [
+            "Latency: Fast-path decisions from sketch alone (no CAS fetch)",
+            "Accuracy: Exact Jaccard for close calls via CAS retrieval",
+            "Performance: Sketch comparison is O(k) vs O(n) for full sets"
+          ],
+          "tasks": [
+            "Implement fast-path: compute J from sketch vs candidate sketch",
+            "Add threshold-based decision (clearly above/below \u2192 decide immediately)",
+            "Implement close-call path: fetch external set(s) from CAS",
+            "Add exact Jaccard computation from full chunk sets",
+            "Integrate LRU cache into retrieval path",
+            "Update reuse decision logic to use tiered retrieval",
+            "Add performance tests for fast-path vs close-call latency",
+            "Record J, decision, and costs in receipts"
+          ],
+          "files": [
+            "crates/northroot-engine/src/delta/overlap.rs",
+            "crates/northroot-engine/src/delta/reuse.rs",
+            "crates/northroot-storage/src/cas.rs"
+          ],
+          "success_criteria": [
+            "Fast-path decisions made from sketch alone (no CAS fetch)",
+            "Close calls trigger CAS retrieval for exact J",
+            "LRU cache reduces CAS fetch latency",
+            "Exact Jaccard computed correctly from full sets",
+            "Performance tests show fast-path < 1ms, close-call < 10ms",
+            "Receipts record J, decision, and costs"
+          ]
+        },
+        {
+          "phase_id": "ADR-0011-P06",
+          "sequence": 6,
+          "status": "proposed",
+          "timestamp": "2025-11-12T19:00:00Z",
+          "decision_drivers": [
+            "Production readiness: Example demonstrates real-world usage",
+            "Completeness: Remove workarounds and use proper storage",
+            "Documentation: Example serves as reference implementation"
+          ],
+          "tasks": [
+            "Update example to generate manifests with overlap_index sketches",
+            "Store chunk sets in CAS when generating receipts",
+            "Retrieve chunk sets from storage for overlap computation",
+            "Remove CSV re-reading workaround",
+            "Use fast-path sketch-based decisions where possible",
+            "Fall back to CAS retrieval for close calls",
+            "Update example documentation",
+            "Add example output showing tiered storage in action"
+          ],
+          "files": [
+            "examples/finops_cost_attribution/main.rs",
+            "examples/finops_cost_attribution/README.md"
+          ],
+          "success_criteria": [
+            "Example uses tiered chunk set storage (no CSV re-reading)",
+            "Manifests include overlap_index sketches",
+            "Chunk sets stored in CAS and retrieved correctly",
+            "Fast-path decisions work for clear cases",
+            "Close calls trigger CAS retrieval",
+            "Example documentation updated",
+            "Example runs successfully end-to-end"
+          ]
+        }
+      ],
+      "phase_ids": [
+        "ADR-0011-P01",
+        "ADR-0011-P02",
+        "ADR-0011-P03",
+        "ADR-0011-P04",
+        "ADR-0011-P05",
+        "ADR-0011-P06"
+      ],
+      "depends_on": [
+        "ADR-0008",
+        "ADR-0009",
+        "ADR-0010"
+      ],
+      "code_refs": []
     }
   ]
 }
