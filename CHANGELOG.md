@@ -7,38 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Automatic changelog generation toolchain
-
-### Changed
-- Migrated from JCS to CBOR canonicalization (RFC 8949) for receipts
-- Updated Merkle Row-Map to use CBOR canonicalization with string-based domain separation
-
-### Fixed
-- Integrity check script now excludes README.md files from vector checks
-
-## [0.1.0] - 2025-01-XX
-
-### Added
-- Unified receipt algebra system with six receipt kinds (data_shape, method_shape, reasoning_shape, execution, spend, settlement)
-- CBOR deterministic encoding (RFC 8949) for canonicalization
-- JSON adapter layer for external compatibility
-- CBOR Diagnostic Notation (CDN) for human-readable debugging
-- Proof-addressable cache (PAC) key computation
-- Delta compute strategies (partition, incremental sum)
-- Merkle Row-Map for deterministic state representation
-- SQLite storage adapter for receipt persistence
-- Three demo examples (FinOps cost attribution, ETL partition reuse, analytics dashboard)
-- Integrity check system for test vectors and baselines
-- Comprehensive test suite with drift detection
-
-### Changed
-- Receipt canonicalization from JSON (JCS) to CBOR (RFC 8949)
-- Merkle tree domain separation from byte prefixes to string prefixes
-
-### Security
-- Input validation at receipt boundaries
-- Deterministic encoding prevents canonicalization attacks
+_Changelog entries will be automatically generated from git commits when the first release is created._
 
 ---
 

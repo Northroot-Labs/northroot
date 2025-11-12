@@ -1,0 +1,108 @@
+---
+alwaysApply: true
+---
+
+# Commit Automation Rules
+
+**Purpose**: Automatically create meaningful commits after successful code changes, ensuring clean git history and changelog integrity.
+
+## Commit Timing
+
+Commits must be created **only after**:
+- ✅ All tests pass (`cargo test --workspace --all-features`)
+- ✅ Linter passes (`cargo clippy --workspace --all-features -- -D warnings`)
+- ✅ All phase requirements are met (per architectural alignment rules)
+- ✅ ADR is updated (if applicable)
+
+## Commit Message Format
+
+Use **Conventional Commits** format for automatic changelog generation:
+
+```
+type(scope): succinct description
+
+Optional body with details if needed.
+
+BREAKING CHANGE: description (if applicable)
+```
+
+### Type Mapping
+
+- **`feat(scope)`**: New features → Changelog: **Added**
+- **`fix(scope)`**: Bug fixes → Changelog: **Fixed**
+- **`refactor(scope)`**: Code restructuring → Changelog: **Changed**
+- **`change(scope)`**: Behavioral changes → Changelog: **Changed**
+- **`add(scope)`**: Additive changes → Changelog: **Added**
+- **`remove(scope)`**: Removals → Changelog: **Removed**
+- **`security(scope)`**: Security fixes → Changelog: **Security**
+
+### Scope Guidelines
+
+- Use crate name: `engine`, `receipts`, `storage`, `policy`
+- Use component: `resolver`, `cas`, `rowmap`, `delta`
+- Use `docs` for documentation-only changes
+- Use `ci` for CI/CD changes (these are ignored in changelog)
+
+## Commit Content Rules
+
+1. **One logical change per commit**
+   - Group related file changes together
+   - Separate unrelated changes into multiple commits
+
+2. **Succinct but descriptive**
+   - First line: 50-72 characters (summary)
+   - Body: Explain what and why, not how
+
+3. **Phase completion commits**
+   - Include phase number and classification: `feat(engine): phase 4 - implement resolver API`
+   - Reference ADR if applicable: `refactor(engine): phase 2 - RFC-6962 domain separation (ADR-009)`
+
+4. **Breaking changes**
+   - Always include `BREAKING CHANGE:` footer
+   - Explain impact and migration path
+
+## Examples
+
+```bash
+# Phase completion
+feat(engine): phase 4 - implement ArtifactResolver trait
+
+Adds privacy-preserving resolver API for tenant artifact resolution.
+Implements ArtifactResolver and ManagedCache traits per ADR-009.
+
+# Bug fix
+fix(engine): correct MerkleRowMap root computation with RFC-6962
+
+Fixes domain separation to use byte prefixes (0x00/0x01) instead of
+string prefixes. Updates all test vectors accordingly.
+
+BREAKING CHANGE: All MerkleRowMap roots have changed.
+
+# Refactor
+refactor(engine): move MerkleRowMap to rowmap module
+
+Extracts MerkleRowMap from execution/merkle_row_map.rs to dedicated
+rowmap.rs module for better organization.
+
+# Additive change
+feat(storage): add encrypted locator storage methods
+
+Extends ReceiptStore trait with store_encrypted_locator and
+get_encrypted_locator methods. Adds SQLite schema for encrypted_locators
+table.
+```
+
+## Changelog Integrity
+
+- **Never commit changelog manually** before first release
+- Changelog auto-generates from commits when `scripts/update-changelog.sh release <version>` is run
+- After first release, changelog updates automatically from commits
+- All commits must follow conventional format for proper categorization
+
+## Enforcement
+
+- Commit only after all gates pass (tests, linter, requirements)
+- Use conventional commit format for changelog generation
+- One logical change per commit
+- Include phase/ADR references in commit messages
+- Mark breaking changes explicitly

@@ -14,6 +14,35 @@ Every change must be classified before implementation:
 - **`change`**: Behavioral changes that modify outputs or contracts (e.g., algorithm changes, format changes, breaking changes)
 - **`additive`**: New functionality that doesn't affect existing code (e.g., new optional fields, new modules)
 
+### Classification Guidelines
+
+#### Edge Case Classifications
+
+- **Bug fixes**: Always `change` (corrects incorrect behavior, modifies observable outputs)
+- **Security fixes**: Always `change` (modifies security behavior, may change validation/error handling)
+- **Performance optimizations**: 
+  - `refactor` if behavior/contracts unchanged (internal improvements only)
+  - `change` if contracts/APIs modified (e.g., time complexity guarantees change)
+- **Deprecation**:
+  - Marking as deprecated: `additive` (adds non-breaking marker, doesn't remove functionality)
+  - Removing deprecated code: `change` (breaking removal, modifies available APIs)
+- **Removals/Deletions**: Always `change` (breaking change, removes functionality)
+- **Documentation-only changes**: Not a code change classification (handled separately as documentation updates)
+
+#### Common Patterns
+
+- **New feature with optional fields**: `additive`
+- **Fixing incorrect output/behavior**: `change`
+- **Restructuring without behavior change**: `refactor`
+- **Changing algorithm output**: `change`
+- **Adding new API alongside old**: `additive`
+- **Replacing old API with new**: `change` (breaking)
+- **Performance improvement (same contract)**: `refactor`
+- **Performance improvement (changed contract)**: `change`
+- **Code cleanup/formatting**: `refactor`
+- **Schema evolution (backward compatible)**: `additive`
+- **Schema evolution (breaking)**: `change`
+
 ## Pre-Implementation Requirements
 
 ### For All Phases
