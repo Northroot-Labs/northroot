@@ -865,7 +865,7 @@ This path provides a usable, production-ready tool that abstracts away engine co
 ## References
 
 - [ADR-008: Production Hardening](ADRs/ADR-008-production-hardening-storage.md)
-- [Production Compute Jobs](docs/production-compute-jobs.md)
+- [Production Compute Jobs](../../docs/planning/production-compute-jobs.md)
 - [Delta Compute Spec](docs/specs/delta_compute.md)
 - [Architecture Diagrams](docs/specs/architecture-diagrams.md)
 

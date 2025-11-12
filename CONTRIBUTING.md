@@ -33,7 +33,7 @@ bash scripts/check-integrity.sh
 
 ## Code Organization
 
-See [docs/ADR_PLAYBOOK.md](docs/ADR_PLAYBOOK.md) for detailed guidance on where code belongs.
+See [docs/process/ADR_PLAYBOOK.md](docs/process/ADR_PLAYBOOK.md) for detailed guidance on where code belongs.
 
 ### Quick Reference
 
@@ -79,7 +79,7 @@ See [docs/ADR_PLAYBOOK.md](docs/ADR_PLAYBOOK.md) for detailed guidance on where 
 6. Run integrity checks: `bash scripts/check-integrity.sh`
 7. Create a pull request with a clear description
 
-**Note:** A pre-commit hook automatically runs integrity checks. See [Integrity Checks](docs/INTEGRITY_CHECKS.md) for details.
+**Note:** A pre-commit hook automatically runs integrity checks. See [Integrity Checks](docs/process/INTEGRITY_CHECKS.md) for details.
 
 ## Testing
 
@@ -162,5 +162,5 @@ bash scripts/update-changelog.sh release 0.1.0
 
 ## Questions?
 
-See the [ADR Playbook](docs/ADR_PLAYBOOK.md) for detailed guidance on code placement and architecture.
+See the [ADR Playbook](docs/process/ADR_PLAYBOOK.md) for detailed guidance on code placement and architecture.
 

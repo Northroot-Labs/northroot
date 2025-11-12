@@ -26,8 +26,8 @@ git diff HEAD | bash scripts/check-integrity.sh
 - `1` - Errors detected (vectors modified without baseline updates)
 
 **See also:**
-- [Integrity Checks Documentation](../docs/INTEGRITY_CHECKS.md)
-- [CI Vector Checks Documentation](../docs/CI_VECTOR_CHECKS.md)
+- [Integrity Checks Documentation](../docs/process/INTEGRITY_CHECKS.md)
+- [CI Vector Checks Documentation](../docs/ci/CI_VECTOR_CHECKS.md)
 
 ## update-changelog.sh
 

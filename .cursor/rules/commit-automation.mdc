@@ -1,7 +1,7 @@
 ---
-alwaysApply: true
+description: automatic commits and summaries of changes when implementing code.
+alwaysApply: false
 ---
-
 # Commit Automation Rules
 
 **Purpose**: Automatically create meaningful commits after successful code changes, ensuring clean git history and changelog integrity.

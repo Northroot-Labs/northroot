@@ -187,7 +187,7 @@ CI checks cannot be bypassed. All integrity checks must pass for CI to succeed.
 
 ## Related Documentation
 
-- [CI Vector Checks](CI_VECTOR_CHECKS.md) - Detailed CI check documentation
+- [CI Vector Checks](../ci/CI_VECTOR_CHECKS.md) - Detailed CI check documentation
 - [Test Vector README](../vectors/README.md) - Vector file documentation
 - [ADR-002: Canonicalization Strategy](../ADRs/ADR-002-canonicalization-strategy.md)
 - [Contributing Guide](../CONTRIBUTING.md)
