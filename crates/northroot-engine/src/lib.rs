@@ -28,6 +28,7 @@ pub mod commitments;
 pub mod composition;
 pub mod delta;
 pub mod execution;
+pub mod shapes;
 pub mod signature;
 pub mod strategies;
 
@@ -62,6 +63,9 @@ pub use execution::{
     compute_execution_roots, generate_trace_id, validate_method_ref, ExecutionReceiptBuilder,
     MerkleRowMap,
 };
+
+// Re-export shapes module items
+pub use shapes::{compute_data_shape_hash, ChunkScheme, DataShape, DataShapeError, KeyFormat, RowValueRepr};
 
 // Re-export strategies module items
 pub use strategies::{

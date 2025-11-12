@@ -487,6 +487,24 @@ pub struct CdfMetadata {
     pub commit_timestamp: String,
 }
 
+/// Encrypted locator reference: tenant-scoped, encrypted pointer
+///
+/// Northroot stores encrypted locators; tenant decrypts via Resolver API.
+/// Actual storage locations never exposed to northroot.
+///
+/// This type ensures privacy-preserving design where receipts contain opaque
+/// references, not actual locations. Resolver API (tenant-private) resolves
+/// these to actual storage locations.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct EncryptedLocatorRef {
+    /// Encrypted locator data (tenant-specific encryption)
+    pub encrypted_data: Vec<u8>,
+    /// Content hash for verification (sha256 format: "sha256:<64hex>")
+    pub content_hash: String,
+    /// Encryption scheme identifier (e.g., "aes256-gcm", "tenant-key")
+    pub encryption_scheme: String,
+}
+
 /// Execution payload: observable run structure capturing "what" and "when".
 ///
 /// Execution receipts record the actual execution of a method over data.
@@ -528,6 +546,35 @@ pub struct ExecutionPayload {
     /// Previous execution RID for receipt chain
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prev_execution_rid: Option<Uuid>,
+    /// Output digest: flat SHA-256 hash of materialized output bytes
+    ///
+    /// This is a commitment to the materialized output bytes for fast exact-hit cache lookup.
+    /// Format: "sha256:<64hex>". Tenants keep actual outputs; northroot stores only the commitment.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_digest: Option<String>,
+    /// Manifest root: optional Merkle root over output subparts (files, partitions)
+    ///
+    /// Used when proving/recomputing at subpart granularity. Separate from `merkle_root`
+    /// which is for generic integrity verification. Enables partial reuse proofs
+    /// (e.g., reuse 3 of 5 parquet files).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub manifest_root: Option<[u8; 32]>,
+    /// Output MIME type (e.g., "application/parquet", "application/json")
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_mime_type: Option<String>,
+    /// Output size in bytes
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_size_bytes: Option<u64>,
+    /// Input encrypted locator references
+    ///
+    /// Opaque references to input artifacts. Tenant decrypts via Resolver API.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_locator_refs: Option<Vec<EncryptedLocatorRef>>,
+    /// Output encrypted locator reference
+    ///
+    /// Opaque reference to output artifact. Tenant decrypts via Resolver API.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_locator_ref: Option<EncryptedLocatorRef>,
 }
 
 /// Reference to a method (operator plan) used in execution.
