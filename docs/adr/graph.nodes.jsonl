@@ -7,44 +7,8 @@
 {"id": "adr:0007", "type": "ADR", "adr_id": "ADR-0007", "title": "Delta Compute Implementation Strategy", "status": "superseded", "created_at": "2025-11-08T00:00:00Z"}
 {"id": "adr:0008", "type": "ADR", "adr_id": "ADR-0008", "title": "Proof-Addressable Storage and Incremental Compute Hardening", "status": "superseded", "created_at": "2025-11-09T00:00:00Z"}
 {"id": "adr:0009", "type": "ADR", "adr_id": "ADR-0009", "title": "Hybrid ByteStream/RowMap Evidence Substrate with Privacy-Preserving Resolver and Reuse Pipeline", "status": "accepted", "created_at": "2025-11-12T01:26:46Z", "accepted_at": "2025-11-12T01:26:46Z", "implemented_at": "2025-11-12T07:57:26Z"}
-{"id": "adr:0010", "type": "ADR", "adr_id": "ADR-0010", "title": "v0.1.0 Release Readiness Evaluation", "status": "proposed", "created_at": "2025-11-12T08:00:00Z", "implemented_at": "2025-11-12T19:11:19Z"}
-{"id": "adr:0011", "type": "ADR", "adr_id": "ADR-0011", "title": "Manifest Storage and Retrieval Architecture", "status": "proposed", "created_at": "2025-11-12T19:00:00Z"}
-{"id": "commit:864b54a", "type": "COMMIT", "sha": "864b54a55fb142872fc45bb44afea88efdb53ae8", "message": "Update ADR-009 and related documentation for architectural alignment phases", "when": "2025-11-12T01:45:29-05:00"}
-{"id": "commit:8c2594a", "type": "COMMIT", "sha": "8c2594a6e859a4c996b4307f1461267d2249d0e8", "message": "Implement comprehensive property tests for invariants and edge cases", "when": "2025-11-12T14:05:34-05:00"}
-{"id": "commit:9a25428", "type": "COMMIT", "sha": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679", "message": "Add helper functions for shape hash computation", "when": "2025-11-12T02:59:18-05:00"}
-{"id": "file:.cursor/rules/architectural-alignment.mdc", "type": "FILE", "path": ".cursor/rules/architectural-alignment.mdc"}
-{"id": "file:ADRs/ADR-009.md", "type": "FILE", "path": "ADRs/ADR-009.md"}
-{"id": "file:Cargo.lock", "type": "FILE", "path": "Cargo.lock"}
-{"id": "file:crates/northroot-engine/Cargo.toml", "type": "FILE", "path": "crates/northroot-engine/Cargo.toml"}
-{"id": "file:crates/northroot-engine/src/delta/data_shape.rs", "type": "FILE", "path": "crates/northroot-engine/src/delta/data_shape.rs"}
-{"id": "file:crates/northroot-engine/src/delta/method_shape.rs", "type": "FILE", "path": "crates/northroot-engine/src/delta/method_shape.rs"}
-{"id": "file:crates/northroot-engine/src/delta/mod.rs", "type": "FILE", "path": "crates/northroot-engine/src/delta/mod.rs"}
-{"id": "file:crates/northroot-engine/tests/property/edge_cases.rs", "type": "FILE", "path": "crates/northroot-engine/tests/property/edge_cases.rs"}
-{"id": "file:crates/northroot-engine/tests/property/generators.rs", "type": "FILE", "path": "crates/northroot-engine/tests/property/generators.rs"}
-{"id": "file:crates/northroot-engine/tests/property/invariants.rs", "type": "FILE", "path": "crates/northroot-engine/tests/property/invariants.rs"}
-{"id": "file:crates/northroot-engine/tests/test_phase4_spec.rs", "type": "FILE", "path": "crates/northroot-engine/tests/test_phase4_spec.rs"}
-{"id": "file:crates/northroot-engine/tests/test_property.rs", "type": "FILE", "path": "crates/northroot-engine/tests/test_property.rs"}
-{"id": "file:crates/northroot-storage/src/sqlite.rs", "type": "FILE", "path": "crates/northroot-storage/src/sqlite.rs"}
-{"id": "file:docs/README.md", "type": "FILE", "path": "docs/README.md"}
-{"id": "file:docs/phases/ADR-009-P4.md", "type": "FILE", "path": "docs/phases/ADR-009-P4.md"}
-{"id": "file:docs/phases/PHASE_4_PREPARATION.md", "type": "FILE", "path": "docs/phases/PHASE_4_PREPARATION.md"}
-{"id": "file:docs/phases/README.md", "type": "FILE", "path": "docs/phases/README.md"}
-{"id": "file:docs/process/ADR_PHASE_ID_STANDARDS.md", "type": "FILE", "path": "docs/process/ADR_PHASE_ID_STANDARDS.md"}
-{"id": "file:examples/finops_cost_attribution/README.md", "type": "FILE", "path": "examples/finops_cost_attribution/README.md"}
-{"id": "file:examples/finops_cost_attribution/data/billing_run1.csv", "type": "FILE", "path": "examples/finops_cost_attribution/data/billing_run1.csv"}
-{"id": "file:examples/finops_cost_attribution/data/billing_run2.csv", "type": "FILE", "path": "examples/finops_cost_attribution/data/billing_run2.csv"}
-{"id": "file:examples/finops_cost_attribution/main.rs", "type": "FILE", "path": "examples/finops_cost_attribution/main.rs"}
-{"id": "file:examples/finops_cost_attribution/northroot.db", "type": "FILE", "path": "examples/finops_cost_attribution/northroot.db"}
-{"id": "file:examples/finops_cost_attribution/output/aggregated_run1.csv", "type": "FILE", "path": "examples/finops_cost_attribution/output/aggregated_run1.csv"}
-{"id": "file:examples/finops_cost_attribution/output/aggregated_run2.csv", "type": "FILE", "path": "examples/finops_cost_attribution/output/aggregated_run2.csv"}
-{"id": "file:schemas/adr/adr.index.schema.json", "type": "FILE", "path": "schemas/adr/adr.index.schema.json"}
-{"id": "file:schemas/adr/adr.schema.json", "type": "FILE", "path": "schemas/adr/adr.schema.json"}
-{"id": "file:schemas/adr/phase.schema.json", "type": "FILE", "path": "schemas/adr/phase.schema.json"}
-{"id": "file:scripts/generate-adr-index.py", "type": "FILE", "path": "scripts/generate-adr-index.py"}
-{"id": "file:scripts/generate-adr-index.sh", "type": "FILE", "path": "scripts/generate-adr-index.sh"}
-{"id": "file:scripts/migrate-adrs.py", "type": "FILE", "path": "scripts/migrate-adrs.py"}
-{"id": "file:scripts/validate-adrs.py", "type": "FILE", "path": "scripts/validate-adrs.py"}
 {"id": "phase:0009:P01", "type": "PHASE", "phase_id": "ADR-0009-P01", "status": "implemented", "title": "", "implemented_at": "2025-11-12T07:41:08Z"}
+{"id": "commit:864b54a", "type": "COMMIT", "sha": "864b54a55fb142872fc45bb44afea88efdb53ae8"}
 {"id": "phase:0009:P02", "type": "PHASE", "phase_id": "ADR-0009-P02", "status": "implemented", "title": "", "implemented_at": "2025-11-12T07:41:54Z"}
 {"id": "phase:0009:P03", "type": "PHASE", "phase_id": "ADR-0009-P03", "status": "implemented", "title": "", "implemented_at": "2025-11-12T07:41:54Z"}
 {"id": "phase:0009:P04", "type": "PHASE", "phase_id": "ADR-0009-P04", "status": "implemented", "title": "", "implemented_at": "2025-11-12T07:41:54Z"}
@@ -52,11 +16,16 @@
 {"id": "phase:0009:P06", "type": "PHASE", "phase_id": "ADR-0009-P06", "status": "implemented", "title": "", "implemented_at": "2025-11-12T07:41:54Z"}
 {"id": "phase:0009:P07", "type": "PHASE", "phase_id": "ADR-0009-P07", "status": "implemented", "title": "", "implemented_at": "2025-11-12T07:49:49Z"}
 {"id": "phase:0009:P08", "type": "PHASE", "phase_id": "ADR-0009-P08", "status": "implemented", "title": "", "implemented_at": "2025-11-12T07:57:26Z"}
+{"id": "adr:0010", "type": "ADR", "adr_id": "ADR-0010", "title": "v0.1.0 Release Readiness Evaluation", "status": "proposed", "created_at": "2025-11-12T08:00:00Z", "implemented_at": "2025-11-12T19:11:19Z"}
 {"id": "phase:0010:P01", "type": "PHASE", "phase_id": "ADR-0010-P01", "status": "implemented", "title": "", "implemented_at": "2025-11-12T12:00:00Z"}
+{"id": "commit:9a25428", "type": "COMMIT", "sha": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"}
 {"id": "phase:0010:P02", "type": "PHASE", "phase_id": "ADR-0010-P02", "status": "implemented", "title": "", "implemented_at": "2025-11-12T13:00:00Z"}
 {"id": "phase:0010:P03", "type": "PHASE", "phase_id": "ADR-0010-P03", "status": "implemented", "title": "", "implemented_at": "2025-11-12T19:11:19Z"}
+{"id": "commit:8c2594a", "type": "COMMIT", "sha": "8c2594a6e859a4c996b4307f1461267d2249d0e8"}
 {"id": "phase:0010:P04", "type": "PHASE", "phase_id": "ADR-0010-P04", "status": "implemented", "title": "", "implemented_at": "2025-11-12T19:11:19Z"}
-{"id": "phase:0011:P01", "type": "PHASE", "phase_id": "ADR-0011-P01", "status": "proposed", "title": ""}
+{"id": "adr:0011", "type": "ADR", "adr_id": "ADR-0011", "title": "Manifest Storage and Retrieval Architecture", "status": "proposed", "created_at": "2025-11-12T19:00:00Z"}
+{"id": "phase:0011:P01", "type": "PHASE", "phase_id": "ADR-0011-P01", "status": "implemented", "title": "", "implemented_at": "2025-11-12T21:05:28Z"}
+{"id": "commit:1f64d8b", "type": "COMMIT", "sha": "1f64d8b29465563bd29a6a023687f9621261e921"}
 {"id": "phase:0011:P02", "type": "PHASE", "phase_id": "ADR-0011-P02", "status": "proposed", "title": ""}
 {"id": "phase:0011:P03", "type": "PHASE", "phase_id": "ADR-0011-P03", "status": "proposed", "title": ""}
 {"id": "phase:0011:P04", "type": "PHASE", "phase_id": "ADR-0011-P04", "status": "proposed", "title": ""}

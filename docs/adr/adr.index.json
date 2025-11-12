@@ -1,7 +1,7 @@
 {
   "$schema": "./adr.index.schema.json",
   "version": "0.4",
-  "generated_at": "2025-11-12T20:46:52Z",
+  "generated_at": "2025-11-12T21:05:58Z",
   "adrs": [
     {
       "adr_id": "ADR-0001",
@@ -238,83 +238,7 @@
         "ADR-0009-P07",
         "ADR-0009-P08"
       ],
-      "code_refs": [
-        {
-          "type": "file",
-          "path": ".cursor/rules/architectural-alignment.mdc",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "ADRs/ADR-009.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/test_phase4_spec.rs",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/README.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/phases/ADR-009-P4.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/phases/PHASE_4_PREPARATION.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/phases/README.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/process/ADR_PHASE_ID_STANDARDS.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "schemas/adr/adr.index.schema.json",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "schemas/adr/adr.schema.json",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "schemas/adr/phase.schema.json",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "scripts/generate-adr-index.py",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "scripts/generate-adr-index.sh",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "scripts/migrate-adrs.py",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "scripts/validate-adrs.py",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        }
-      ],
+      "code_refs": [],
       "realized_at": "2025-11-12T07:41:08Z"
     },
     {
@@ -403,103 +327,7 @@
       "depends_on": [
         "ADR-0009"
       ],
-      "code_refs": [
-        {
-          "type": "file",
-          "path": "Cargo.lock",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/Cargo.toml",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/src/delta/data_shape.rs",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/src/delta/method_shape.rs",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/src/delta/mod.rs",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "Cargo.lock",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/Cargo.toml",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/property/edge_cases.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/property/generators.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/property/invariants.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/test_property.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-storage/src/sqlite.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/README.md",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/data/billing_run1.csv",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/data/billing_run2.csv",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/main.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/northroot.db",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/output/aggregated_run1.csv",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/output/aggregated_run2.csv",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        }
-      ],
+      "code_refs": [],
       "realized_at": "2025-11-12T12:00:00Z"
     },
     {
@@ -521,8 +349,11 @@
         {
           "phase_id": "ADR-0011-P01",
           "sequence": 1,
-          "status": "proposed",
+          "status": "implemented",
           "timestamp": "2025-11-12T19:00:00Z",
+          "implemented_at": "2025-11-12T21:05:28Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "1f64d8b29465563bd29a6a023687f9621261e921",
           "decision_drivers": [
             "Consistency: Manifests should use same canonicalization as receipts (CBOR)",
             "Foundation: Required for all other phases (blocks P02-P06)",
@@ -657,7 +488,8 @@
         "ADR-0009",
         "ADR-0010"
       ],
-      "code_refs": []
+      "code_refs": [],
+      "realized_at": "2025-11-12T21:05:28Z"
     }
   ]
 }

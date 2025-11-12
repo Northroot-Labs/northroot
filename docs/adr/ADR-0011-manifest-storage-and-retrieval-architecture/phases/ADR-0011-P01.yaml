@@ -7,6 +7,9 @@ status: implemented
 summary: Add CBOR serialization to ByteStreamManifest for consistency with receipts and enable tiered chunk set storage. HIGHEST PRIORITY - Foundation that blocks all other phases (P02-P06).
 proposed_at: "2025-11-12T19:00:00Z"
 decided_at: "2025-11-12T19:00:00Z"
+implemented_at: "2025-11-12T21:05:28Z"
+implemented_in: "0.1.0"
+implementation_commit: "1f64d8b29465563bd29a6a023687f9621261e921"
 decision_drivers:
   - "Consistency: Manifests should use same canonicalization as receipts (CBOR)"
   - "Foundation: Required for all other phases (blocks P02-P06)"
