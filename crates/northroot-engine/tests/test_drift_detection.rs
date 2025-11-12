@@ -90,18 +90,19 @@ const BASELINE_ROOTS: &[(&str, &str)] = &[
         "compute_tensor_root_three_items",
         "sha256:b294e910ea566785d193092a0f165f09d7aa909a44d6e41c1ab19846a9092bdb",
     ),
-    // MerkleRowMap baselines (CBOR canonicalization)
+    // MerkleRowMap baselines (CBOR canonicalization with RFC-6962 domain separation)
+    // Updated in Phase 2: Changed from "leaf:"/"node:" prefixes to 0x00/0x01 byte prefixes
     (
         "merkle_row_map_empty",
-        "sha256:08679e383d66dbc4192bae473a37843066188e42635077349d1c7db7cf25b20c",
+        "sha256:6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
     ),
     (
         "merkle_row_map_single",
-        "sha256:efc2744e9b28f4e70e3fa27213eff9a64c98bae3fd14c159cde674dcb607d66d",
+        "sha256:8cabe6e0ab8e9056357d16a91cb9cd298fbf0703c0b031124c13a4e755f77798",
     ),
     (
         "merkle_row_map_multiple",
-        "sha256:a48477478dea2ee2360da4a3cd1ccfe278a49aa3be067d1286b6038e208fb600",
+        "sha256:db69612db7577aaae0000ea8c81807f70eca03783f5c5776f3f2e4680508f8ec",
     ),
     // compute_execution_roots baselines (trace_set_root values)
     (
