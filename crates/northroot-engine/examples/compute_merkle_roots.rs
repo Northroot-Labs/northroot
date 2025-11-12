@@ -2,9 +2,9 @@
 //!
 //! Run with: cargo run --package northroot-engine --example compute_merkle_roots
 
+use ciborium::value::Value as CborValue;
 use northroot_engine::execution::MerkleRowMap;
 use serde_json::json;
-use ciborium::value::Value as CborValue;
 
 // Helper to convert JSON Value to CBOR Value
 fn json_to_cbor_value(json: &serde_json::Value) -> CborValue {
@@ -21,16 +21,11 @@ fn json_to_cbor_value(json: &serde_json::Value) -> CborValue {
             }
         }
         serde_json::Value::String(s) => CborValue::Text(s.clone()),
-        serde_json::Value::Array(a) => {
-            CborValue::Array(a.iter().map(json_to_cbor_value).collect())
-        }
+        serde_json::Value::Array(a) => CborValue::Array(a.iter().map(json_to_cbor_value).collect()),
         serde_json::Value::Object(o) => {
             let mut map = Vec::new();
             for (k, v) in o {
-                map.push((
-                    CborValue::Text(k.clone()),
-                    json_to_cbor_value(v),
-                ));
+                map.push((CborValue::Text(k.clone()), json_to_cbor_value(v)));
             }
             CborValue::Map(map)
         }
@@ -45,7 +40,7 @@ fn main() {
     let empty_root = empty_map.compute_root();
     println!("    \"root\": \"{}\"", empty_root);
     println!("  }},");
-    
+
     println!("  \"single_entry\": {{");
     let mut single_map = MerkleRowMap::new();
     single_map.insert("key1".to_string(), json_to_cbor_value(&json!(42)));
@@ -55,7 +50,7 @@ fn main() {
     println!("    }},");
     println!("    \"root\": \"{}\"", single_root);
     println!("  }},");
-    
+
     println!("  \"multiple_entries\": {{");
     let mut multi_map = MerkleRowMap::new();
     multi_map.insert("key1".to_string(), json_to_cbor_value(&json!(42)));
@@ -69,20 +64,23 @@ fn main() {
     println!("    }},");
     println!("    \"root\": \"{}\"", multi_root);
     println!("  }},");
-    
+
     println!("  \"order_independence\": {{");
     let mut map1 = MerkleRowMap::new();
     map1.insert("a".to_string(), json_to_cbor_value(&json!(1)));
     map1.insert("b".to_string(), json_to_cbor_value(&json!(2)));
     let root1 = map1.compute_root();
-    
+
     let mut map2 = MerkleRowMap::new();
     map2.insert("b".to_string(), json_to_cbor_value(&json!(2)));
     map2.insert("a".to_string(), json_to_cbor_value(&json!(1)));
     let root2 = map2.compute_root();
-    
-    assert_eq!(root1, root2, "Roots should be same regardless of insertion order");
-    
+
+    assert_eq!(
+        root1, root2,
+        "Roots should be same regardless of insertion order"
+    );
+
     println!("    \"map1\": {{");
     println!("      \"entries\": {{");
     println!("        \"a\": 1,");
@@ -100,4 +98,3 @@ fn main() {
     println!("  }}");
     println!("}}");
 }
-

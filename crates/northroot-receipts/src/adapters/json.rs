@@ -31,12 +31,12 @@ pub fn json_to_cbor(json_bytes: &[u8]) -> Result<Vec<u8>, AdapterError> {
     // Deserialize JSON to a generic value
     let json_value: serde_json::Value = serde_json::from_slice(json_bytes)
         .map_err(|e| AdapterError::JsonDeserialize(e.to_string()))?;
-    
+
     // Serialize to CBOR
     let mut cbor_bytes = Vec::new();
     ciborium::ser::into_writer(&json_value, &mut cbor_bytes)
         .map_err(|e| AdapterError::CborSerialize(e.to_string()))?;
-    
+
     Ok(cbor_bytes)
 }
 
@@ -48,11 +48,11 @@ pub fn cbor_to_json(cbor_bytes: &[u8]) -> Result<Vec<u8>, AdapterError> {
     // Deserialize CBOR to a generic value
     let cbor_value: ciborium::value::Value = ciborium::de::from_reader(cbor_bytes)
         .map_err(|e| AdapterError::CborDeserialize(e.to_string()))?;
-    
+
     // Serialize to JSON
-    let json_bytes = serde_json::to_vec(&cbor_value)
-        .map_err(|e| AdapterError::JsonSerialize(e.to_string()))?;
-    
+    let json_bytes =
+        serde_json::to_vec(&cbor_value).map_err(|e| AdapterError::JsonSerialize(e.to_string()))?;
+
     Ok(json_bytes)
 }
 
@@ -67,8 +67,8 @@ pub fn receipt_from_json(json_str: &str) -> Result<Receipt, AdapterError> {
     // Our custom deserializer should work, but CborValue::deserialize doesn't work with JSON
     // So we'll use serde_json's deserializer which should work with our custom logic
     // Actually, let's try using serde_json directly and see if it works
-    let receipt: Receipt = serde_json::from_str(json_str)
-        .map_err(|e| AdapterError::JsonDeserialize(e.to_string()))?;
+    let receipt: Receipt =
+        serde_json::from_str(json_str).map_err(|e| AdapterError::JsonDeserialize(e.to_string()))?;
     Ok(receipt)
 }
 
@@ -79,8 +79,7 @@ pub fn receipt_from_json(json_str: &str) -> Result<Receipt, AdapterError> {
 pub fn receipt_to_json(receipt: &Receipt) -> Result<String, AdapterError> {
     // Serialize directly to JSON - this will use our UUID serialization
     // which outputs UUIDs as hyphenated strings in JSON
-    serde_json::to_string(receipt)
-        .map_err(|e| AdapterError::JsonSerialize(e.to_string()))
+    serde_json::to_string(receipt).map_err(|e| AdapterError::JsonSerialize(e.to_string()))
 }
 
 #[cfg(test)]
@@ -91,15 +90,14 @@ mod tests {
     #[test]
     fn test_json_cbor_roundtrip() {
         let receipt = generate_execution_receipt(&"sha256:test".to_string());
-        
+
         // Receipt -> JSON -> CBOR -> Receipt
         let json_str = receipt_to_json(&receipt).unwrap();
         let receipt2 = receipt_from_json(&json_str).unwrap();
-        
+
         // Should preserve all fields (hash will be different if not set)
         assert_eq!(receipt.rid, receipt2.rid);
         assert_eq!(receipt.kind, receipt2.kind);
         assert_eq!(receipt.version, receipt2.version);
     }
 }
-

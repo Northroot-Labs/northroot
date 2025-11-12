@@ -6,10 +6,10 @@
 //! - Match computed values for delta compute scenarios
 //! - Validate composition chains correctly
 
-use northroot_engine::*;
-use northroot_receipts::{Receipt, adapters::json};
-use serde_json::Value;
 use ciborium::value::Value as CborValue;
+use northroot_engine::*;
+use northroot_receipts::{adapters::json, Receipt};
+use serde_json::Value;
 use std::collections::HashSet;
 use std::fs;
 
@@ -29,16 +29,11 @@ fn json_to_cbor_value(json: &Value) -> CborValue {
             }
         }
         Value::String(s) => CborValue::Text(s.clone()),
-        Value::Array(a) => {
-            CborValue::Array(a.iter().map(json_to_cbor_value).collect())
-        }
+        Value::Array(a) => CborValue::Array(a.iter().map(json_to_cbor_value).collect()),
         Value::Object(o) => {
             let mut map = Vec::new();
             for (k, v) in o {
-                map.push((
-                    CborValue::Text(k.clone()),
-                    json_to_cbor_value(v),
-                ));
+                map.push((CborValue::Text(k.clone()), json_to_cbor_value(v)));
             }
             CborValue::Map(map)
         }

@@ -1,6 +1,6 @@
 use jsonschema::JSONSchema;
-use northroot_receipts::*;
 use northroot_receipts::adapters::json;
+use northroot_receipts::*;
 use serde_json::Value;
 use std::{
     env, fs,

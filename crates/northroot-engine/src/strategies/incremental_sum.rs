@@ -7,9 +7,9 @@ use crate::delta::{economic_delta, jaccard_similarity, OverlapMetric};
 use crate::execution::MerkleRowMap;
 use crate::strategies::trait_::{ExecutionMode, Strategy, StrategyError};
 use crate::ReuseIndexed;
+use ciborium::value::Value as CborValue;
 use northroot_policy::CostModel;
 use serde_json::Value as JsonValue;
-use ciborium::value::Value as CborValue;
 use std::collections::HashSet;
 use std::sync::RwLock;
 
@@ -146,7 +146,7 @@ impl Strategy for IncrementalSumStrategy {
 
         // Compute overlap metric during execution
         let previous_chunks: HashSet<String> = prev_state
-            .map(|ps| Self::chunk_ids_from_state(ps))
+            .map(Self::chunk_ids_from_state)
             .unwrap_or_default();
 
         let mut incremental_sum = 0.0;

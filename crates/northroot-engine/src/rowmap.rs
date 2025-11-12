@@ -151,7 +151,7 @@ impl MerkleRowMap {
     pub fn compute_root(&self) -> String {
         if self.entries.is_empty() {
             let mut hasher = Sha256::new();
-            hasher.update(&[0x00u8]); // RFC-6962 leaf prefix
+            hasher.update([0x00u8]); // RFC-6962 leaf prefix
             hasher.update(b"");
             return format!("sha256:{:x}", hasher.finalize());
         }
@@ -161,10 +161,7 @@ impl MerkleRowMap {
         for (key, value) in &self.entries {
             // Create CBOR map for {k, v}
             let mut entry_map = Vec::new();
-            entry_map.push((
-                CborValue::Text(key.clone()),
-                value.clone(),
-            ));
+            entry_map.push((CborValue::Text(key.clone()), value.clone()));
             let entry = CborValue::Map(entry_map);
 
             // Canonicalize to CBOR bytes
@@ -173,7 +170,7 @@ impl MerkleRowMap {
 
             // Leaf hash = H(0x00 || cbor_bytes) - RFC-6962 style
             let mut hasher = Sha256::new();
-            hasher.update(&[0x00u8]); // RFC-6962 leaf prefix
+            hasher.update([0x00u8]); // RFC-6962 leaf prefix
             hasher.update(&cbor_bytes);
             leaf_hashes.push(hasher.finalize().into());
         }
@@ -188,9 +185,9 @@ impl MerkleRowMap {
                 if i + 1 < current_level.len() {
                     // Parent = H(0x01 || left || right) - RFC-6962 style
                     let mut hasher = Sha256::new();
-                    hasher.update(&[0x01u8]); // RFC-6962 parent prefix
-                    hasher.update(&current_level[i]);
-                    hasher.update(&current_level[i + 1]);
+                    hasher.update([0x01u8]); // RFC-6962 parent prefix
+                    hasher.update(current_level[i]);
+                    hasher.update(current_level[i + 1]);
                     next_level.push(hasher.finalize().into());
                 } else {
                     // Odd node: promote upward unchanged
@@ -283,10 +280,7 @@ impl MerkleRowMap {
     /// # Errors
     ///
     /// Returns error if frontier computation fails
-    pub fn compute_frontier(
-        &self,
-        changed_keys: &[String],
-    ) -> Result<MerkleFrontier, RowMapError> {
+    pub fn compute_frontier(&self, changed_keys: &[String]) -> Result<MerkleFrontier, RowMapError> {
         // TODO: Full implementation requires maintaining tree structure
         // For now, return a placeholder that includes all changed keys
         Ok(MerkleFrontier {
@@ -464,4 +458,3 @@ mod tests {
         assert_eq!(frontier.changed_keys, vec!["key1"]);
     }
 }
-

@@ -109,10 +109,7 @@ pub trait ReceiptStore: Send + Sync {
     /// # Errors
     ///
     /// Returns error if storage operation fails
-    fn query_by_output_digest(
-        &self,
-        output_digest: &str,
-    ) -> Result<Vec<Receipt>, StorageError>;
+    fn query_by_output_digest(&self, output_digest: &str) -> Result<Vec<Receipt>, StorageError>;
 
     /// Get output information for an execution receipt.
     ///

@@ -60,7 +60,7 @@ impl Strategy for PartitionStrategy {
 
         // Compute overlap metric during execution
         let previous_chunks: HashSet<String> = prev_state
-            .map(|ps| Self::chunk_ids_from_state(ps))
+            .map(Self::chunk_ids_from_state)
             .unwrap_or_default();
 
         // Create chunk index: map row hash -> row index

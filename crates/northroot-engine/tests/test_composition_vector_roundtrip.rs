@@ -4,7 +4,7 @@
 //! and used in composition operations correctly.
 
 use northroot_engine::*;
-use northroot_receipts::{Receipt, adapters::json};
+use northroot_receipts::{adapters::json, Receipt};
 use std::fs;
 
 fn load_vector(path: &str) -> Result<Vec<Receipt>, Box<dyn std::error::Error>> {

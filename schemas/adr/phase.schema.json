@@ -13,7 +13,7 @@
     "phase_id": {
       "type": "string",
       "pattern": "^ADR-\\d{4}-P\\d{2}(-[0-9A-HJKMNP-TV-Z]{26})?$",
-      "description": "Canonical phase identifier with optional ULID"
+      "description": "Canonical phase identifier with optional ULID. P01 is the standard foundation phase identifier."
     },
     "adr_id": {
       "type": "string",
@@ -23,7 +23,7 @@
     "sequence": {
       "type": "integer",
       "minimum": 1,
-      "description": "Local ordinal within this ADR"
+      "description": "Local ordinal within this ADR. P01 is the standard foundation phase identifier."
     },
     "title": {
       "type": "string",

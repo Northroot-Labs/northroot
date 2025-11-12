@@ -10,6 +10,15 @@ This directory contains documentation for specific implementation phases from AD
 - Each phase has a **canonical unique ID**: `ADR-XXX-PN` format
 - Always reference phases using their canonical ID: `ADR-009-P4` not just "Phase 4"
 
+### Foundation Phase Standard
+
+**P01 is the standard foundation phase identifier** for highest priority foundational work that blocks all subsequent phases.
+
+- **P01** = Foundation phase (highest priority, blocks all other phases)
+- **P02, P03, P04...** = Subsequent phases in priority order
+- This standard ensures consistent prioritization across all ADRs
+- Schema allows `sequence: 1` (or higher) for foundation phases
+
 See [ADR and Phase ID Standards](../process/ADR_PHASE_ID_STANDARDS.md) for complete identification system.
 
 ## Current Phases

@@ -113,6 +113,11 @@ pub struct Signature {
 /// Receipt payload: kind-specific data that varies by receipt type.
 ///
 /// The payload type is determined by the `kind` field in the receipt envelope.
+///
+/// Note: This enum has large variants (Execution, Spend) which is acceptable
+/// as payloads are typically boxed or serialized when stored, and the enum
+/// represents the canonical in-memory representation of receipt payloads.
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug, Clone, PartialEq)]
 pub enum Payload {
     /// Data shape payload
@@ -185,33 +190,42 @@ impl<'de> serde::Deserialize<'de> for Payload {
 
         if has_key("schema_hash") {
             Ok(Payload::DataShape(
-                ciborium::de::from_reader(cbor_bytes.as_slice())
-                    .map_err(|e| Error::custom(format!("Failed to deserialize DataShapePayload: {}", e)))?,
+                ciborium::de::from_reader(cbor_bytes.as_slice()).map_err(|e| {
+                    Error::custom(format!("Failed to deserialize DataShapePayload: {}", e))
+                })?,
             ))
         } else if has_key("nodes") {
             Ok(Payload::MethodShape(
-                ciborium::de::from_reader(cbor_bytes.as_slice())
-                    .map_err(|e| Error::custom(format!("Failed to deserialize MethodShapePayload: {}", e)))?,
+                ciborium::de::from_reader(cbor_bytes.as_slice()).map_err(|e| {
+                    Error::custom(format!("Failed to deserialize MethodShapePayload: {}", e))
+                })?,
             ))
         } else if has_key("intent_hash") {
             Ok(Payload::ReasoningShape(
-                ciborium::de::from_reader(cbor_bytes.as_slice())
-                    .map_err(|e| Error::custom(format!("Failed to deserialize ReasoningShapePayload: {}", e)))?,
+                ciborium::de::from_reader(cbor_bytes.as_slice()).map_err(|e| {
+                    Error::custom(format!(
+                        "Failed to deserialize ReasoningShapePayload: {}",
+                        e
+                    ))
+                })?,
             ))
         } else if has_key("trace_id") {
             Ok(Payload::Execution(
-                ciborium::de::from_reader(cbor_bytes.as_slice())
-                    .map_err(|e| Error::custom(format!("Failed to deserialize ExecutionPayload: {}", e)))?,
+                ciborium::de::from_reader(cbor_bytes.as_slice()).map_err(|e| {
+                    Error::custom(format!("Failed to deserialize ExecutionPayload: {}", e))
+                })?,
             ))
         } else if has_key("meter") {
             Ok(Payload::Spend(
-                ciborium::de::from_reader(cbor_bytes.as_slice())
-                    .map_err(|e| Error::custom(format!("Failed to deserialize SpendPayload: {}", e)))?,
+                ciborium::de::from_reader(cbor_bytes.as_slice()).map_err(|e| {
+                    Error::custom(format!("Failed to deserialize SpendPayload: {}", e))
+                })?,
             ))
         } else if has_key("wur_refs") {
             Ok(Payload::Settlement(
-                ciborium::de::from_reader(cbor_bytes.as_slice())
-                    .map_err(|e| Error::custom(format!("Failed to deserialize SettlementPayload: {}", e)))?,
+                ciborium::de::from_reader(cbor_bytes.as_slice()).map_err(|e| {
+                    Error::custom(format!("Failed to deserialize SettlementPayload: {}", e))
+                })?,
             ))
         } else {
             Err(Error::custom("Cannot determine payload type"))
@@ -594,7 +608,7 @@ pub struct ExecutionRoots {
     /// Trace set root: SHA-256 hash of sorted span commitments (set view)
     pub trace_set_root: String,
     /// Identity root: Merkle root over identity records (DID, kid, role, tenant)
-    /// 
+    ///
     /// This root commits to the set of actors/keys that participated in the execution,
     /// independent of trace ordering. See `identity_root_from_identities` for computation.
     pub identity_root: String,
@@ -763,14 +777,14 @@ where
     // Collect and sort identities by (did, kid)
     let mut sorted: Vec<IdentityRecord> = identities.collect();
     sorted.sort_by(|a, b| match a.did.cmp(&b.did) {
-            std::cmp::Ordering::Equal => a.kid.cmp(&b.kid),
-            other => other,
+        std::cmp::Ordering::Equal => a.kid.cmp(&b.kid),
+        other => other,
     });
 
     // Empty tree: H(0x00 || "")
     if sorted.is_empty() {
         let mut hasher = Sha256::new();
-        hasher.update(&[0x00u8]);
+        hasher.update([0x00u8]);
         hasher.update(b"");
         return format!("sha256:{:x}", hasher.finalize());
     }
@@ -780,10 +794,10 @@ where
     for identity in &sorted {
         // Canonicalize identity record with JCS
         let canonical = serde_json::to_string(identity).unwrap();
-        
+
         // Leaf hash = H(0x00 || canonical_bytes)
         let mut hasher = Sha256::new();
-        hasher.update(&[0x00u8]);
+        hasher.update([0x00u8]);
         hasher.update(canonical.as_bytes());
         leaf_hashes.push(hasher.finalize().into());
     }
@@ -792,22 +806,22 @@ where
     let mut current_level = leaf_hashes;
     while current_level.len() > 1 {
         let mut next_level = Vec::new();
-        
+
         // Pair hashes left-to-right
         for i in (0..current_level.len()).step_by(2) {
             if i + 1 < current_level.len() {
                 // Parent = H(0x01 || left || right)
                 let mut hasher = Sha256::new();
-                hasher.update(&[0x01u8]);
-                hasher.update(&current_level[i]);
-                hasher.update(&current_level[i + 1]);
+                hasher.update([0x01u8]);
+                hasher.update(current_level[i]);
+                hasher.update(current_level[i + 1]);
                 next_level.push(hasher.finalize().into());
             } else {
                 // Odd node: promote upward unchanged
                 next_level.push(current_level[i]);
             }
         }
-        
+
         current_level = next_level;
     }
 

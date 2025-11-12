@@ -36,6 +36,7 @@
 
 use crate::commitments::{jcs, sha256_prefixed};
 use serde_json::json;
+use thiserror::Error;
 
 /// Data shape: unified representation of data for proof computation
 ///
@@ -92,28 +93,43 @@ pub enum RowValueRepr {
 }
 
 /// Error type for data shape operations
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum DataShapeError {
     /// Invalid hash format
-    InvalidHashFormat(String),
+    #[error("Invalid hash format: {message}. Expected format: sha256:<64hex>, got: {provided}")]
+    InvalidHashFormat {
+        /// Error message
+        message: String,
+        /// Provided hash value
+        provided: String,
+    },
     /// Serialization error
-    Serialization(String),
+    #[error("Serialization failed: {message}. Context: {context}")]
+    Serialization {
+        /// Error message
+        message: String,
+        /// Additional context
+        context: String,
+    },
 }
 
-impl std::fmt::Display for DataShapeError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            DataShapeError::InvalidHashFormat(msg) => {
-                write!(f, "Invalid hash format: {}", msg)
-            }
-            DataShapeError::Serialization(msg) => {
-                write!(f, "Serialization error: {}", msg)
-            }
+impl DataShapeError {
+    /// Create an invalid hash format error with context
+    pub fn invalid_hash_format(message: impl Into<String>, provided: impl Into<String>) -> Self {
+        Self::InvalidHashFormat {
+            message: message.into(),
+            provided: provided.into(),
+        }
+    }
+
+    /// Create a serialization error with context
+    pub fn serialization(message: impl Into<String>, context: impl Into<String>) -> Self {
+        Self::Serialization {
+            message: message.into(),
+            context: context.into(),
         }
     }
 }
-
-impl std::error::Error for DataShapeError {}
 
 /// Compute data shape hash from DataShape enum
 ///
@@ -207,7 +223,9 @@ mod tests {
     #[test]
     fn test_compute_data_shape_hash_bytestream() {
         let shape = DataShape::ByteStream {
-            manifest_root: "sha256:0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+            manifest_root:
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                    .to_string(),
             manifest_len: 1024,
             chunk_scheme: ChunkScheme::CDC { avg_size: 65536 },
         };
@@ -220,7 +238,8 @@ mod tests {
     #[test]
     fn test_compute_data_shape_hash_rowmap() {
         let shape = DataShape::RowMap {
-            merkle_root: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+            merkle_root: "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                .to_string(),
             row_count: 1000,
             key_fmt: KeyFormat::Sha256Hex,
             value_repr: RowValueRepr::Number,
@@ -270,4 +289,3 @@ mod tests {
         assert_ne!(hash1, hash2);
     }
 }
-

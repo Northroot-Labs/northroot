@@ -3,8 +3,8 @@
 //! Tests use JSON adapters for loading test vectors (human-readable),
 //! but internally use CBOR for all operations.
 
-use northroot_receipts::*;
 use northroot_receipts::adapters::json;
+use northroot_receipts::*;
 use std::fs;
 
 fn load_vector(path: &str) -> Receipt {

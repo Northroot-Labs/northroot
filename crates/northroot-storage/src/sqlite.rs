@@ -2,13 +2,13 @@
 
 use crate::error::StorageError;
 use crate::traits::{ManifestMeta, ManifestSummary, ReceiptQuery, ReceiptStore};
+use ciborium;
 use northroot_receipts::{EncryptedLocatorRef, Receipt};
 use rusqlite::{params, Connection, Row};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 use zstd::encode_all;
-use ciborium;
 
 /// SQLite-based storage backend.
 ///
@@ -291,12 +291,12 @@ impl SqliteStore {
     /// Convert receipt from database row.
     fn receipt_from_row(row: &Row) -> Result<Receipt, StorageError> {
         let cbor_bytes: Vec<u8> = row.get("canonical_cbor")?;
-        
+
         // Deserialize from CBOR bytes (deterministic encoding per RFC 8949)
         let receipt: Receipt = ciborium::de::from_reader(cbor_bytes.as_slice()).map_err(|e| {
             StorageError::SerializationError(format!("CBOR deserialization failed: {}", e))
         })?;
-        
+
         Ok(receipt)
     }
 }
@@ -336,22 +336,22 @@ impl ReceiptStore for SqliteStore {
                 prev_execution_rid, created_at
             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)",
             params![
-            r.rid.to_string(),
-            format!("{:?}", r.kind),
-            r.version,
-            r.hash,
-            pac.as_slice(),
-            change_epoch,
-            policy_ref,
-            r.ctx.timestamp,
-            cbor_bytes,
-            minhash_signature,
-            hll_cardinality,
-            chunk_manifest_hash_vec,
-            chunk_manifest_size_bytes,
-            merkle_root_vec,
-            prev_execution_rid.map(|r| r.to_string()),
-            created_at,
+                r.rid.to_string(),
+                format!("{:?}", r.kind),
+                r.version,
+                r.hash,
+                pac.as_slice(),
+                change_epoch,
+                policy_ref,
+                r.ctx.timestamp,
+                cbor_bytes,
+                minhash_signature,
+                hll_cardinality,
+                chunk_manifest_hash_vec,
+                chunk_manifest_size_bytes,
+                merkle_root_vec,
+                prev_execution_rid.map(|r| r.to_string()),
+                created_at,
             ],
         )?;
 
@@ -426,7 +426,7 @@ impl ReceiptStore for SqliteStore {
 
     fn query_receipts(&self, q: ReceiptQuery) -> Result<Vec<Receipt>, StorageError> {
         let conn = self.conn.lock().unwrap();
-        
+
         // For Phase 2, use a simple approach: fetch all and filter in memory
         // This will be optimized in later phases when we have proper indexes
         let mut stmt =
@@ -452,7 +452,7 @@ impl ReceiptStore for SqliteStore {
         let mut receipts = Vec::new();
         for row_result in rows {
             let receipt = row_result?;
-            
+
             // Apply filters
             if let Some(ref pac) = q.pac {
                 let receipt_pac = Self::extract_pac(&receipt);
@@ -493,9 +493,9 @@ impl ReceiptStore for SqliteStore {
                     continue;
                 }
             }
-            
+
             receipts.push(receipt);
-            
+
             // Apply limit
             if let Some(limit) = q.limit {
                 if receipts.len() >= limit {
@@ -537,14 +537,14 @@ impl ReceiptStore for SqliteStore {
                 size_uncompressed, created_at, expires_at
             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
-            hash.as_slice(),
-            meta.pac.as_slice(),
-            meta.change_epoch_id,
-            encoding,
-            compressed_data,
-            meta.size_uncompressed as i64,
-            created_at,
-            meta.expires_at,
+                hash.as_slice(),
+                meta.pac.as_slice(),
+                meta.change_epoch_id,
+                encoding,
+                compressed_data,
+                meta.size_uncompressed as i64,
+                created_at,
+                meta.expires_at,
             ],
         )?;
 
@@ -716,10 +716,7 @@ impl ReceiptStore for SqliteStore {
 
     // --- Phase 4: Output Digest Storage ---
 
-    fn query_by_output_digest(
-        &self,
-        output_digest: &str,
-    ) -> Result<Vec<Receipt>, StorageError> {
+    fn query_by_output_digest(&self, output_digest: &str) -> Result<Vec<Receipt>, StorageError> {
         let conn = self.conn.lock().unwrap();
 
         // Join output_digests with receipts to get full receipt data

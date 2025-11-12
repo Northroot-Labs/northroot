@@ -190,10 +190,10 @@ def generate_index(adr_dir: Path, write: bool = True):
                     
                     # Build phase entry for index
                     phase_entry = {
-                        "phase_id": phase_data.get("phase_id", ""),
-                        "sequence": phase_data.get("sequence", 0),
+                                "phase_id": phase_data.get("phase_id", ""),
+                                "sequence": phase_data.get("sequence", 0),
                         "status": phase_status,
-                        "timestamp": phase_data.get("decided_at") or phase_data.get("proposed_at") or ""
+                                "timestamp": phase_data.get("decided_at") or phase_data.get("proposed_at") or ""
                     }
                     
                     # Add implementation metadata if implemented

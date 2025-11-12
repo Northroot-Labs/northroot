@@ -37,15 +37,15 @@ pub fn compute_hash(receipt: &Receipt) -> Result<String, CanonError> {
     // Create a temporary receipt without sig and hash for canonicalization
     // We'll serialize to CBOR Value, remove those fields, then canonicalize
     use ciborium::value::Value as CborValue;
-    
+
     // Serialize receipt to CBOR Value
     let mut buffer = Vec::new();
     ciborium::ser::into_writer(receipt, &mut buffer)
         .map_err(|e| CanonError::ToValue(e.to_string()))?;
-    
+
     let mut value: CborValue = ciborium::de::from_reader(buffer.as_slice())
         .map_err(|e| CanonError::ToValue(e.to_string()))?;
-    
+
     // Remove sig and hash fields from the map
     if let CborValue::Map(ref mut map) = value {
         map.retain(|(k, _)| {
@@ -56,17 +56,17 @@ pub fn compute_hash(receipt: &Receipt) -> Result<String, CanonError> {
             }
         });
     }
-    
+
     // Canonicalize and hash
     cbor_canon::canon_value(&mut value);
     let mut cbor_bytes = Vec::new();
     ciborium::ser::into_writer(&value, &mut cbor_bytes)
         .map_err(|e| CanonError::Encode(e.to_string()))?;
-    
+
     let mut hasher = Sha256::new();
     hasher.update(&cbor_bytes);
     let hash_bytes = hasher.finalize();
-    
+
     Ok(format!("sha256:{:x}", hash_bytes))
 }
 

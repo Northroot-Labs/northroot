@@ -33,14 +33,12 @@ pub fn to_cdn(value: &CborValue) -> String {
                 .trim_end_matches(")")
                 .to_string()
         }
-        CborValue::Float(f) => {
-            match f {
-                f if f.is_nan() => "NaN".into(),
-                f if *f == f64::INFINITY => "Infinity".into(),
-                f if *f == f64::NEG_INFINITY => "-Infinity".into(),
-                f => format!("{}", f),
-            }
-        }
+        CborValue::Float(f) => match f {
+            f if f.is_nan() => "NaN".into(),
+            f if *f == f64::INFINITY => "Infinity".into(),
+            f if *f == f64::NEG_INFINITY => "-Infinity".into(),
+            f => format!("{}", f),
+        },
         CborValue::Text(s) => {
             // Escape special characters and quote
             format!("\"{}\"", s.escape_default())
@@ -110,9 +108,10 @@ mod tests {
     #[test]
     fn test_cdn_map() {
         // Create a map directly as a Vec of (key, value) pairs (CBOR Map representation)
-        let map: Vec<(CborValue, CborValue)> = vec![
-            (CborValue::Text("key".into()), CborValue::Text("value".into())),
-        ];
+        let map: Vec<(CborValue, CborValue)> = vec![(
+            CborValue::Text("key".into()),
+            CborValue::Text("value".into()),
+        )];
         let cbor_map = CborValue::Map(map);
         let cdn = to_cdn(&cbor_map);
         assert!(cdn.starts_with("{"));
@@ -121,4 +120,3 @@ mod tests {
         assert!(cdn.contains("value"));
     }
 }
-

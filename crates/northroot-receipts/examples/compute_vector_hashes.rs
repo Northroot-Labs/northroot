@@ -10,12 +10,8 @@ use std::path::PathBuf;
 fn main() {
     // Get the workspace root (go up from crates/northroot-receipts/examples)
     let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let workspace_root = manifest_dir
-        .parent()
-        .unwrap()
-        .parent()
-        .unwrap();
-    
+    let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
+
     let vectors = [
         "vectors/data_shape.json",
         "vectors/method_shape.json",
@@ -27,7 +23,7 @@ fn main() {
 
     println!("// Updated baseline hashes (CBOR canonicalization)");
     println!("const BASELINE_HASHES: &[(&str, &str)] = &[");
-    
+
     for path in &vectors {
         let full_path = workspace_root.join(path);
         let json_str = fs::read_to_string(&full_path).unwrap();
@@ -39,7 +35,6 @@ fn main() {
         println!("        \"{}\",", hash);
         println!("    ),");
     }
-    
+
     println!("];");
 }
-

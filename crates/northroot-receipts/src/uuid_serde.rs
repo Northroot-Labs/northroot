@@ -80,7 +80,7 @@ pub mod vec {
     /// - CBOR (binary): expect array of 16-byte byte strings
     pub fn deserialize<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Vec<Uuid>, D::Error> {
         let is_human_readable = deserializer.is_human_readable();
-        
+
         struct UuidVisitor {
             is_human_readable: bool,
         }
@@ -117,9 +117,7 @@ pub mod vec {
             }
         }
 
-        deserializer.deserialize_seq(UuidVisitor {
-            is_human_readable,
-        })
+        deserializer.deserialize_seq(UuidVisitor { is_human_readable })
     }
 }
 
@@ -163,7 +161,7 @@ mod tests {
         // Serialize to CBOR
         let mut cbor_bytes = Vec::new();
         ciborium::ser::into_writer(&test, &mut cbor_bytes).unwrap();
-        
+
         // Should be compact (16 bytes for UUID, not an array)
         assert!(cbor_bytes.len() < 50); // Much smaller than array representation
 
@@ -197,7 +195,7 @@ mod tests {
         // Serialize to CBOR
         let mut cbor_bytes = Vec::new();
         ciborium::ser::into_writer(&test, &mut cbor_bytes).unwrap();
-        
+
         // Deserialize from CBOR
         let test2: TestStructWithVec = ciborium::de::from_reader(cbor_bytes.as_slice()).unwrap();
         assert_eq!(test.ids, test2.ids);
@@ -211,7 +209,7 @@ mod tests {
         // Direct CBOR roundtrip (bypassing JSON Value conversion)
         let mut cbor_bytes = Vec::new();
         ciborium::ser::into_writer(&test, &mut cbor_bytes).unwrap();
-        
+
         // Deserialize from CBOR - UUID should be 16 bytes, not an array
         let test2: TestStruct = ciborium::de::from_reader(cbor_bytes.as_slice()).unwrap();
         assert_eq!(test.id, test2.id);

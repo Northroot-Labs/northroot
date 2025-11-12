@@ -346,7 +346,7 @@ pub fn extract_cost_model(
 
     // Validate alpha is in [0, 1] for the given row count
     let (_, _, alpha_val) = cost_model.evaluate(row_count);
-    if alpha_val < 0.0 || alpha_val > 1.0 {
+    if !(0.0..=1.0).contains(&alpha_val) {
         return Err(PolicyError::InvalidPolicyRef {
             policy_ref: policy.policy_id.clone(),
             reason: format!(

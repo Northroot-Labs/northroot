@@ -5,13 +5,13 @@
 //! - Phase 2: MerkleRowMap RFC-6962 domain separation (BREAKING CHANGE)
 //! - Phase 3: ByteStream manifest builder (CAS module)
 
+use ciborium::value::Value as CborValue;
 use northroot_engine::{
     cas::{build_manifest_from_data, chunk_by_fixed},
     rowmap::MerkleRowMap,
     shapes::{compute_data_shape_hash, ChunkScheme, DataShape, KeyFormat, RowValueRepr},
     strategies::{ExecutionMode, IncrementalSumStrategy, Strategy},
 };
-use ciborium::value::Value as CborValue;
 use serde_json::json;
 
 // Helper to convert JSON values to CBOR
@@ -50,7 +50,8 @@ mod phase2_merkle_row_map {
 
         // Verify it's H(0x00 || "") not H("leaf:" || "")
         // The new root should be different from old "leaf:" prefix
-        let old_style_root = "sha256:08679e383d66dbc4192bae473a37843066188e42635077349d1c7db7cf25b20c";
+        let old_style_root =
+            "sha256:08679e383d66dbc4192bae473a37843066188e42635077349d1c7db7cf25b20c";
         assert_ne!(
             root1, old_style_root,
             "New RFC-6962 root should differ from old 'leaf:' prefix root"
@@ -116,7 +117,7 @@ mod phase2_merkle_row_map {
         map.insert("test".to_string(), CborValue::Integer(123.into()));
 
         let root = map.compute_root();
-        
+
         // Verify format
         assert!(root.starts_with("sha256:"));
         assert_eq!(root.len(), 71);
@@ -171,7 +172,10 @@ mod phase1_data_shape {
         let hash1 = compute_data_shape_hash(&bytestream).unwrap();
         let hash2 = compute_data_shape_hash(&rowmap).unwrap();
 
-        assert_ne!(hash1, hash2, "Different shape types must produce different hashes");
+        assert_ne!(
+            hash1, hash2,
+            "Different shape types must produce different hashes"
+        );
     }
 
     #[test]
@@ -226,12 +230,19 @@ mod phase3_cas {
     fn test_manifest_deterministic() {
         // Invariant: Same data + scheme → same manifest root
         let data = b"test data for manifest";
-        let manifest1 = build_manifest_from_data(data, northroot_engine::shapes::ChunkScheme::Fixed { size: 8 }).unwrap();
-        let manifest2 = build_manifest_from_data(data, northroot_engine::shapes::ChunkScheme::Fixed { size: 8 }).unwrap();
+        let manifest1 = build_manifest_from_data(
+            data,
+            northroot_engine::shapes::ChunkScheme::Fixed { size: 8 },
+        )
+        .unwrap();
+        let manifest2 = build_manifest_from_data(
+            data,
+            northroot_engine::shapes::ChunkScheme::Fixed { size: 8 },
+        )
+        .unwrap();
 
         assert_eq!(
-            manifest1.manifest_root,
-            manifest2.manifest_root,
+            manifest1.manifest_root, manifest2.manifest_root,
             "Same data and scheme must produce same manifest root"
         );
         assert_eq!(manifest1.manifest_len, manifest2.manifest_len);
@@ -255,7 +266,11 @@ mod phase3_cas {
     fn test_manifest_empty_handling() {
         // Invariant: Empty data produces valid manifest
         let data = b"";
-        let manifest = build_manifest_from_data(data, northroot_engine::shapes::ChunkScheme::Fixed { size: 8 }).unwrap();
+        let manifest = build_manifest_from_data(
+            data,
+            northroot_engine::shapes::ChunkScheme::Fixed { size: 8 },
+        )
+        .unwrap();
 
         assert!(manifest.manifest_root.starts_with("sha256:"));
         assert_eq!(manifest.manifest_len, 0);
@@ -266,7 +281,11 @@ mod phase3_cas {
     fn test_rfc6962_manifest_domain_separation() {
         // Verify manifest uses RFC-6962 domain separation
         let data = b"test";
-        let manifest = build_manifest_from_data(data, northroot_engine::shapes::ChunkScheme::Fixed { size: 8 }).unwrap();
+        let manifest = build_manifest_from_data(
+            data,
+            northroot_engine::shapes::ChunkScheme::Fixed { size: 8 },
+        )
+        .unwrap();
 
         // Verify format
         assert!(manifest.manifest_root.starts_with("sha256:"));
@@ -289,14 +308,12 @@ mod cross_phase_invariants {
             {"id": "2", "value": 20.0},
         ]);
 
-        let (output, state) = strategy
-            .execute(&input, ExecutionMode::Full, None)
-            .unwrap();
+        let (output, state) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
 
         // Verify functionality still works
         assert_eq!(output["sum"], 30.0);
         assert_eq!(state.len(), 2);
-        
+
         // Verify state hash is valid (format, not specific value)
         let state_hash = state.state_hash();
         assert!(state_hash.starts_with("sha256:"));
@@ -307,7 +324,11 @@ mod cross_phase_invariants {
     fn test_data_shape_integration() {
         // Invariant: DataShape can be constructed from CAS manifest
         let data = b"test data";
-        let manifest = build_manifest_from_data(data, northroot_engine::shapes::ChunkScheme::Fixed { size: 4 }).unwrap();
+        let manifest = build_manifest_from_data(
+            data,
+            northroot_engine::shapes::ChunkScheme::Fixed { size: 4 },
+        )
+        .unwrap();
 
         let shape = DataShape::ByteStream {
             manifest_root: manifest.manifest_root.clone(),
@@ -319,4 +340,3 @@ mod cross_phase_invariants {
         assert!(shape_hash.starts_with("sha256:"));
     }
 }
-

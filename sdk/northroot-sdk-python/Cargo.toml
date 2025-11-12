@@ -1,0 +1,42 @@
+[package]
+name = "northroot-sdk-python"
+version = "0.1.0"
+edition = "2021"
+authors = ["Northroot Contributors"]
+description = "Python SDK for Northroot proof algebra system"
+license = "Apache-2.0"
+repository = "https://github.com/northroot/northroot"
+
+# Explicitly exclude from workspace (SDK is separate Python package)
+[workspace]
+
+[lib]
+name = "northroot_sdk"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+# PyO3 for Python bindings
+pyo3 = { version = "0.21", features = ["extension-module", "abi3-py38"] }
+
+# Northroot crates
+northroot-engine = { path = "../../crates/northroot-engine" }
+northroot-receipts = { path = "../../crates/northroot-receipts" }
+northroot-policy = { path = "../../crates/northroot-policy" }
+northroot-storage = { path = "../../crates/northroot-storage", optional = true }
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[features]
+default = []
+storage = ["northroot-storage"]
+
+[profile.release]
+opt-level = 3
+lto = true
+

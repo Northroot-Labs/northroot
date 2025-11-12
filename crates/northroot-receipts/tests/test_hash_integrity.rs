@@ -1,7 +1,7 @@
 //! Hash integrity tests: verify hash computation and canonicalization.
 
-use northroot_receipts::*;
 use northroot_receipts::adapters::json;
+use northroot_receipts::*;
 use std::fs;
 
 fn load_vector(path: &str) -> Receipt {
@@ -27,7 +27,10 @@ fn test_hash_computation_ignores_sig_and_hash() {
 
     // Compute hash should be the same as original (ignores sig/hash)
     let computed = receipt.compute_hash().unwrap();
-    assert_eq!(computed, original_hash, "Hash should ignore sig and hash fields");
+    assert_eq!(
+        computed, original_hash,
+        "Hash should ignore sig and hash fields"
+    );
 }
 
 #[test]
@@ -80,7 +83,8 @@ fn test_all_vectors_hash_integrity() {
         assert!(
             computed.starts_with("sha256:") && computed.len() == 71,
             "Invalid hash format in {}: {}",
-            path, computed
+            path,
+            computed
         );
         // TODO: After updating test vectors, uncomment:
         // assert_eq!(

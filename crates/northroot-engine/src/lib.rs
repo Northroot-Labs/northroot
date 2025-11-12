@@ -68,7 +68,7 @@ pub use execution::{
 };
 
 // Re-export rowmap module items
-pub use rowmap::{DeltaUpdate, MerkleFrontier, RowMapError, normalize_row};
+pub use rowmap::{normalize_row, DeltaUpdate, MerkleFrontier, RowMapError};
 
 // Re-export cas module items
 pub use cas::{
@@ -82,7 +82,9 @@ pub use resolver::{
 };
 
 // Re-export shapes module items
-pub use shapes::{compute_data_shape_hash, ChunkScheme, DataShape, DataShapeError, KeyFormat, RowValueRepr};
+pub use shapes::{
+    compute_data_shape_hash, ChunkScheme, DataShape, DataShapeError, KeyFormat, RowValueRepr,
+};
 
 // Re-export strategies module items
 pub use strategies::{

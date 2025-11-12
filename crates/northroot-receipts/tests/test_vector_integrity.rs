@@ -1,7 +1,7 @@
 //! Test vector integrity: verify existing vectors have correct hashes and structure.
 
-use northroot_receipts::*;
 use northroot_receipts::adapters::json;
+use northroot_receipts::*;
 use std::fs;
 
 fn load_vector(path: &str) -> Result<Receipt, Box<dyn std::error::Error>> {

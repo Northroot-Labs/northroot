@@ -1,5 +1,5 @@
 ---
-description: automatic commits and summaries of changes when implementing code.
+description: automatic commits and summaries of changes when implementing code and ADRS. 
 alwaysApply: false
 ---
 # Commit Automation Rules

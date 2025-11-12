@@ -26,10 +26,7 @@ pub enum ResolverError {
     /// Invalid encrypted locator format
     InvalidLocator(String),
     /// Content hash mismatch
-    HashMismatch {
-        expected: String,
-        actual: String,
-    },
+    HashMismatch { expected: String, actual: String },
     /// Resolver not configured
     NotConfigured(String),
 }
@@ -291,4 +288,3 @@ mod tests {
         assert_eq!(metadata.size_bytes, 1024);
     }
 }
-

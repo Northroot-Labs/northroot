@@ -82,8 +82,14 @@ impl MinHashSketch {
         let hash_bytes = hasher.finalize();
         // Take first 8 bytes as u64
         u64::from_be_bytes([
-            hash_bytes[0], hash_bytes[1], hash_bytes[2], hash_bytes[3],
-            hash_bytes[4], hash_bytes[5], hash_bytes[6], hash_bytes[7],
+            hash_bytes[0],
+            hash_bytes[1],
+            hash_bytes[2],
+            hash_bytes[3],
+            hash_bytes[4],
+            hash_bytes[5],
+            hash_bytes[6],
+            hash_bytes[7],
         ])
     }
 
@@ -263,7 +269,7 @@ impl BloomFilter {
     /// * `num_bits` - Number of bits in the filter (typically 8-16x expected elements)
     /// * `num_hashes` - Number of hash functions (typically 3-7)
     pub fn new(num_bits: usize, num_hashes: usize) -> Self {
-        let num_bytes = (num_bits + 7) / 8; // Round up
+        let num_bytes = (num_bits + 7).div_ceil(8); // Round up
         Self {
             num_bits,
             num_hashes,
@@ -315,9 +321,8 @@ impl BloomFilter {
         hasher.update(format!("{}:{}", hash_fn_index, chunk_id).as_bytes());
         let hash_bytes = hasher.finalize();
         // Use first 4 bytes as u32, then mod by num_bits
-        let hash_u32 = u32::from_be_bytes([
-            hash_bytes[0], hash_bytes[1], hash_bytes[2], hash_bytes[3],
-        ]);
+        let hash_u32 =
+            u32::from_be_bytes([hash_bytes[0], hash_bytes[1], hash_bytes[2], hash_bytes[3]]);
         (hash_u32 as usize) % self.num_bits
     }
 
@@ -342,7 +347,7 @@ impl BloomFilter {
 
         let num_bits = u32::from_be_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) as usize;
         let num_hashes = u32::from_be_bytes([bytes[4], bytes[5], bytes[6], bytes[7]]) as usize;
-        let expected_bytes = (num_bits + 7) / 8;
+        let expected_bytes = (num_bits + 7).div_ceil(8);
 
         if bytes.len() < 8 + expected_bytes {
             return Err(ManifestSummaryError::InvalidFormat(format!(
@@ -429,8 +434,7 @@ where
     let num_bits = (-(expected_size as f64) * false_positive_rate.ln() / (2.0_f64.ln().powi(2)))
         .ceil() as usize;
     // k = (m/n) * ln(2) where m=num_bits, n=expected_size
-    let num_hashes = (((num_bits as f64 / expected_size as f64) * 2.0_f64.ln())
-        .ceil() as usize)
+    let num_hashes = (((num_bits as f64 / expected_size as f64) * 2.0_f64.ln()).ceil() as usize)
         .max(1)
         .min(10); // Cap at 10 for sanity
 
@@ -545,4 +549,3 @@ mod tests {
         assert_eq!(hll.cardinality(), 5);
     }
 }
-

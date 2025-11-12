@@ -4,10 +4,10 @@
 //! are locked in `test_drift_detection.rs`. If root computation algorithms change,
 //! update `BASELINE_ROOTS` in that file.
 
+use ciborium::value::Value as CborValue;
 use northroot_engine::execution::*;
 use northroot_receipts::{Context, MethodRef};
 use serde_json::json;
-use ciborium::value::Value as CborValue;
 
 // Helper to convert JSON Value to CBOR Value
 fn json_to_cbor_value(json: &serde_json::Value) -> CborValue {
@@ -24,16 +24,11 @@ fn json_to_cbor_value(json: &serde_json::Value) -> CborValue {
             }
         }
         serde_json::Value::String(s) => CborValue::Text(s.clone()),
-        serde_json::Value::Array(a) => {
-            CborValue::Array(a.iter().map(json_to_cbor_value).collect())
-        }
+        serde_json::Value::Array(a) => CborValue::Array(a.iter().map(json_to_cbor_value).collect()),
         serde_json::Value::Object(o) => {
             let mut map = Vec::new();
             for (k, v) in o {
-                map.push((
-                    CborValue::Text(k.clone()),
-                    json_to_cbor_value(v),
-                ));
+                map.push((CborValue::Text(k.clone()), json_to_cbor_value(v)));
             }
             CborValue::Map(map)
         }

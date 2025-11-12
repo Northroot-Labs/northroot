@@ -65,6 +65,7 @@ impl ChunkSet {
     }
 
     /// Create a chunk set from an iterator of chunk IDs.
+    #[allow(clippy::should_implement_trait)]
     pub fn from_iter<I>(iter: I) -> Self
     where
         I: IntoIterator<Item = String>,

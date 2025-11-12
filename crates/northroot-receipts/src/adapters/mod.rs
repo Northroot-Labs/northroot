@@ -7,4 +7,3 @@
 pub mod json;
 
 pub use json::{cbor_to_json, json_to_cbor, receipt_from_json, receipt_to_json, AdapterError};
-

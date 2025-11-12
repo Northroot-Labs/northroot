@@ -13,10 +13,8 @@ use northroot_policy::CostModel;
 use northroot_receipts::{EncryptedLocatorRef, ExecutionPayload, ReuseJustification};
 use northroot_storage::ReceiptStore;
 
-use crate::delta::{
-    decide_reuse, economic_delta, ManifestSummaryError,
-};
 use crate::delta::overlap::jaccard_similarity;
+use crate::delta::{decide_reuse, economic_delta, ManifestSummaryError};
 
 use std::collections::HashSet;
 
@@ -118,7 +116,8 @@ impl ReuseReconciliation {
             )?
         } else {
             // Use fast path estimate
-            let (_decision, mut justification) = decide_reuse(fast_overlap, &self.cost_model, row_count);
+            let (_decision, mut justification) =
+                decide_reuse(fast_overlap, &self.cost_model, row_count);
             justification.overlap_j = Some(fast_overlap);
             (fast_overlap, justification)
         };
@@ -127,14 +126,23 @@ impl ReuseReconciliation {
         let economic_delta = economic_delta(overlap_j, &self.cost_model, row_count);
 
         // Get output info if reuse is recommended
-        let output_info = if justification.decision.as_ref().map(|s| s == "reuse").unwrap_or(false) {
+        let output_info = if justification
+            .decision
+            .as_ref()
+            .map(|s| s == "reuse")
+            .unwrap_or(false)
+        {
             self.get_output_info(previous_payload, store)?
         } else {
             None
         };
 
         Ok(ReuseReconciliationResult {
-            should_reuse: justification.decision.as_ref().map(|s| s == "reuse").unwrap_or(false),
+            should_reuse: justification
+                .decision
+                .as_ref()
+                .map(|s| s == "reuse")
+                .unwrap_or(false),
             justification,
             output_info,
             economic_delta,
@@ -153,42 +161,53 @@ impl ReuseReconciliation {
     ) -> Result<f64, ReuseReconciliationError> {
         // Try to get manifest summaries
         let current_summary = if let Some(manifest_hash) = current.chunk_manifest_hash {
-            store.get_manifest_summary(&manifest_hash).map_err(ReuseReconciliationError::Storage)?
+            store
+                .get_manifest_summary(&manifest_hash)
+                .map_err(ReuseReconciliationError::Storage)?
         } else {
             None
         };
 
         let previous_summary = if let Some(manifest_hash) = previous.chunk_manifest_hash {
-            store.get_manifest_summary(&manifest_hash).map_err(ReuseReconciliationError::Storage)?
+            store
+                .get_manifest_summary(&manifest_hash)
+                .map_err(ReuseReconciliationError::Storage)?
         } else {
             None
         };
 
         // If we have summaries with MinHash sketches, use them
-        if let (Some(current_summary), Some(previous_summary)) = (current_summary, previous_summary) {
-            if !current_summary.minhash_sketch.is_empty() && !previous_summary.minhash_sketch.is_empty() {
+        if let (Some(current_summary), Some(previous_summary)) = (current_summary, previous_summary)
+        {
+            if !current_summary.minhash_sketch.is_empty()
+                && !previous_summary.minhash_sketch.is_empty()
+            {
                 // Deserialize MinHash sketches and estimate overlap
                 use crate::delta::manifest_summary::MinHashSketch;
                 let current_sketch = MinHashSketch::from_bytes(&current_summary.minhash_sketch)
                     .map_err(ReuseReconciliationError::ManifestSummary)?;
                 let previous_sketch = MinHashSketch::from_bytes(&previous_summary.minhash_sketch)
                     .map_err(ReuseReconciliationError::ManifestSummary)?;
-                
-                return current_sketch.estimate_jaccard(&previous_sketch)
+
+                return current_sketch
+                    .estimate_jaccard(&previous_sketch)
                     .map_err(ReuseReconciliationError::ManifestSummary);
             }
         }
 
         // Fallback: Use MinHash signatures from payloads if available
-        if let (Some(current_mh), Some(previous_mh)) = (&current.minhash_signature, &previous.minhash_signature) {
+        if let (Some(current_mh), Some(previous_mh)) =
+            (&current.minhash_signature, &previous.minhash_signature)
+        {
             if !current_mh.is_empty() && !previous_mh.is_empty() {
                 use crate::delta::manifest_summary::MinHashSketch;
                 let current_sketch = MinHashSketch::from_bytes(current_mh)
                     .map_err(ReuseReconciliationError::ManifestSummary)?;
                 let previous_sketch = MinHashSketch::from_bytes(previous_mh)
                     .map_err(ReuseReconciliationError::ManifestSummary)?;
-                
-                return current_sketch.estimate_jaccard(&previous_sketch)
+
+                return current_sketch
+                    .estimate_jaccard(&previous_sketch)
                     .map_err(ReuseReconciliationError::ManifestSummary);
             }
         }
@@ -209,7 +228,9 @@ impl ReuseReconciliation {
     ) -> Result<(f64, ReuseJustification), ReuseReconciliationError> {
         // Load previous manifest
         let previous_manifest = if let Some(manifest_hash) = previous.chunk_manifest_hash {
-            store.get_manifest(&manifest_hash).map_err(ReuseReconciliationError::Storage)?
+            store
+                .get_manifest(&manifest_hash)
+                .map_err(ReuseReconciliationError::Storage)?
         } else {
             None
         };
@@ -245,7 +266,7 @@ impl ReuseReconciliation {
         // Get output info from storage
         // We need the execution RID - for now, we'll use trace_id as a lookup
         // In a full implementation, we'd need the actual receipt RID
-        
+
         if let Some(output_digest) = &previous.output_digest {
             if let Some(locator_ref) = &previous.output_locator_ref {
                 return Ok(Some(ReuseOutputInfo {
@@ -302,4 +323,3 @@ mod tests {
         assert_eq!(reconciliation.exact_path_margin, 0.1);
     }
 }
-

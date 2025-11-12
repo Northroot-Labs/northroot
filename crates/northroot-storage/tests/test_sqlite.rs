@@ -41,6 +41,12 @@ fn create_test_receipt(rid: Uuid) -> Receipt {
         chunk_manifest_size_bytes: None,
         merkle_root: None,
         prev_execution_rid: None,
+        output_digest: None,
+        manifest_root: None,
+        output_mime_type: None,
+        output_size_bytes: None,
+        input_locator_refs: None,
+        output_locator_ref: None,
     });
 
     let ctx = Context {

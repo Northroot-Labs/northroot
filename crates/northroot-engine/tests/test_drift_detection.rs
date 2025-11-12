@@ -30,10 +30,7 @@ fn json_to_cbor(json: &serde_json::Value) -> ciborium::value::Value {
         serde_json::Value::Object(o) => {
             let mut map = Vec::new();
             for (k, v) in o {
-                map.push((
-                    ciborium::value::Value::Text(k.clone()),
-                    json_to_cbor(v),
-                ));
+                map.push((ciborium::value::Value::Text(k.clone()), json_to_cbor(v)));
             }
             ciborium::value::Value::Map(map)
         }

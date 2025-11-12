@@ -42,23 +42,23 @@ where
     I: Iterator<Item = [u8; 32]>,
 {
     let parts: Vec<[u8; 32]> = part_hashes.collect();
-    
+
     if parts.is_empty() {
         // Empty manifest - return zero hash
         return [0u8; 32];
     }
-    
+
     if parts.len() == 1 {
         // Single part - return leaf hash
         return hash_leaf(&parts[0]);
     }
-    
+
     // Build binary Merkle tree
-    let mut level: Vec<[u8; 32]> = parts.iter().map(|p| hash_leaf(p)).collect();
-    
+    let mut level: Vec<[u8; 32]> = parts.iter().map(hash_leaf).collect();
+
     while level.len() > 1 {
         let mut next_level = Vec::new();
-        
+
         // Process pairs
         for i in (0..level.len()).step_by(2) {
             if i + 1 < level.len() {
@@ -69,10 +69,10 @@ where
                 next_level.push(level[i]);
             }
         }
-        
+
         level = next_level;
     }
-    
+
     level[0]
 }
 
@@ -81,7 +81,7 @@ where
 /// Format: `0x00 || part_hash`
 fn hash_leaf(part_hash: &[u8; 32]) -> [u8; 32] {
     let mut hasher = Sha256::new();
-    hasher.update(&[0x00u8]); // Leaf prefix (RFC-6962)
+    hasher.update([0x00u8]); // Leaf prefix (RFC-6962)
     hasher.update(part_hash);
     hasher.finalize().into()
 }
@@ -91,7 +91,7 @@ fn hash_leaf(part_hash: &[u8; 32]) -> [u8; 32] {
 /// Format: `0x01 || left_hash || right_hash`
 fn hash_node(left: &[u8; 32], right: &[u8; 32]) -> [u8; 32] {
     let mut hasher = Sha256::new();
-    hasher.update(&[0x01u8]); // Node prefix (RFC-6962)
+    hasher.update([0x01u8]); // Node prefix (RFC-6962)
     hasher.update(left);
     hasher.update(right);
     hasher.finalize().into()
@@ -120,28 +120,28 @@ where
     S: AsRef<str>,
 {
     let mut parts = Vec::new();
-    
+
     for hash_str in part_hash_strings {
         let hash_str = hash_str.as_ref();
         // Remove "sha256:" prefix if present
         let hash_hex = hash_str.strip_prefix("sha256:").unwrap_or(hash_str);
-        
+
         // Parse hex to bytes
         let hash_bytes = hex::decode(hash_hex)
             .map_err(|e| ManifestRootError::InvalidHash(format!("Failed to decode hex: {}", e)))?;
-        
+
         if hash_bytes.len() != 32 {
             return Err(ManifestRootError::InvalidHash(format!(
                 "Hash must be 32 bytes, got {}",
                 hash_bytes.len()
             )));
         }
-        
+
         let mut hash = [0u8; 32];
         hash.copy_from_slice(&hash_bytes);
         parts.push(hash);
     }
-    
+
     Ok(compute_manifest_root(parts.into_iter()))
 }
 
@@ -176,7 +176,7 @@ mod tests {
         let part1 = [1u8; 32];
         let part2 = [2u8; 32];
         let root = compute_manifest_root([part1, part2].iter().cloned());
-        
+
         // Should be hash of 0x01 || hash_leaf(part1) || hash_leaf(part2)
         assert_ne!(root, [0u8; 32]);
         assert_ne!(root, part1);
@@ -200,9 +200,9 @@ mod tests {
 
     #[test]
     fn test_manifest_root_from_strings() {
-        let hashes = vec!["sha256:0101010101010101010101010101010101010101010101010101010101010101"];
+        let hashes =
+            vec!["sha256:0101010101010101010101010101010101010101010101010101010101010101"];
         let root = compute_manifest_root_from_strings(hashes.iter()).unwrap();
         assert_ne!(root, [0u8; 32]);
     }
 }
-

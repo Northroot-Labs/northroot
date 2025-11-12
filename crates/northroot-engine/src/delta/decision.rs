@@ -60,7 +60,7 @@ pub fn decide_reuse(
     row_count: Option<usize>,
 ) -> (ReuseDecision, ReuseJustification) {
     // Clamp overlap to valid range [0, 1]
-    let overlap_j = overlap_j.max(0.0).min(1.0);
+    let overlap_j = overlap_j.clamp(0.0, 1.0);
 
     let threshold = cost_model.reuse_threshold(row_count);
 
@@ -110,7 +110,7 @@ pub fn decide_reuse(
 /// Economic delta (positive = savings, negative = cost)
 pub fn economic_delta(overlap_j: f64, cost_model: &CostModel, row_count: Option<usize>) -> f64 {
     // Clamp overlap to valid range [0, 1]
-    let overlap_j = overlap_j.max(0.0).min(1.0);
+    let overlap_j = overlap_j.clamp(0.0, 1.0);
     let (c_id, c_comp, alpha) = cost_model.evaluate(row_count);
     alpha * c_comp * overlap_j - c_id
 }

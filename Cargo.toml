@@ -7,6 +7,9 @@ members = [
     "crates/northroot-commons",
     "crates/northroot-storage",
 ]
+exclude = [
+    "sdk/northroot-sdk-python",  # Python SDK is separate (PyO3, not part of Rust workspace)
+]
 resolver = "2"
 
 [workspace.package]

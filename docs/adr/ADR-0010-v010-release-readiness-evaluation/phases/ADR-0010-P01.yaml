@@ -1,0 +1,17 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0010-P01
+adr_id: ADR-0010
+sequence: 1
+title: Foundation & Code Quality
+status: implemented
+summary: Fix compilation errors/warnings, improve error handling, and review API stability before building SDK. This is the foundation that blocks all other work. HIGHEST PRIORITY.
+proposed_at: "2025-11-12T08:00:00Z"
+decided_at: "2025-11-12T08:00:00Z"
+decision_drivers:
+  - Foundation first - Must have clean codebase before building features
+  - Error handling - SDK depends on good error messages
+  - API stability - SDK APIs must be well-designed
+  - Code quality - Technical debt blocks productivity
+implemented_at: '2025-11-12T12:00:00Z'
+implemented_in: 0.1.0
+implementation_commit: 9a254283a4c1d1b41b52ca3a9e89c675d2cc3679

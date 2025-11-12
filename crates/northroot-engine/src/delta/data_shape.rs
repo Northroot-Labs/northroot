@@ -46,9 +46,11 @@ pub fn compute_data_shape_hash_from_file<P: AsRef<Path>>(
     chunk_scheme: Option<ChunkScheme>,
 ) -> Result<String, DataShapeError> {
     // Read file
-    let data = fs::read(path.as_ref()).map_err(|e| {
-        DataShapeError::Serialization(format!("Failed to read file: {}", e))
-    })?;
+    let data = fs::read(path.as_ref())
+        .map_err(|e| DataShapeError::serialization(
+            format!("Failed to read file: {}", e),
+            format!("path: {:?}", path.as_ref()),
+        ))?;
 
     compute_data_shape_hash_from_bytes(&data, chunk_scheme)
 }
@@ -90,9 +92,11 @@ pub fn compute_data_shape_hash_from_bytes(
     let scheme = chunk_scheme.unwrap_or(ChunkScheme::CDC { avg_size: 65536 });
 
     // Build manifest from data
-    let manifest = build_manifest_from_data(data, scheme.clone()).map_err(|e| {
-        DataShapeError::Serialization(format!("Failed to build manifest: {}", e))
-    })?;
+    let manifest = build_manifest_from_data(data, scheme.clone())
+        .map_err(|e| DataShapeError::serialization(
+            format!("Failed to build manifest: {}", e),
+            format!("data_size: {}, chunk_scheme: {:?}", data.len(), scheme),
+        ))?;
 
     // Create DataShape::ByteStream from manifest
     let shape = DataShape::ByteStream {
@@ -144,8 +148,9 @@ pub fn compute_data_shape_hash_from_inputs(
     locators: &[EncryptedLocatorRef],
 ) -> Result<String, DataShapeError> {
     if locators.is_empty() {
-        return Err(DataShapeError::Serialization(
-            "Cannot compute shape hash from empty input list".to_string(),
+        return Err(DataShapeError::serialization(
+            "Cannot compute shape hash from empty input list",
+            format!("locators.len(): {}", locators.len()),
         ));
     }
 
@@ -158,7 +163,12 @@ pub fn compute_data_shape_hash_from_inputs(
     // Compute Merkle root over content hashes
     use crate::delta::manifest_root::compute_manifest_root_from_strings;
     let manifest_root_bytes = compute_manifest_root_from_strings(content_hashes.iter().cloned())
-        .map_err(|e| DataShapeError::Serialization(format!("Failed to compute manifest root: {}", e)))?;
+        .map_err(|e| {
+            DataShapeError::serialization(
+                format!("Failed to compute manifest root: {}", e),
+                format!("content_hashes.len(): {}", content_hashes.len()),
+            )
+        })?;
 
     // Convert to hex string
     let manifest_root = format!("sha256:{}", hex::encode(manifest_root_bytes));
@@ -203,12 +213,16 @@ mod tests {
         let locators = vec![
             EncryptedLocatorRef {
                 encrypted_data: vec![1, 2, 3],
-                content_hash: "sha256:0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+                content_hash:
+                    "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                        .to_string(),
                 encryption_scheme: "aes256-gcm".to_string(),
             },
             EncryptedLocatorRef {
                 encrypted_data: vec![4, 5, 6],
-                content_hash: "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string(),
+                content_hash:
+                    "sha256:1111111111111111111111111111111111111111111111111111111111111111"
+                        .to_string(),
                 encryption_scheme: "aes256-gcm".to_string(),
             },
         ];
@@ -224,4 +238,3 @@ mod tests {
         assert!(result.is_err());
     }
 }
-

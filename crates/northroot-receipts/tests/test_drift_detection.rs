@@ -3,8 +3,8 @@
 //! This test compares computed hashes against a stored baseline to detect
 //! any changes to canonicalization logic that would break compatibility.
 
-use northroot_receipts::*;
 use northroot_receipts::adapters::json;
+use northroot_receipts::*;
 use std::collections::{BTreeSet, HashSet};
 use std::fs;
 
@@ -314,6 +314,12 @@ fn test_cdf_metadata_in_execution_receipt() {
             chunk_manifest_size_bytes: None,
             merkle_root: None,
             prev_execution_rid: None,
+            output_digest: None,
+            manifest_root: None,
+            output_mime_type: None,
+            output_size_bytes: None,
+            input_locator_refs: None,
+            output_locator_ref: None,
         }),
         attest: None,
         sig: None,
@@ -518,6 +524,12 @@ fn test_cdf_range_drift_detection() {
             chunk_manifest_size_bytes: None,
             merkle_root: None,
             prev_execution_rid: None,
+            output_digest: None,
+            manifest_root: None,
+            output_mime_type: None,
+            output_size_bytes: None,
+            input_locator_refs: None,
+            output_locator_ref: None,
         }),
         attest: None,
         sig: None,
@@ -588,6 +600,12 @@ fn test_cdf_range_drift_detection() {
             chunk_manifest_size_bytes: None,
             merkle_root: None,
             prev_execution_rid: None,
+            output_digest: None,
+            manifest_root: None,
+            output_mime_type: None,
+            output_size_bytes: None,
+            input_locator_refs: None,
+            output_locator_ref: None,
         }),
         attest: None,
         sig: None,
@@ -691,14 +709,8 @@ fn test_minhash_sketch_divergence() {
     ];
 
     // Convert to chunk sets for comparison
-    let chunk_set1: HashSet<String> = run1_tuples
-        .iter()
-        .map(|t| chunk_id_from_str(t))
-        .collect();
-    let chunk_set2: HashSet<String> = run2_tuples
-        .iter()
-        .map(|t| chunk_id_from_str(t))
-        .collect();
+    let chunk_set1: HashSet<String> = run1_tuples.iter().map(|t| chunk_id_from_str(t)).collect();
+    let chunk_set2: HashSet<String> = run2_tuples.iter().map(|t| chunk_id_from_str(t)).collect();
 
     // 4 out of 6 unique tuples overlap = 4/6 = 0.667 < 0.95, so drift should be detected
     // Actually wait, let me recalculate: run1 has 5 tuples, run2 has 5 tuples
@@ -728,14 +740,8 @@ fn test_minhash_sketch_divergence() {
         "acct5:s3:us-east-1:bucket", // Same as run3
     ];
 
-    let chunk_set3: HashSet<String> = run3_tuples
-        .iter()
-        .map(|t| chunk_id_from_str(t))
-        .collect();
-    let chunk_set4: HashSet<String> = run4_tuples
-        .iter()
-        .map(|t| chunk_id_from_str(t))
-        .collect();
+    let chunk_set3: HashSet<String> = run3_tuples.iter().map(|t| chunk_id_from_str(t)).collect();
+    let chunk_set4: HashSet<String> = run4_tuples.iter().map(|t| chunk_id_from_str(t)).collect();
 
     // 5 out of 5 tuples overlap = 5/5 = 1.0 >= 0.95, so no drift
     let drift_detected2 = detect_minhash_drift(&chunk_set3, &chunk_set4);
@@ -760,14 +766,8 @@ fn test_minhash_sketch_divergence() {
         "acct8:s3:us-west-2:bucket",    // Different
     ];
 
-    let chunk_set5: HashSet<String> = run5_tuples
-        .iter()
-        .map(|t| chunk_id_from_str(t))
-        .collect();
-    let chunk_set6: HashSet<String> = run6_tuples
-        .iter()
-        .map(|t| chunk_id_from_str(t))
-        .collect();
+    let chunk_set5: HashSet<String> = run5_tuples.iter().map(|t| chunk_id_from_str(t)).collect();
+    let chunk_set6: HashSet<String> = run6_tuples.iter().map(|t| chunk_id_from_str(t)).collect();
 
     // 3 out of 7 unique tuples overlap = 3/7 = 0.429 < 0.95, so drift detected
     let drift_detected3 = detect_minhash_drift(&chunk_set5, &chunk_set6);

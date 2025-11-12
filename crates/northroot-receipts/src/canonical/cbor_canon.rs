@@ -23,11 +23,9 @@ pub enum CanonError {
 fn to_value<T: Serialize>(t: &T) -> Result<CborValue, CanonError> {
     // Serialize via ciborium into a Value DOM
     let mut buffer = Vec::new();
-    ciborium::ser::into_writer(t, &mut buffer)
-        .map_err(|e| CanonError::ToValue(e.to_string()))?;
-    
-    ciborium::de::from_reader(buffer.as_slice())
-        .map_err(|e| CanonError::ToValue(e.to_string()))
+    ciborium::ser::into_writer(t, &mut buffer).map_err(|e| CanonError::ToValue(e.to_string()))?;
+
+    ciborium::de::from_reader(buffer.as_slice()).map_err(|e| CanonError::ToValue(e.to_string()))
 }
 
 /// Canonicalize a CBOR value by sorting map keys.
@@ -62,7 +60,7 @@ fn format_key(k: &CborValue) -> Vec<u8> {
     if let CborValue::Text(s) = k {
         return s.as_bytes().to_vec();
     }
-    
+
     // For non-text keys, serialize to canonical CBOR bytes and sort by those
     let mut tmp = k.clone();
     canon_value(&mut tmp);
@@ -97,11 +95,10 @@ fn format_key(k: &CborValue) -> Vec<u8> {
 pub fn encode_canonical<T: Serialize>(t: &T) -> Result<Vec<u8>, CanonError> {
     let mut v = to_value(t)?;
     canon_value(&mut v);
-    
+
     let mut out = Vec::new();
-    ciborium::ser::into_writer(&v, &mut out)
-        .map_err(|e| CanonError::Encode(e.to_string()))?;
-    
+    ciborium::ser::into_writer(&v, &mut out).map_err(|e| CanonError::Encode(e.to_string()))?;
+
     Ok(out)
 }
 
@@ -140,14 +137,14 @@ mod tests {
         let mut map1 = BTreeMap::new();
         map1.insert("b".to_string(), 1);
         map1.insert("a".to_string(), 2);
-        
+
         let mut map2 = BTreeMap::new();
         map2.insert("a".to_string(), 2);
         map2.insert("b".to_string(), 1);
-        
+
         let c1 = encode_canonical(&map1).unwrap();
         let c2 = encode_canonical(&map2).unwrap();
-        
+
         // Should produce identical bytes despite insertion order
         assert_eq!(c1, c2);
     }
@@ -157,10 +154,9 @@ mod tests {
         let data = vec!["a", "b", "c"];
         let h1 = hash_canonical(&data).unwrap();
         let h2 = hash_canonical(&data).unwrap();
-        
+
         assert_eq!(h1, h2);
         assert!(h1.starts_with("sha256:"));
         assert_eq!(h1.len(), 71); // "sha256:" + 64 hex chars
     }
 }
-

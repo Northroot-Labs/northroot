@@ -14,29 +14,65 @@
 use crate::delta::chunk_id_from_bytes;
 use crate::shapes::ChunkScheme;
 use sha2::{Digest, Sha256};
+use thiserror::Error;
 
 /// Error type for CAS operations
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CasError {
     /// Chunking error
-    Chunking(String),
+    #[error("Chunking failed: {message}")]
+    Chunking {
+        /// Error message
+        message: String,
+        /// Context: data size in bytes (if available)
+        data_size: Option<usize>,
+        /// Context: chunk size parameters (if available)
+        chunk_params: Option<String>,
+    },
     /// Manifest building error
-    Manifest(String),
+    #[error("Manifest building failed: {message}")]
+    Manifest {
+        /// Error message
+        message: String,
+        /// Context: number of chunks (if available)
+        chunk_count: Option<usize>,
+    },
     /// Invalid chunk scheme
-    InvalidScheme(String),
+    #[error("Invalid chunk scheme: {message}. Expected CDC {{ avg_size: >0 }} or Fixed {{ size: >0 }}")]
+    InvalidScheme {
+        /// Error message
+        message: String,
+        /// Context: provided scheme (if available)
+        provided_scheme: Option<String>,
+    },
 }
 
-impl std::fmt::Display for CasError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            CasError::Chunking(msg) => write!(f, "Chunking error: {}", msg),
-            CasError::Manifest(msg) => write!(f, "Manifest building error: {}", msg),
-            CasError::InvalidScheme(msg) => write!(f, "Invalid chunk scheme: {}", msg),
+impl CasError {
+    /// Create a chunking error with context
+    pub fn chunking(message: impl Into<String>, data_size: Option<usize>, chunk_params: Option<String>) -> Self {
+        Self::Chunking {
+            message: message.into(),
+            data_size,
+            chunk_params,
+        }
+    }
+
+    /// Create a manifest error with context
+    pub fn manifest(message: impl Into<String>, chunk_count: Option<usize>) -> Self {
+        Self::Manifest {
+            message: message.into(),
+            chunk_count,
+        }
+    }
+
+    /// Create an invalid scheme error with context
+    pub fn invalid_scheme(message: impl Into<String>, provided_scheme: Option<String>) -> Self {
+        Self::InvalidScheme {
+            message: message.into(),
+            provided_scheme,
         }
     }
 }
-
-impl std::error::Error for CasError {}
 
 /// Chunk for ByteStream
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -83,7 +119,11 @@ pub struct ByteStreamManifest {
 /// Returns error if chunking fails
 pub fn chunk_by_cdc(data: &[u8], avg_size: u64) -> Result<Vec<Chunk>, CasError> {
     if avg_size == 0 {
-        return Err(CasError::Chunking("Average chunk size must be > 0".to_string()));
+        return Err(CasError::chunking(
+            "Average chunk size must be > 0",
+            Some(data.len()),
+            Some(format!("avg_size={}", avg_size)),
+        ));
     }
 
     // Rabin fingerprinting parameters
@@ -101,7 +141,7 @@ pub fn chunk_by_cdc(data: &[u8], avg_size: u64) -> Result<Vec<Chunk>, CasError> 
         // Ensure we don't exceed max_size
         let max_end = (start + (max_size as usize)).min(data.len());
         let min_end = (start + (min_size as usize)).min(data.len());
-        
+
         let end = if min_end >= data.len() {
             // Last chunk, use remaining data
             data.len()
@@ -124,10 +164,10 @@ pub fn chunk_by_cdc(data: &[u8], avg_size: u64) -> Result<Vec<Chunk>, CasError> 
                 let window_end = (i + window_size).min(data.len());
                 let window = &data[i..window_end];
                 let hash = simple_rolling_hash(window);
-                
+
                 // Boundary found when hash matches pattern (mod avg_size)
                 // But ensure we don't exceed max_size
-                if hash % avg_size == 0 {
+                if hash.is_multiple_of(avg_size) {
                     let candidate_boundary = window_end;
                     if candidate_boundary <= max_end {
                         boundary = candidate_boundary;
@@ -192,7 +232,11 @@ fn simple_rolling_hash(data: &[u8]) -> u64 {
 /// Returns error if chunking fails
 pub fn chunk_by_fixed(data: &[u8], size: u64) -> Result<Vec<Chunk>, CasError> {
     if size == 0 {
-        return Err(CasError::Chunking("Chunk size must be > 0".to_string()));
+        return Err(CasError::chunking(
+            "Chunk size must be > 0",
+            Some(data.len()),
+            Some(format!("size={}", size)),
+        ));
     }
 
     let mut chunks = Vec::new();
@@ -242,7 +286,7 @@ pub fn build_bytestream_manifest(
     if chunks.is_empty() {
         // Empty manifest: root = H(0x00 || "")
         let mut hasher = Sha256::new();
-        hasher.update(&[0x00u8]);
+        hasher.update([0x00u8]);
         hasher.update(b"");
         let root_bytes = hasher.finalize();
         let hex_str: String = root_bytes.iter().map(|b| format!("{:02x}", b)).collect();
@@ -259,8 +303,8 @@ pub fn build_bytestream_manifest(
     let mut leaf_hashes: Vec<[u8; 32]> = Vec::new();
     for chunk in chunks {
         let mut hasher = Sha256::new();
-        hasher.update(&[0x00u8]); // RFC-6962 leaf prefix
-        hasher.update(&chunk.hash);
+        hasher.update([0x00u8]); // RFC-6962 leaf prefix
+        hasher.update(chunk.hash);
         leaf_hashes.push(hasher.finalize().into());
     }
 
@@ -274,9 +318,9 @@ pub fn build_bytestream_manifest(
             if i + 1 < current_level.len() {
                 // Parent = H(0x01 || left || right) - RFC-6962 style
                 let mut hasher = Sha256::new();
-                hasher.update(&[0x01u8]); // RFC-6962 parent prefix
-                hasher.update(&current_level[i]);
-                hasher.update(&current_level[i + 1]);
+                hasher.update([0x01u8]); // RFC-6962 parent prefix
+                hasher.update(current_level[i]);
+                hasher.update(current_level[i + 1]);
                 next_level.push(hasher.finalize().into());
             } else {
                 // Odd node: promote upward unchanged
@@ -378,7 +422,7 @@ mod tests {
         // Simplified CDC implementation may not perfectly match target, so use wider range
         let total_len: u64 = chunks.iter().map(|c| c.len).sum();
         assert_eq!(total_len, data.len() as u64);
-        
+
         // Verify chunks are within reasonable bounds
         // Note: Simplified CDC implementation may produce chunks slightly outside
         // ideal bounds, but should still be reasonable
@@ -387,11 +431,9 @@ mod tests {
             assert!(chunk.len > 0);
             assert!(chunk.len <= 64); // Allow some flexibility for simplified implementation
         }
-        
+
         // Verify that most chunks are within expected range
-        let chunks_in_range = chunks.iter()
-            .filter(|c| c.len >= 8 && c.len <= 32)
-            .count();
+        let chunks_in_range = chunks.iter().filter(|c| c.len >= 8 && c.len <= 32).count();
         // At least 50% of chunks should be in expected range
         if chunks.len() > 1 {
             assert!(chunks_in_range as f64 / chunks.len() as f64 >= 0.5);
@@ -417,7 +459,8 @@ mod tests {
     fn test_build_bytestream_manifest_single_chunk() {
         let data = b"hello";
         let chunks = chunk_by_fixed(data, 100).unwrap(); // Single chunk
-        let manifest = build_bytestream_manifest(&chunks, ChunkScheme::Fixed { size: 100 }).unwrap();
+        let manifest =
+            build_bytestream_manifest(&chunks, ChunkScheme::Fixed { size: 100 }).unwrap();
 
         assert!(manifest.manifest_root.starts_with("sha256:"));
         assert_eq!(manifest.manifest_len, 5);
@@ -450,11 +493,12 @@ mod tests {
         let data = b"deterministic test data";
         let chunks1 = chunk_by_fixed(data, 8).unwrap();
         let chunks2 = chunk_by_fixed(data, 8).unwrap();
-        let manifest1 = build_bytestream_manifest(&chunks1, ChunkScheme::Fixed { size: 8 }).unwrap();
-        let manifest2 = build_bytestream_manifest(&chunks2, ChunkScheme::Fixed { size: 8 }).unwrap();
+        let manifest1 =
+            build_bytestream_manifest(&chunks1, ChunkScheme::Fixed { size: 8 }).unwrap();
+        let manifest2 =
+            build_bytestream_manifest(&chunks2, ChunkScheme::Fixed { size: 8 }).unwrap();
 
         assert_eq!(manifest1.manifest_root, manifest2.manifest_root);
         assert_eq!(manifest1.manifest_len, manifest2.manifest_len);
     }
 }
-

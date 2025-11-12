@@ -3,8 +3,8 @@
 //! This test ensures that receipt structures can be encoded to CBOR
 //! deterministically and that CBOR encoding doesn't break existing receipt validation.
 
-use northroot_receipts::*;
 use northroot_receipts::adapters::json;
+use northroot_receipts::*;
 use std::fs;
 
 fn load_vector(path: &str) -> Result<Receipt, Box<dyn std::error::Error>> {
@@ -87,7 +87,10 @@ fn test_receipt_cbor_does_not_break_json_validation() {
 
     // Hash computation should still work (now using CBOR canonicalization)
     let computed_hash = receipt.compute_hash().unwrap();
-    assert_eq!(computed_hash, receipt.hash, "Hash should match computed value");
+    assert_eq!(
+        computed_hash, receipt.hash,
+        "Hash should match computed value"
+    );
 }
 
 #[test]

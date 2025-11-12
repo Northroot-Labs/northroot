@@ -74,7 +74,7 @@ pub fn compute_method_shape_hash_from_code(
 ) -> Result<String, MethodShapeError> {
     // Normalize code hash (remove "sha256:" prefix if present)
     let code_hash_hex = code_hash.strip_prefix("sha256:").unwrap_or(code_hash);
-    
+
     // Validate hex format
     if code_hash_hex.len() != 64 || !code_hash_hex.chars().all(|c| c.is_ascii_hexdigit()) {
         return Err(MethodShapeError::InvalidHashFormat(format!(
@@ -183,9 +183,7 @@ pub fn compute_method_shape_root_from_payload(
 ) -> Result<String, MethodShapeError> {
     // The method shape root is the root_multiset
     // Validate format
-    if !payload.root_multiset.starts_with("sha256:")
-        || payload.root_multiset.len() != 71
-    {
+    if !payload.root_multiset.starts_with("sha256:") || payload.root_multiset.len() != 71 {
         return Err(MethodShapeError::InvalidHashFormat(format!(
             "Invalid root_multiset format: {}",
             payload.root_multiset
@@ -228,8 +226,9 @@ mod tests {
         let hash = compute_method_shape_hash_from_signature(
             "normalize_ledger",
             &["Vec<Transaction>"],
-            "Ledger"
-        ).unwrap();
+            "Ledger",
+        )
+        .unwrap();
         assert!(hash.starts_with("sha256:"));
         assert_eq!(hash.len(), 71);
     }
@@ -242,31 +241,19 @@ mod tests {
 
     #[test]
     fn test_compute_method_shape_hash_deterministic() {
-        let hash1 = compute_method_shape_hash_from_signature(
-            "test_func",
-            &["i32", "String"],
-            "bool"
-        ).unwrap();
-        let hash2 = compute_method_shape_hash_from_signature(
-            "test_func",
-            &["i32", "String"],
-            "bool"
-        ).unwrap();
+        let hash1 =
+            compute_method_shape_hash_from_signature("test_func", &["i32", "String"], "bool")
+                .unwrap();
+        let hash2 =
+            compute_method_shape_hash_from_signature("test_func", &["i32", "String"], "bool")
+                .unwrap();
         assert_eq!(hash1, hash2);
     }
 
     #[test]
     fn test_compute_method_shape_hash_different_signatures() {
-        let hash1 = compute_method_shape_hash_from_signature(
-            "func1",
-            &["i32"],
-            "bool"
-        ).unwrap();
-        let hash2 = compute_method_shape_hash_from_signature(
-            "func2",
-            &["i32"],
-            "bool"
-        ).unwrap();
+        let hash1 = compute_method_shape_hash_from_signature("func1", &["i32"], "bool").unwrap();
+        let hash2 = compute_method_shape_hash_from_signature("func2", &["i32"], "bool").unwrap();
         assert_ne!(hash1, hash2);
     }
 
@@ -275,11 +262,12 @@ mod tests {
         let payload = MethodShapePayload {
             nodes: vec![],
             edges: None,
-            root_multiset: "sha256:0000000000000000000000000000000000000000000000000000000000000000".to_string(),
+            root_multiset:
+                "sha256:0000000000000000000000000000000000000000000000000000000000000000"
+                    .to_string(),
             dag_hash: None,
         };
         let root = compute_method_shape_root_from_payload(&payload).unwrap();
         assert_eq!(root, payload.root_multiset);
     }
 }
-

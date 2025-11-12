@@ -1,0 +1,17 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0010-P02
+adr_id: ADR-0010
+sequence: 2
+title: Python SDK Development with PyO3 Bindings
+status: implemented
+summary: Develop Python SDK with PyO3 bindings to Rust engine, including high-level Python API with decorator, context manager, and operator patterns. Core bindings for delta compute, shapes, and receipts are complete.
+proposed_at: "2025-11-12T08:00:00Z"
+decided_at: "2025-11-12T08:00:00Z"
+decision_drivers:
+  - Developer ergonomics - Python provides better DX than low-level Rust APIs
+  - Faster adoption - Python ecosystem is larger and more accessible
+  - Launch readiness - Enables meaningful adoption at v0.1.0 launch
+  - User base - Targets larger Python developer community
+implemented_at: '2025-11-12T13:00:00Z'
+implemented_in: 0.1.0
+implementation_commit: 9a254283a4c1d1b41b52ca3a9e89c675d2cc3679

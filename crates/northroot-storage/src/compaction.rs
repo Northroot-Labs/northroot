@@ -219,4 +219,3 @@ mod tests {
         assert_eq!(info.tier_set_at, 1234567890);
     }
 }
-

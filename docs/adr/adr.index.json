@@ -1,7 +1,7 @@
 {
   "$schema": "./adr.index.schema.json",
   "version": "0.3",
-  "generated_at": "2025-11-12T07:57:26Z",
+  "generated_at": "2025-11-12T18:18:53Z",
   "adrs": [
     {
       "adr_id": "ADR-0001",
@@ -213,6 +213,54 @@
         }
       ],
       "realized_at": "2025-11-12T07:41:08Z"
+    },
+    {
+      "adr_id": "ADR-0010",
+      "slug": "v010-release-readiness-evaluation",
+      "title": "v0.1.0 Release Readiness Evaluation",
+      "status": "proposed",
+      "tags": [
+        "release",
+        "evaluation",
+        "readiness",
+        "v0.1.0",
+        "quality-assurance"
+      ],
+      "domain": "release",
+      "created_at": "2025-11-12T08:00:00Z",
+      "phases": [
+        {
+          "phase_id": "ADR-0010-P01",
+          "sequence": 1,
+          "status": "implemented",
+          "timestamp": "2025-11-12T08:00:00Z",
+          "implemented_at": "2025-11-12T12:00:00Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
+        },
+        {
+          "phase_id": "ADR-0010-P02",
+          "sequence": 2,
+          "status": "implemented",
+          "timestamp": "2025-11-12T08:00:00Z",
+          "implemented_at": "2025-11-12T13:00:00Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
+        },
+        {
+          "phase_id": "ADR-0010-P03",
+          "sequence": 3,
+          "status": "proposed",
+          "timestamp": "2025-11-12T08:00:00Z"
+        },
+        {
+          "phase_id": "ADR-0010-P04",
+          "sequence": 4,
+          "status": "proposed",
+          "timestamp": "2025-11-12T08:00:00Z"
+        }
+      ],
+      "realized_at": "2025-11-12T12:00:00Z"
     }
   ]
 }
