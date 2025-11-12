@@ -3,7 +3,7 @@ phase_id: ADR-0010-P04
 adr_id: ADR-0010
 sequence: 4
 title: Real End-to-End Example with Actual Data Processing
-status: proposed
+status: implemented
 summary: Create a working end-to-end example with real data processing (not simulation), demonstrating storage persistence, reuse decisions, and receipt generation.
 proposed_at: "2025-11-12T08:00:00Z"
 decision_drivers:

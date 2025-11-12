@@ -1,0 +1,7 @@
+account_id,service,region,resource_type,cost_usd,usage_units
+acct1,s3,us-east-1,bucket,125.50,1000
+acct2,ec2,us-west-2,instance,89.30,200
+acct3,rds,eu-west-1,db,156.75,50
+acct4,lambda,ap-southeast-1,function,67.40,600
+acct1,ec2,us-east-1,instance,234.60,400
+

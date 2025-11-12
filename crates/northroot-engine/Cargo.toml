@@ -39,8 +39,10 @@ base64 = "0.22"
 bs58 = "0.5"
 ciborium = "0.2"
 thiserror = "1.0"
+chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
 serde_json = { workspace = true }
 northroot-storage = { path = "../northroot-storage" }
 tempfile = "3.10"
+proptest = "1.4"

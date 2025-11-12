@@ -184,8 +184,17 @@ impl SqliteStore {
 
     /// Extract PAC from receipt (from ExecutionPayload if present, otherwise compute default).
     fn extract_pac(receipt: &Receipt) -> [u8; 32] {
-        // TODO: Extract from ExecutionPayload.pac when Phase 3 is complete
-        // For now, use a default PAC based on RID
+        // Extract from ExecutionPayload.pac if available
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            if let Some(pac_vec) = &exec.pac {
+                if pac_vec.len() == 32 {
+                    let mut pac = [0u8; 32];
+                    pac.copy_from_slice(pac_vec);
+                    return pac;
+                }
+            }
+        }
+        // Fallback: use a default PAC based on RID
         let mut pac = [0u8; 32];
         let rid_bytes = receipt.rid.as_bytes();
         pac[..16].copy_from_slice(&rid_bytes[..16]);
@@ -204,21 +213,30 @@ impl SqliteStore {
     }
 
     /// Extract minhash_signature from receipt (from ExecutionPayload if present).
-    fn extract_minhash_signature(_receipt: &Receipt) -> Option<Vec<u8>> {
-        // TODO: Extract from ExecutionPayload.minhash_signature when Phase 3 is complete
-        None
+    fn extract_minhash_signature(receipt: &Receipt) -> Option<Vec<u8>> {
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            exec.minhash_signature.clone()
+        } else {
+            None
+        }
     }
 
     /// Extract hll_cardinality from receipt (from ExecutionPayload if present).
-    fn extract_hll_cardinality(_receipt: &Receipt) -> Option<u64> {
-        // TODO: Extract from ExecutionPayload.hll_cardinality when Phase 3 is complete
-        None
+    fn extract_hll_cardinality(receipt: &Receipt) -> Option<u64> {
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            exec.hll_cardinality
+        } else {
+            None
+        }
     }
 
     /// Extract chunk_manifest_hash from receipt (from ExecutionPayload if present).
-    fn extract_chunk_manifest_hash(_receipt: &Receipt) -> Option<[u8; 32]> {
-        // TODO: Extract from ExecutionPayload.chunk_manifest_hash when Phase 3 is complete
-        None
+    fn extract_chunk_manifest_hash(receipt: &Receipt) -> Option<[u8; 32]> {
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            exec.chunk_manifest_hash
+        } else {
+            None
+        }
     }
 
     /// Extract chunk_manifest_size_bytes from receipt (from ExecutionPayload if present).
@@ -228,15 +246,21 @@ impl SqliteStore {
     }
 
     /// Extract merkle_root from receipt (from ExecutionPayload if present).
-    fn extract_merkle_root(_receipt: &Receipt) -> Option<[u8; 32]> {
-        // TODO: Extract from ExecutionPayload.merkle_root when Phase 3 is complete
-        None
+    fn extract_merkle_root(receipt: &Receipt) -> Option<[u8; 32]> {
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            exec.merkle_root
+        } else {
+            None
+        }
     }
 
     /// Extract prev_execution_rid from receipt (from ExecutionPayload if present).
-    fn extract_prev_execution_rid(_receipt: &Receipt) -> Option<Uuid> {
-        // TODO: Extract from ExecutionPayload.prev_execution_rid when Phase 3 is complete
-        None
+    fn extract_prev_execution_rid(receipt: &Receipt) -> Option<Uuid> {
+        if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
+            exec.prev_execution_rid
+        } else {
+            None
+        }
     }
 
     /// Extract output_digest from receipt (from ExecutionPayload if present).
@@ -585,9 +609,11 @@ impl ReceiptStore for SqliteStore {
     fn get_previous_execution(
         &self,
         pac: &[u8; 32],
-        trace_id: &str,
+        trace_id: &str, // Not used in query, but kept for API compatibility
     ) -> Result<Option<Receipt>, StorageError> {
-        // Query for most recent execution receipt with matching PAC and trace_id
+        // Query for most recent execution receipt with matching PAC
+        // Exclude the current execution by requiring created_at < current time
+        // This ensures we get the previous execution, not the current one
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(
             "SELECT canonical_cbor FROM receipts 
@@ -614,16 +640,10 @@ impl ReceiptStore for SqliteStore {
 
         match rows.next() {
             Some(Ok(receipt)) => {
-                // Verify trace_id matches
-                if let northroot_receipts::Payload::Execution(exec) = &receipt.payload {
-                    if exec.trace_id == trace_id {
-                        Ok(Some(receipt))
-                    } else {
-                        Ok(None)
-                    }
-                } else {
-                    Ok(None)
-                }
+                // Return the most recent execution with matching PAC
+                // Note: trace_id parameter is kept for API compatibility but not used in filtering
+                // This allows finding previous executions regardless of trace_id
+                Ok(Some(receipt))
             }
             Some(Err(e)) => Err(StorageError::SerializationError(format!(
                 "Failed to deserialize receipt: {}",

@@ -250,14 +250,18 @@
         {
           "phase_id": "ADR-0010-P03",
           "sequence": 3,
-          "status": "proposed",
-          "timestamp": "2025-11-12T08:00:00Z"
+          "status": "implemented",
+          "timestamp": "2025-11-12T08:00:00Z",
+          "implemented_at": "2025-11-12T18:30:05Z",
+          "implemented_in": "0.1.0"
         },
         {
           "phase_id": "ADR-0010-P04",
           "sequence": 4,
-          "status": "proposed",
-          "timestamp": "2025-11-12T08:00:00Z"
+          "status": "implemented",
+          "timestamp": "2025-11-12T08:00:00Z",
+          "implemented_at": "2025-11-12T18:51:43Z",
+          "implemented_in": "0.1.0"
         }
       ],
       "realized_at": "2025-11-12T12:00:00Z"
