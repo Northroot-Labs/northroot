@@ -5,15 +5,19 @@
 
 pub mod chunking;
 pub mod decision;
+pub mod manifest_root;
 pub mod manifest_summary;
 pub mod overlap;
 pub mod pac;
+pub mod reuse;
 
 pub use chunking::*;
 pub use decision::*;
+pub use manifest_root::*;
 pub use manifest_summary::*;
 pub use overlap::*;
 pub use pac::*;
+pub use reuse::*;
 
 use northroot_policy::{extract_cost_model, load_policy, CostModel, PolicyError};
 

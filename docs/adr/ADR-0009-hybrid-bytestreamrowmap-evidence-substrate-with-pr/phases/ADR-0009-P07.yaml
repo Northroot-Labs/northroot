@@ -3,6 +3,10 @@ phase_id: ADR-0009-P07
 adr_id: ADR-0009
 sequence: 7
 title: Reuse reconciliation flow
-status: proposed
+status: implemented
 summary: Implement ReuseReconciliation + check_reuse() helpers with manifest summaries.
 proposed_at: '2025-11-12T06:41:23Z'
+decided_at: '2025-11-12T06:41:23Z'
+implemented_at: '2025-11-12T07:49:49Z'
+implemented_in: 0.1.0
+implementation_commit: 864b54a55fb142872fc45bb44afea88efdb53ae8

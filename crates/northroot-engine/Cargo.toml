@@ -28,6 +28,7 @@ path = "../../examples/analytics_dashboard/main.rs"
 northroot-receipts = { path = "../northroot-receipts" }
 northroot-commons = { path = "../northroot-commons" }
 northroot-policy = { path = "../northroot-policy" }
+northroot-storage = { path = "../northroot-storage" }
 serde = { workspace = true }
 serde_json = { workspace = true }
 uuid = { workspace = true }
