@@ -3,10 +3,13 @@ phase_id: ADR-0011-P02
 adr_id: ADR-0011
 sequence: 2
 title: Overlap Index Sketch Generation
-status: accepted
+status: implemented
 summary: Add MinHash sketch generation to manifests for fast-path reuse decisions without fetching full chunk sets. HIGH PRIORITY - Depends on P01, blocks P04-P05.
 proposed_at: "2025-11-12T19:00:00Z"
 decided_at: "2025-11-12T21:10:00Z"
+implemented_at: "2025-11-12T21:14:23Z"
+implemented_in: "0.1.0"
+implementation_commit: "a1f61f168cfbaaf8570abe8ff86bba7f1a51c38d"
 decision_drivers:
   - "Latency: Fast reuse decisions from manifest sketch alone"
   - "Efficiency: Avoid CAS fetch for most overlap checks"
