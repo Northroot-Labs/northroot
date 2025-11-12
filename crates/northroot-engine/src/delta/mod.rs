@@ -4,17 +4,21 @@
 //! making reuse decisions, and managing chunking strategies.
 
 pub mod chunking;
+pub mod data_shape;
 pub mod decision;
 pub mod manifest_root;
 pub mod manifest_summary;
+pub mod method_shape;
 pub mod overlap;
 pub mod pac;
 pub mod reuse;
 
 pub use chunking::*;
+pub use data_shape::*;
 pub use decision::*;
 pub use manifest_root::*;
 pub use manifest_summary::*;
+pub use method_shape::*;
 pub use overlap::*;
 pub use pac::*;
 pub use reuse::*;

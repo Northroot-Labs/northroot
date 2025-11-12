@@ -43,3 +43,4 @@ thiserror = "1.0"
 [dev-dependencies]
 serde_json = { workspace = true }
 northroot-storage = { path = "../northroot-storage" }
+tempfile = "3.10"

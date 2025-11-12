@@ -1,7 +1,7 @@
 {
   "$schema": "./adr.index.schema.json",
   "version": "0.3",
-  "generated_at": "2025-11-12T07:49:49Z",
+  "generated_at": "2025-11-12T07:57:26Z",
   "adrs": [
     {
       "adr_id": "ADR-0001",
@@ -205,8 +205,11 @@
         {
           "phase_id": "ADR-0009-P08",
           "sequence": 8,
-          "status": "proposed",
-          "timestamp": "2025-11-12T06:41:23Z"
+          "status": "implemented",
+          "timestamp": "2025-11-12T06:41:23Z",
+          "implemented_at": "2025-11-12T07:57:26Z",
+          "implemented_in": "0.1.0",
+          "implementation_commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
         }
       ],
       "realized_at": "2025-11-12T07:41:08Z"
