@@ -4,9 +4,11 @@
 //! trace IDs, span commitments, and computing execution roots.
 
 pub mod builder;
-pub mod merkle_row_map;
 pub mod state;
 
+// MerkleRowMap moved to rowmap.rs module (RFC-6962 domain separation)
+// Re-export for backward compatibility
+pub use crate::rowmap::MerkleRowMap;
+
 pub use builder::*;
-pub use merkle_row_map::*;
 pub use state::*;

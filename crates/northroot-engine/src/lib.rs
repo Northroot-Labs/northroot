@@ -24,10 +24,12 @@
 //! **Policy re-exports**: This crate re-exports policy validation functions for convenience,
 //! but policy validation lives in `northroot-policy` to maintain clear boundaries.
 
+pub mod cas;
 pub mod commitments;
 pub mod composition;
 pub mod delta;
 pub mod execution;
+pub mod rowmap;
 pub mod shapes;
 pub mod signature;
 pub mod strategies;
@@ -62,6 +64,15 @@ pub use delta::{
 pub use execution::{
     compute_execution_roots, generate_trace_id, validate_method_ref, ExecutionReceiptBuilder,
     MerkleRowMap,
+};
+
+// Re-export rowmap module items
+pub use rowmap::{DeltaUpdate, MerkleFrontier, RowMapError, normalize_row};
+
+// Re-export cas module items
+pub use cas::{
+    build_bytestream_manifest, build_manifest_from_data, chunk_by_cdc, chunk_by_fixed,
+    ByteStreamManifest, CasError, Chunk,
 };
 
 // Re-export shapes module items

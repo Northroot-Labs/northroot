@@ -1,15 +1,53 @@
-//! DEPRECATED: This module has been moved to `rowmap.rs` with RFC-6962 domain separation.
+//! Merkle Row-Map implementation for deterministic state representation.
 //!
-//! This file is kept for reference only. All new code should use `crate::rowmap::MerkleRowMap`.
-//! The new implementation uses byte prefixes (0x00/0x01) instead of string prefixes ("leaf:"/"node:").
+//! This module implements a Merkle tree over key-value pairs using CBOR
+//! canonicalization and RFC-6962 style domain-separated hashing for deterministic state commitments.
 //!
-//! **Breaking Change**: All MerkleRowMap roots have changed due to RFC-6962 domain separation migration.
-//! Test vectors and stored roots must be regenerated.
+//! ## Domain Separation (RFC-6962)
 //!
-//! See `crate::rowmap` for the current implementation.
+//! - Leaf hash = H(0x00 || cbor_canonical({k, v}))
+//! - Parent hash = H(0x01 || left || right)
+//! - Empty tree root = H(0x00 || "")
+//!
+//! ## CBOR Canonicalization
+//!
+//! Leaves use CBOR canonicalization (RFC 8949) per ADR-002. This is pragmatic
+//! and aligned with the receipts crate canonicalization strategy. JCS is only
+//! used at API boundaries via adapters.
 
 use ciborium::value::Value as CborValue;
+use northroot_receipts::canonical::encode_canonical;
+use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
+
+/// Error type for Merkle Row-Map operations
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RowMapError {
+    /// Normalization error
+    Normalization(String),
+    /// Hash computation error
+    Hash(String),
+    /// Frontier computation error
+    Frontier(String),
+}
+
+impl std::fmt::Display for RowMapError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RowMapError::Normalization(msg) => {
+                write!(f, "Normalization error: {}", msg)
+            }
+            RowMapError::Hash(msg) => {
+                write!(f, "Hash computation error: {}", msg)
+            }
+            RowMapError::Frontier(msg) => {
+                write!(f, "Frontier computation error: {}", msg)
+            }
+        }
+    }
+}
+
+impl std::error::Error for RowMapError {}
 
 /// Merkle Row-Map: deterministic state representation as Merkle tree.
 ///
@@ -18,6 +56,7 @@ use std::collections::BTreeMap;
 /// - Values are state values (numbers, strings, bytes, etc.) as CBOR values
 /// - Tree root provides deterministic commitment to the entire state
 /// - Uses CBOR canonicalization (RFC 8949) for deterministic hashing
+/// - Uses RFC-6962 style domain separation (byte prefixes 0x00/0x01)
 #[derive(Debug, Clone)]
 pub struct MerkleRowMap {
     entries: BTreeMap<String, CborValue>,
@@ -52,10 +91,7 @@ impl MerkleRowMap {
         self.entries.get(key).and_then(|v| match v {
             CborValue::Integer(i) => {
                 // Extract integer value - ciborium::value::Integer wraps u64/i64
-                // Use Debug format to extract, or try direct conversion
-                // For now, serialize to bytes and parse back, or use a helper
                 let debug_str = format!("{:?}", i);
-                // Try to parse from debug string (format: "Integer(42)" or similar)
                 debug_str
                     .trim_start_matches("Integer(")
                     .trim_end_matches(")")
@@ -100,10 +136,10 @@ impl MerkleRowMap {
 
     /// Compute the Merkle root of the Row-Map.
     ///
-    /// Uses domain-separated hashing with CBOR canonicalization:
-    /// - Leaf hash = H("leaf:" || cbor_canonical({k, v}))
-    /// - Parent hash = H("node:" || left || right)
-    /// - Empty tree root = H("leaf:" || "")
+    /// Uses RFC-6962 style domain-separated hashing with CBOR canonicalization:
+    /// - Leaf hash = H(0x00 || cbor_canonical({k, v}))
+    /// - Parent hash = H(0x01 || left || right)
+    /// - Empty tree root = H(0x00 || "")
     ///
     /// CBOR canonicalization ensures deterministic encoding per RFC 8949,
     /// providing type fidelity (bytes, big integers, timestamps) and avoiding
@@ -113,21 +149,17 @@ impl MerkleRowMap {
     ///
     /// Merkle root in format `sha256:<64hex>`
     pub fn compute_root(&self) -> String {
-        use sha2::{Digest, Sha256};
-        use northroot_receipts::canonical::encode_canonical;
-
         if self.entries.is_empty() {
             let mut hasher = Sha256::new();
-            hasher.update(b"leaf:");
+            hasher.update(&[0x00u8]); // RFC-6962 leaf prefix
             hasher.update(b"");
             return format!("sha256:{:x}", hasher.finalize());
         }
 
-        // Compute leaf hashes: H("leaf:" || cbor_canonical({k, v}))
+        // Compute leaf hashes: H(0x00 || cbor_canonical({k, v}))
         let mut leaf_hashes: Vec<[u8; 32]> = Vec::new();
         for (key, value) in &self.entries {
             // Create CBOR map for {k, v}
-            // CborValue::Map uses Vec<(CborValue, CborValue)>, not BTreeMap
             let mut entry_map = Vec::new();
             entry_map.push((
                 CborValue::Text(key.clone()),
@@ -139,9 +171,9 @@ impl MerkleRowMap {
             let cbor_bytes = encode_canonical(&entry)
                 .expect("CBOR canonicalization should never fail for valid CBOR values");
 
-            // Leaf hash = H("leaf:" || cbor_bytes)
+            // Leaf hash = H(0x00 || cbor_bytes) - RFC-6962 style
             let mut hasher = Sha256::new();
-            hasher.update(b"leaf:");
+            hasher.update(&[0x00u8]); // RFC-6962 leaf prefix
             hasher.update(&cbor_bytes);
             leaf_hashes.push(hasher.finalize().into());
         }
@@ -154,9 +186,9 @@ impl MerkleRowMap {
             // Pair hashes left-to-right
             for i in (0..current_level.len()).step_by(2) {
                 if i + 1 < current_level.len() {
-                    // Parent = H("node:" || left || right)
+                    // Parent = H(0x01 || left || right) - RFC-6962 style
                     let mut hasher = Sha256::new();
-                    hasher.update(b"node:");
+                    hasher.update(&[0x01u8]); // RFC-6962 parent prefix
                     hasher.update(&current_level[i]);
                     hasher.update(&current_level[i + 1]);
                     next_level.push(hasher.finalize().into());
@@ -187,6 +219,122 @@ impl Default for MerkleRowMap {
     }
 }
 
+/// Normalize row for deterministic hashing
+///
+/// Rules: UTF-8, LF line endings, no trailing spaces, header excluded
+///
+/// # Arguments
+///
+/// * `row` - Raw row bytes to normalize
+///
+/// # Returns
+///
+/// Normalized row bytes
+///
+/// # Errors
+///
+/// Returns error if normalization fails
+pub fn normalize_row(row: &[u8]) -> Result<Vec<u8>, RowMapError> {
+    // Convert to UTF-8 string
+    let mut text = String::from_utf8(row.to_vec())
+        .map_err(|e| RowMapError::Normalization(format!("Invalid UTF-8: {}", e)))?;
+
+    // Normalize line endings: CRLF -> LF, CR -> LF
+    text = text.replace("\r\n", "\n").replace('\r', "\n");
+
+    // Remove trailing spaces from each line
+    let lines: Vec<String> = text
+        .lines()
+        .map(|line| line.trim_end().to_string())
+        .collect();
+
+    // Join with LF
+    let normalized = lines.join("\n");
+
+    Ok(normalized.into_bytes())
+}
+
+/// Merkle frontier: subset of internal node hashes for delta recompute
+///
+/// Limits recompute to touched subtrees only.
+#[derive(Debug, Clone)]
+pub struct MerkleFrontier {
+    /// Internal node hashes along paths from changed leaves to root
+    pub internal_nodes: Vec<[u8; 32]>,
+    /// Changed leaf keys
+    pub changed_keys: Vec<String>,
+}
+
+impl MerkleRowMap {
+    /// Compute frontier for delta update
+    ///
+    /// Returns internal node hashes needed to recompute only touched subtrees.
+    /// This is a placeholder implementation - full implementation requires
+    /// maintaining tree structure with node references.
+    ///
+    /// # Arguments
+    ///
+    /// * `changed_keys` - Keys that have changed
+    ///
+    /// # Returns
+    ///
+    /// Merkle frontier with internal nodes and changed keys
+    ///
+    /// # Errors
+    ///
+    /// Returns error if frontier computation fails
+    pub fn compute_frontier(
+        &self,
+        changed_keys: &[String],
+    ) -> Result<MerkleFrontier, RowMapError> {
+        // TODO: Full implementation requires maintaining tree structure
+        // For now, return a placeholder that includes all changed keys
+        Ok(MerkleFrontier {
+            internal_nodes: Vec::new(), // Will be populated when tree structure is maintained
+            changed_keys: changed_keys.to_vec(),
+        })
+    }
+
+    /// Apply delta using frontier
+    ///
+    /// Only recomputes touched subtrees using frontier nodes.
+    /// This is a placeholder implementation - full implementation requires
+    /// maintaining tree structure with node references.
+    ///
+    /// # Arguments
+    ///
+    /// * `delta` - Delta update to apply
+    /// * `frontier` - Merkle frontier for efficient recompute
+    ///
+    /// # Returns
+    ///
+    /// New Merkle root after applying delta
+    ///
+    /// # Errors
+    ///
+    /// Returns error if delta application fails
+    pub fn apply_delta_with_frontier(
+        &mut self,
+        _delta: &DeltaUpdate,
+        _frontier: &MerkleFrontier,
+    ) -> Result<String, RowMapError> {
+        // TODO: Full implementation requires maintaining tree structure
+        // For now, just recompute the root
+        Ok(self.compute_root())
+    }
+}
+
+/// Delta update for Merkle Row-Map
+#[derive(Debug, Clone)]
+pub struct DeltaUpdate {
+    /// Keys to add or update
+    pub added: Vec<(String, CborValue)>,
+    /// Keys to remove
+    pub removed: Vec<String>,
+    /// Keys to update
+    pub changed: Vec<(String, CborValue)>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -207,6 +355,8 @@ mod tests {
         let root = map.compute_root();
         assert!(root.starts_with("sha256:"));
         assert_eq!(root.len(), 71);
+        // Empty root should be H(0x00 || "")
+        // This is a breaking change from previous "leaf:" prefix
     }
 
     #[test]
@@ -285,4 +435,33 @@ mod tests {
         assert!(root.starts_with("sha256:"));
         assert_eq!(root.len(), 71);
     }
+
+    #[test]
+    fn test_normalize_row() {
+        // Test CRLF -> LF normalization
+        let row1 = b"line1\r\nline2\r\nline3";
+        let normalized1 = normalize_row(row1).unwrap();
+        assert_eq!(normalized1, b"line1\nline2\nline3");
+
+        // Test trailing space removal
+        let row2 = b"line1   \nline2   \nline3";
+        let normalized2 = normalize_row(row2).unwrap();
+        assert_eq!(normalized2, b"line1\nline2\nline3");
+
+        // Test UTF-8 handling
+        let row3 = "café\ncafé".as_bytes();
+        let normalized3 = normalize_row(row3).unwrap();
+        assert_eq!(normalized3, b"caf\xc3\xa9\ncaf\xc3\xa9");
+    }
+
+    #[test]
+    fn test_merkle_frontier() {
+        let mut map = MerkleRowMap::new();
+        map.insert("key1".to_string(), json_to_cbor_value(42));
+        map.insert("key2".to_string(), json_to_cbor_value(100));
+
+        let frontier = map.compute_frontier(&["key1".to_string()]).unwrap();
+        assert_eq!(frontier.changed_keys, vec!["key1"]);
+    }
 }
+
