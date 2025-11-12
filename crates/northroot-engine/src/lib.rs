@@ -74,7 +74,8 @@ pub use rowmap::{normalize_row, DeltaUpdate, MerkleFrontier, RowMapError};
 // Re-export cas module items
 pub use cas::{
     build_bytestream_manifest, build_manifest_from_data, chunk_by_cdc, chunk_by_fixed,
-    deserialize_manifest_from_cbor, serialize_manifest_to_cbor, ByteStreamManifest, CasError, Chunk,
+    deserialize_manifest_from_cbor, estimate_jaccard_from_indices, serialize_manifest_to_cbor,
+    BloomParams, ByteStreamManifest, CasError, Chunk, ExternalSetRef, OverlapIndex, SketchData,
 };
 
 // Re-export resolver module items
