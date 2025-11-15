@@ -15,6 +15,9 @@
 
 use pyo3::prelude::*;
 
+/// Client module (thin client wrapper)
+mod client;
+
 /// Delta compute module
 mod delta;
 
@@ -33,7 +36,14 @@ fn northroot_sdk(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Register error classes
     errors::register_errors(m)?;
 
-    // Register submodules
+    // Register Client class
+    m.add_class::<client::Client>()?;
+
+    // Register module-level functions for ergonomic usage
+    m.add_function(pyo3::wrap_pyfunction!(client::record_work_py, m)?)?;
+    m.add_function(pyo3::wrap_pyfunction!(client::verify_receipt_py, m)?)?;
+
+    // Register submodules (for advanced usage)
     delta::register_module(m)?;
     receipts::register_module(m)?;
     shapes::register_module(m)?;

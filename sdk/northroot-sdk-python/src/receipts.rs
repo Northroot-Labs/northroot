@@ -137,7 +137,7 @@ fn receipt_from_json_py(json_str: String) -> PyResult<PyReceipt> {
 ///     ... )
 #[pyfunction]
 #[pyo3(signature = (workload_id, payload, tags = None, trace_id = None, parent_id = None))]
-fn record_work_py(
+pub fn record_work_py(
     workload_id: String,
     payload: &Bound<'_, PyDict>,
     tags: Option<Vec<String>>,
@@ -190,7 +190,7 @@ fn record_work_py(
 ///     >>> if is_valid:
 ///     ...     print(f"Receipt {receipt.get_rid()} is valid")
 #[pyfunction]
-fn verify_receipt_py(receipt: &PyReceipt) -> PyResult<bool> {
+pub fn verify_receipt_py(receipt: &PyReceipt) -> PyResult<bool> {
     verify_receipt_rust(&receipt.receipt).map_err(api_error_to_python)
 }
 
