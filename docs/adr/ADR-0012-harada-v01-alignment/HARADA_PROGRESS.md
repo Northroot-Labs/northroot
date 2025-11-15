@@ -7,7 +7,7 @@
 ## Implementation Provenance
 
 **Latest Commit:** `e1c46853875535f4a4c4cfdce1d2233fdfa84bbc`  
-**Commit Date:** 2025-01-17  
+**Commit Date:** 2025-11-15 
 **Commit Message:** `feat(sdk): implement minimal API (P2-T3) and quickstart (P2-T7)`
 
 This commit implements:
