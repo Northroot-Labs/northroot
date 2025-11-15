@@ -128,6 +128,10 @@ impl Client {
         // Delegate to module-level function
         verify_receipt_py(receipt)
     }
+    
+    // Note: Async methods (record_work_async, verify_receipt_async) are implemented
+    // in Python (northroot/__init__.py) via monkey-patching. This keeps the Rust code
+    // simple and avoids complex type conversions.
 }
 
 /// Module-level function: Record a unit of work.

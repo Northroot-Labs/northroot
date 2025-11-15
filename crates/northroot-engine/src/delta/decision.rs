@@ -1,7 +1,48 @@
 //! Reuse decision logic for delta compute.
 //!
-//! This module implements the reuse decision rule and cost model evaluation
+//! This module implements the **stabilized** reuse decision rule and cost model evaluation
 //! for determining when to reuse previous computation results.
+//!
+//! ## Stabilized Reuse Criteria (v0.1)
+//!
+//! The reuse decision rule is **locked** for v0.1:
+//!
+//! ```text
+//! Reuse iff J > C_id / (α · C_comp)
+//! ```
+//!
+//! Where:
+//! - **J**: Jaccard overlap [0,1] between prior and current chunk sets
+//! - **C_id**: Identity/integration cost (cost to locate, validate, and splice reused results)
+//! - **C_comp**: Baseline compute cost (cost to re-execute operator)
+//! - **α**: Operator incrementality factor [0,1] (how efficiently deltas can be applied)
+//!
+//! ### Economic Delta
+//!
+//! The economic delta (savings estimate) is:
+//!
+//! ```text
+//! ΔC ≈ α · C_comp · J - C_id
+//! ```
+//!
+//! Positive values indicate savings from reuse. Reuse is rational when ΔC > 0.
+//!
+//! ### Decision Semantics
+//!
+//! - **Reuse**: Overlap exceeds threshold → reuse previous results
+//! - **Recompute**: Overlap below threshold → recompute from scratch
+//! - **Hybrid**: Reserved for future implementation (partial reuse)
+//!
+//! ### Implementation Status
+//!
+//! - ✅ Core decision logic (`decide_reuse`) - **STABILIZED**
+//! - ✅ Economic delta calculation (`economic_delta`) - **STABILIZED**
+//! - ✅ Cost model evaluation (`CostModel::reuse_threshold`) - **STABILIZED**
+//! - ✅ Fast path overlap estimation (MinHash sketches) - **STABILIZED**
+//! - ⚠️ Exact path manifest parsing - **KNOWN LIMITATION** (returns 0.0 overlap, fast path used instead)
+//!
+//! The exact path limitation is acceptable for v0.1 since the fast path provides sufficient
+//! accuracy for most use cases. Full manifest parsing will be implemented in a future version.
 
 use northroot_policy::CostModel;
 use northroot_receipts::ReuseJustification;

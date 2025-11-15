@@ -23,14 +23,17 @@ pip install -e .
 
 ### Minimal API (v0.1) - Quick Start
 
-The minimal v0.1 API provides a simple interface for creating and verifying receipts:
+The minimal v0.1 API uses the `Client` class for a simple, consistent interface:
 
 ```python
 from northroot import Client
-import northroot as nr
 
-# Thin client API (recommended) - simple and ergonomic
-receipt = nr.record_work(
+# Create a client (storage is decoupled and optional for v0.1)
+client = Client()
+# client = Client(storage_path="./receipts")  # With filesystem storage (future)
+
+# Record a unit of work and get a verifiable receipt
+receipt = client.record_work(
     workload_id="normalize-prices",
     payload={"input_hash": "sha256:abc...", "output_hash": "sha256:def..."},
     tags=["etl", "batch"],
@@ -42,11 +45,11 @@ print(f"Receipt ID: {receipt.get_rid()}")
 print(f"Hash: {receipt.get_hash()}")
 
 # Verify receipt integrity
-is_valid = nr.verify_receipt(receipt)
+is_valid = client.verify_receipt(receipt)
 print(f"Receipt is valid: {is_valid}")
 
 # Create a DAG: child receipt linked to parent
-child_receipt = nr.record_work(
+child_receipt = client.record_work(
     workload_id="aggregate-totals",
     payload={"input_receipt": receipt.get_rid(), "result": "sum"},
     tags=["etl"],
@@ -54,9 +57,9 @@ child_receipt = nr.record_work(
     parent_id=receipt.get_rid(),   # Parent link
 )
 
-# Or use Client class (storage decoupled and optional)
-client = Client()  # No storage required
-receipt_via_client = client.record_work(...)
+# Async versions are also available
+receipt_async = await client.record_work_async(...)
+is_valid_async = await client.verify_receipt_async(receipt_async)
 ```
 
 See `examples/quickstart.py` for a complete example.

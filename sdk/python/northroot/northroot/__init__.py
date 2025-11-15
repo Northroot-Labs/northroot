@@ -32,70 +32,41 @@ except ImportError:
 
 # Async wrappers using asyncio.to_thread
 import asyncio
-from functools import partial
 
 
-async def record_work_async(workload_id, payload, tags=None, trace_id=None, parent_id=None):
-    """
-    Async version of record_work.
+# Add async methods to Client class via monkey-patching
+# This keeps Rust code simple and avoids complex type conversions
+def _add_async_methods():
+    """Add async methods to Client class"""
+    async def record_work_async(self, workload_id, payload, tags=None, trace_id=None, parent_id=None):
+        """Async version of record_work"""
+        return await asyncio.to_thread(
+            self.record_work,
+            workload_id,
+            payload,
+            tags,
+            trace_id,
+            parent_id,
+        )
     
-    Runs the synchronous record_work in a thread pool to avoid blocking the event loop.
+    async def verify_receipt_async(self, receipt):
+        """Async version of verify_receipt"""
+        return await asyncio.to_thread(self.verify_receipt, receipt)
     
-    Args:
-        workload_id: Identifier for this unit of work (required)
-        payload: Work payload as a dictionary (required)
-        tags: Optional tags for categorization
-        trace_id: Optional trace ID for grouping related work units
-        parent_id: Optional parent receipt ID for DAG composition
-    
-    Returns:
-        A PyReceipt containing the verifiable proof of work.
-    
-    Example:
-        >>> import northroot as nr
-        >>> receipt = await nr.record_work_async(
-        ...     workload_id="normalize-prices",
-        ...     payload={"input": "data"},
-        ...     tags=["etl"]
-        ... )
-    """
-    return await asyncio.to_thread(
-        record_work,
-        workload_id,
-        payload,
-        tags,
-        trace_id,
-        parent_id,
-    )
+    # Monkey-patch the methods onto Client class
+    Client.record_work_async = record_work_async
+    Client.verify_receipt_async = verify_receipt_async
 
-
-async def verify_receipt_async(receipt):
-    """
-    Async version of verify_receipt.
-    
-    Runs the synchronous verify_receipt in a thread pool to avoid blocking the event loop.
-    
-    Args:
-        receipt: The receipt to verify
-    
-    Returns:
-        True if the receipt is valid, False if invalid.
-    
-    Example:
-        >>> import northroot as nr
-        >>> is_valid = await nr.verify_receipt_async(receipt)
-    """
-    return await asyncio.to_thread(verify_receipt, receipt)
+_add_async_methods()
 
 
 __all__ = [
     "Client",
-    "record_work",
-    "verify_receipt",
-    "record_work_async",
-    "verify_receipt_async",
     "receipts",
     "delta",
     "shapes",
 ]
+
+# Module-level functions are kept internal for Client to use
+# Public API is via Client class only
 

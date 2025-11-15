@@ -24,7 +24,7 @@ use uuid::Uuid;
 /// Simple and human-readable, suitable for local development and v0.1 SDK.
 #[derive(Clone)]
 pub struct FilesystemStore {
-    base_path: PathBuf,
+    _base_path: PathBuf, // Reserved for future use (e.g., manifests subdirectory)
     receipts_dir: PathBuf,
     // Mutex for thread-safety (simple implementation)
     _lock: Arc<Mutex<()>>,
@@ -54,7 +54,7 @@ impl FilesystemStore {
         })?;
 
         Ok(Self {
-            base_path,
+            _base_path: base_path,
             receipts_dir,
             _lock: Arc::new(Mutex::new(())),
         })

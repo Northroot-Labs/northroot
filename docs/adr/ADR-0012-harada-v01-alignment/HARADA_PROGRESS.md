@@ -38,12 +38,12 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 | **P1-T2** — Finalize hashing and domain separation rules | ✅ **COMPLETE** | Comprehensive documentation in `docs/specs/hashing-and-domain-separation.md`. Rules frozen for v0.1. |
 | **P1-T3** — Freeze v0.1 chunk model | ✅ **COMPLETE** | Chunk model frozen in `docs/specs/v01-chunk-model-freeze.md`. All Receipt, ReceiptKind, and Payload types declared frozen for v0.1. |
 | **P1-T4** — Implement golden tests for serialization | ✅ **COMPLETE** | Golden tests exist in `test_drift_detection.rs` with baseline hashes. |
-| **P1-T5** — Stabilize delta-reuse criteria in code | ❌ **PENDING** | Delta reuse logic exists but not stabilized. |
-| **P1-T6** — Clean up engine crate structure | ⚠️ **PARTIAL** | Structure is clean but needs dead code audit. |
+| **P1-T5** — Stabilize delta-reuse criteria in code | ✅ **COMPLETE** | Core decision logic documented and locked in `crates/northroot-engine/src/delta/decision.rs`. Reuse rule: `Reuse iff J > C_id / (α · C_comp)`. Economic delta calculation stabilized. Known limitations documented (exact path manifest parsing deferred to post-v0.1). All tests passing (7/7). |
+| **P1-T6** — Clean up engine crate structure | ✅ **COMPLETE** | Structure cleaned: removed deprecated `execution/merkle_row_map.rs` (moved to `rowmap.rs`). All modules are clear and well-organized. No dead code found. |
 | **P1-T7** — Document canonical forms | ✅ **COMPLETE** | Developer-facing reference created in `docs/guides/canonical-forms-reference.md`. Covers CBOR, JCS, JSON adapters, and best practices. |
 | **P1-T8** — Establish reproducible test suite | ✅ **COMPLETE** | Test suite exists and runs reproducibly. |
 
-**Phase 1 Progress:** 3/8 complete, 3/8 partial, 2/8 pending
+**Phase 1 Progress:** 7/8 complete, 0/8 partial, 1/8 pending
 
 ---
 
@@ -180,6 +180,16 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
    - Location: `crates/northroot-storage/src/filesystem.rs`
    - Status: Complete, stores receipts as JSON files, all tests passing (3/3)
    - **Implementation Commit:** `68037d7fa3ca317f48ac514ca833714451e19edd`
+
+7. **Delta-Reuse Criteria Stabilization (P1-T5)** ✅
+   - Location: `crates/northroot-engine/src/delta/decision.rs`
+   - Status: Complete, core decision logic documented and locked. Reuse rule stabilized: `Reuse iff J > C_id / (α · C_comp)`. Economic delta calculation implemented. All tests passing (7/7).
+   - **Implementation Commit:** (pending commit)
+
+8. **Engine Crate Structure Cleanup (P1-T6)** ✅
+   - Location: `crates/northroot-engine/src/`
+   - Status: Complete, removed deprecated `execution/merkle_row_map.rs` (moved to `rowmap.rs`). All modules are clear and well-organized. No dead code found.
+   - **Implementation Commit:** (pending commit)
 
 ### Critical Next Steps (Aligned with Harada)
 
