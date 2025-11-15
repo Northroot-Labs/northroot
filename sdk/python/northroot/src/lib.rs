@@ -31,17 +31,24 @@ mod receipts;
 mod shapes;
 
 /// Python module definition
+///
+/// This is the internal Rust module (_northroot).
+/// It's wrapped by northroot/__init__.py which provides the public API
+/// including async wrappers.
 #[pymodule]
-fn northroot(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn _northroot(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Register error classes
     errors::register_errors(m)?;
 
     // Register Client class (direct import: from northroot import Client)
     m.add_class::<client::Client>()?;
 
-    // Register module-level functions for ergonomic usage
+    // Register module-level functions for ergonomic usage (sync)
     m.add_function(pyo3::wrap_pyfunction!(client::record_work_py, m)?)?;
     m.add_function(pyo3::wrap_pyfunction!(client::verify_receipt_py, m)?)?;
+    
+    // Note: Async versions are provided in Python __init__.py using asyncio.to_thread
+    // This keeps the Rust code simple and leverages Python's async ecosystem
 
     // Register submodules (for advanced usage)
     delta::register_module(m)?;

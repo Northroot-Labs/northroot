@@ -67,4 +67,22 @@ receipt_via_client = client.record_work(
 print(f"Client receipt: {receipt_via_client.get_rid()}")
 print(f"Client receipt valid: {client.verify_receipt(receipt_via_client)}")
 
+# --- Async API (Optional) ---
+print("\n=== Async API ===")
+import asyncio
+
+async def async_example():
+    # Async versions run sync functions in a thread pool
+    receipt_async = await nr.record_work_async(
+        workload_id="async-example",
+        payload={"async": True},
+        tags=["async"]
+    )
+    print(f"Async receipt: {receipt_async.get_rid()}")
+    is_valid_async = await nr.verify_receipt_async(receipt_async)
+    print(f"Async receipt valid: {is_valid_async}")
+
+# Run async example
+asyncio.run(async_example())
+
 print("\n✅ Quickstart complete!")

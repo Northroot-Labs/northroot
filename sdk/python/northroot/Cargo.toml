@@ -11,7 +11,7 @@ repository = "https://github.com/northroot/northroot"
 [workspace]
 
 [lib]
-name = "northroot"
+name = "_northroot"  # Internal module name, wrapped by northroot/__init__.py
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
