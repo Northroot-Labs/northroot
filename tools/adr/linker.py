@@ -308,3 +308,5 @@ if __name__ == "__main__":
     success = update_graph_files(adr_dir, index_file, args.no_symbols)
     sys.exit(0 if success else 1)
 
+
+

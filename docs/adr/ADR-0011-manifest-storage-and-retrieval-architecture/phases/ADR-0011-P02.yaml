@@ -17,4 +17,3 @@ decision_drivers:
   - "Implementation: Add OverlapIndex struct, MinHash sketch (k=128), SketchData, integrate into build_manifest_from_data, sketch-based Jaccard estimation"
   - "Files: crates/northroot-engine/src/cas.rs, crates/northroot-engine/src/delta/overlap.rs"
   - "Success: All manifests include MinHash sketch (k=128, ~2 KB), estimation within 5% of exact J, fast-path decisions work"
-
