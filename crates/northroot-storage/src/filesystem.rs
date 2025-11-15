@@ -17,6 +17,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 use uuid::Uuid;
+use chrono;
 
 /// Filesystem-based storage backend.
 ///
@@ -63,6 +64,88 @@ impl FilesystemStore {
     /// Get the path to a receipt file.
     fn receipt_path(&self, rid: &Uuid) -> PathBuf {
         self.receipts_dir.join(format!("{}.json", rid))
+    }
+
+    /// Check if a receipt matches the query criteria.
+    fn matches_query(&self, receipt: &Receipt, q: &ReceiptQuery) -> bool {
+        // Filter by trace_id
+        if let Some(ref trace_id) = q.trace_id {
+            if let northroot_receipts::Payload::Execution(ref exec) = receipt.payload {
+                if exec.trace_id != *trace_id {
+                    return false;
+                }
+            } else {
+                // Non-execution receipts don't have trace_id
+                return false;
+            }
+        }
+
+        // Filter by workload_id (method_id from ExecutionPayload)
+        if let Some(ref workload_id) = q.workload_id {
+            if let northroot_receipts::Payload::Execution(ref exec) = receipt.payload {
+                if exec.method_ref.method_id != *workload_id {
+                    return false;
+                }
+            } else {
+                // Non-execution receipts don't have workload_id
+                return false;
+            }
+        }
+
+        // Filter by timestamp range
+        if q.timestamp_from.is_some() || q.timestamp_to.is_some() {
+            // Parse RFC3339 timestamp to Unix epoch seconds
+            match chrono::DateTime::parse_from_rfc3339(&receipt.ctx.timestamp) {
+                Ok(dt) => {
+                    let unix_secs = dt.timestamp();
+                    if let Some(from) = q.timestamp_from {
+                        if unix_secs < from {
+                            return false;
+                        }
+                    }
+                    if let Some(to) = q.timestamp_to {
+                        if unix_secs > to {
+                            return false;
+                        }
+                    }
+                }
+                Err(_) => {
+                    // Invalid timestamp - skip this receipt
+                    return false;
+                }
+            }
+        }
+
+        // Filter by policy_ref
+        if let Some(ref policy_ref) = q.policy_ref {
+            if receipt.ctx.policy_ref.as_ref() != Some(policy_ref) {
+                return false;
+            }
+        }
+
+        // Filter by change_epoch_id (from ExecutionPayload)
+        if let Some(ref epoch_id) = q.change_epoch_id {
+            if let northroot_receipts::Payload::Execution(ref exec) = receipt.payload {
+                if exec.change_epoch.as_ref() != Some(epoch_id) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        // Filter by PAC (from ExecutionPayload)
+        if let Some(ref pac) = q.pac {
+            if let northroot_receipts::Payload::Execution(ref exec) = receipt.payload {
+                if exec.pac.as_ref() != Some(pac) {
+                    return false;
+                }
+            } else {
+                return false;
+            }
+        }
+
+        true
     }
 }
 
@@ -111,9 +194,7 @@ impl ReceiptStore for FilesystemStore {
         Ok(Some(receipt))
     }
 
-    fn query_receipts(&self, _q: ReceiptQuery) -> Result<Vec<Receipt>, StorageError> {
-        // For v0.1, simple implementation: return all receipts
-        // Advanced querying can be added later
+    fn query_receipts(&self, q: ReceiptQuery) -> Result<Vec<Receipt>, StorageError> {
         let _lock = self._lock.lock().unwrap();
 
         let mut receipts = Vec::new();
@@ -139,13 +220,24 @@ impl ReceiptStore for FilesystemStore {
                 })?;
 
                 match northroot_receipts::adapters::json::receipt_from_json(&json_str) {
-                    Ok(receipt) => receipts.push(receipt),
+                    Ok(receipt) => {
+                        // Apply filters
+                        if !self.matches_query(&receipt, &q) {
+                            continue;
+                        }
+                        receipts.push(receipt);
+                    }
                     Err(e) => {
                         // Log error but continue (skip corrupted files)
                         eprintln!("Warning: Failed to parse receipt file {}: {}", path.display(), e);
                     }
                 }
             }
+        }
+
+        // Apply limit
+        if let Some(limit) = q.limit {
+            receipts.truncate(limit);
         }
 
         Ok(receipts)

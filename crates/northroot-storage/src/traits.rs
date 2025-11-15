@@ -190,6 +190,8 @@ pub struct ReceiptQuery {
     pub policy_ref: Option<String>,
     /// Search by trace ID
     pub trace_id: Option<String>,
+    /// Search by workload ID (method_id from ExecutionPayload)
+    pub workload_id: Option<String>,
     /// Search receipts created after this timestamp (Unix epoch seconds)
     pub timestamp_from: Option<i64>,
     /// Search receipts created before this timestamp (Unix epoch seconds)

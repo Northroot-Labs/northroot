@@ -102,6 +102,33 @@ class Client(_SyncClient):
             True if receipt is valid, False if invalid
         """
         return await asyncio.to_thread(self.verify_receipt, receipt)
+    
+    async def list_receipts_async(
+        self,
+        workload_id: Optional[str] = None,
+        trace_id: Optional[str] = None,
+        limit: Optional[int] = None,
+    ):
+        """
+        Async version of list_receipts.
+        
+        Lists receipts matching the query criteria asynchronously.
+        This method runs the sync Rust implementation in a thread pool.
+        
+        Args:
+            workload_id: Optional filter by workload ID
+            trace_id: Optional filter by trace ID
+            limit: Optional maximum number of results
+        
+        Returns:
+            List of PyReceipt objects matching the query
+        """
+        return await asyncio.to_thread(
+            self.list_receipts,
+            workload_id,
+            trace_id,
+            limit,
+        )
 
 
 # Optional OTEL integration

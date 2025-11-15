@@ -522,6 +522,7 @@ dependencies = [
 name = "northroot-storage"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "ciborium",
  "hex",
  "northroot-commons",

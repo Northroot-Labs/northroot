@@ -1,14 +1,15 @@
-{"id": "adr:0001", "type": "ADR", "adr_id": "ADR-0001", "title": "Receipts vs Engine Boundaries", "status": "accepted", "created_at": "2025-11-08T00:00:00Z", "accepted_at": "2025-11-08T00:00:00Z"}
-{"id": "adr:0002", "type": "ADR", "adr_id": "ADR-0002", "title": "Canonicalization Strategy (CBOR)", "status": "accepted", "created_at": "2025-11-08T00:00:00Z", "accepted_at": "2025-11-08T00:00:00Z"}
-{"id": "adr:0003", "type": "ADR", "adr_id": "ADR-0003", "title": "Delta Compute Decisions Recorded Under spend.justification", "status": "accepted", "created_at": "2025-11-08T00:00:00Z", "accepted_at": "2025-11-08T00:00:00Z"}
-{"id": "adr:0004", "type": "ADR", "adr_id": "ADR-0004", "title": "Identity Root Commitment", "status": "accepted", "created_at": "2025-11-08T00:00:00Z", "accepted_at": "2025-11-08T00:00:00Z"}
-{"id": "adr:0005", "type": "ADR", "adr_id": "ADR-0005", "title": "Engine Architecture", "status": "accepted", "created_at": "2025-01-15T00:00:00Z", "accepted_at": "2025-01-15T00:00:00Z"}
-{"id": "adr:0006", "type": "ADR", "adr_id": "ADR-0006", "title": "Signature Verification Strategy", "status": "accepted", "created_at": "2025-11-08T00:00:00Z", "accepted_at": "2025-11-08T00:00:00Z"}
+{"id": "adr:0001", "type": "ADR", "adr_id": "ADR-0001", "title": "Receipts vs Engine Boundaries", "status": "superseded", "created_at": "2025-11-08T00:00:00Z"}
+{"id": "adr:0002", "type": "ADR", "adr_id": "ADR-0002", "title": "Canonicalization Strategy (CBOR)", "status": "superseded", "created_at": "2025-11-08T00:00:00Z"}
+{"id": "adr:0003", "type": "ADR", "adr_id": "ADR-0003", "title": "Delta Compute Decisions Recorded Under spend.justification", "status": "superseded", "created_at": "2025-11-08T00:00:00Z"}
+{"id": "adr:0004", "type": "ADR", "adr_id": "ADR-0004", "title": "Identity Root Commitment", "status": "superseded", "created_at": "2025-11-08T00:00:00Z"}
+{"id": "adr:0005", "type": "ADR", "adr_id": "ADR-0005", "title": "Engine Architecture", "status": "superseded", "created_at": "2025-01-15T00:00:00Z"}
+{"id": "adr:0006", "type": "ADR", "adr_id": "ADR-0006", "title": "Signature Verification Strategy", "status": "superseded", "created_at": "2025-11-08T00:00:00Z"}
 {"id": "adr:0007", "type": "ADR", "adr_id": "ADR-0007", "title": "Delta Compute Implementation Strategy", "status": "superseded", "created_at": "2025-11-08T00:00:00Z"}
 {"id": "adr:0008", "type": "ADR", "adr_id": "ADR-0008", "title": "Proof-Addressable Storage and Incremental Compute Hardening", "status": "superseded", "created_at": "2025-11-09T00:00:00Z"}
-{"id": "adr:0009", "type": "ADR", "adr_id": "ADR-0009", "title": "Hybrid ByteStream/RowMap Evidence Substrate with Privacy-Preserving Resolver and Reuse Pipeline", "status": "accepted", "created_at": "2025-11-12T01:26:46Z", "accepted_at": "2025-11-12T01:26:46Z", "implemented_at": "2025-11-12T07:57:26Z"}
-{"id": "adr:0010", "type": "ADR", "adr_id": "ADR-0010", "title": "v0.1.0 Release Readiness Evaluation", "status": "proposed", "created_at": "2025-11-12T08:00:00Z", "implemented_at": "2025-11-12T19:11:19Z"}
-{"id": "adr:0011", "type": "ADR", "adr_id": "ADR-0011", "title": "Manifest Storage and Retrieval Architecture", "status": "proposed", "created_at": "2025-11-12T19:00:00Z"}
+{"id": "adr:0009", "type": "ADR", "adr_id": "ADR-0009", "title": "Hybrid ByteStream/RowMap Evidence Substrate with Privacy-Preserving Resolver and Reuse Pipeline", "status": "superseded", "created_at": "2025-11-12T01:26:46Z", "implemented_at": "2025-11-12T07:57:26Z"}
+{"id": "adr:0010", "type": "ADR", "adr_id": "ADR-0010", "title": "v0.1.0 Release Readiness Evaluation", "status": "superseded", "created_at": "2025-11-12T08:00:00Z", "implemented_at": "2025-11-12T19:11:19Z"}
+{"id": "adr:0011", "type": "ADR", "adr_id": "ADR-0011", "title": "Manifest Storage and Retrieval Architecture", "status": "superseded", "created_at": "2025-11-12T19:00:00Z"}
+{"id": "adr:0012", "type": "ADR", "adr_id": "ADR-0012", "title": "Harada v0.1 Alignment Plan", "status": "accepted", "created_at": "2025-11-15T00:00:00Z", "accepted_at": "2025-11-15T00:00:00Z"}
 {"id": "commit:1f64d8b", "type": "COMMIT", "sha": "1f64d8b29465563bd29a6a023687f9621261e921", "message": "feat(adr-0011-p01): Add CBOR serialization to ByteStreamManifest", "when": "2025-11-12T16:05:44-05:00"}
 {"id": "commit:864b54a", "type": "COMMIT", "sha": "864b54a55fb142872fc45bb44afea88efdb53ae8", "message": "Update ADR-009 and related documentation for architectural alignment phases", "when": "2025-11-12T01:45:29-05:00"}
 {"id": "commit:8c2594a", "type": "COMMIT", "sha": "8c2594a6e859a4c996b4307f1461267d2249d0e8", "message": "Implement comprehensive property tests for invariants and edge cases", "when": "2025-11-12T14:05:34-05:00"}
@@ -68,3 +69,9 @@
 {"id": "phase:0011:P04", "type": "PHASE", "phase_id": "ADR-0011-P04", "status": "proposed", "title": ""}
 {"id": "phase:0011:P05", "type": "PHASE", "phase_id": "ADR-0011-P05", "status": "proposed", "title": ""}
 {"id": "phase:0011:P06", "type": "PHASE", "phase_id": "ADR-0011-P06", "status": "proposed", "title": ""}
+{"id": "phase:0012:P01", "type": "PHASE", "phase_id": "ADR-0012-P01", "status": "accepted", "title": ""}
+{"id": "phase:0012:P02", "type": "PHASE", "phase_id": "ADR-0012-P02", "status": "accepted", "title": ""}
+{"id": "phase:0012:P03", "type": "PHASE", "phase_id": "ADR-0012-P03", "status": "accepted", "title": ""}
+{"id": "phase:0012:P04", "type": "PHASE", "phase_id": "ADR-0012-P04", "status": "accepted", "title": ""}
+{"id": "phase:0012:P05", "type": "PHASE", "phase_id": "ADR-0012-P05", "status": "accepted", "title": ""}
+{"id": "phase:0012:P06", "type": "PHASE", "phase_id": "ADR-0012-P06", "status": "accepted", "title": ""}

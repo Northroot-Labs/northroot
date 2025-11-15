@@ -91,6 +91,18 @@ impl PyReceipt {
     }
 }
 
+impl PyReceipt {
+    /// Get the inner Receipt (for internal use)
+    pub fn inner(&self) -> &Receipt {
+        &self.receipt
+    }
+
+    /// Create a PyReceipt from an inner Receipt (for internal use)
+    pub fn from_inner(receipt: Receipt) -> Self {
+        Self { receipt }
+    }
+}
+
 /// Create a receipt from JSON string.
 ///
 /// Args:

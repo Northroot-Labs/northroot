@@ -34,6 +34,12 @@
 {"src": "adr:0011", "dst": "adr:0008", "type": "DEPENDS_ON"}
 {"src": "adr:0011", "dst": "adr:0009", "type": "DEPENDS_ON"}
 {"src": "adr:0011", "dst": "adr:0010", "type": "DEPENDS_ON"}
+{"src": "adr:0012", "dst": "phase:0012:P01", "type": "HAS_PHASE"}
+{"src": "adr:0012", "dst": "phase:0012:P02", "type": "HAS_PHASE"}
+{"src": "adr:0012", "dst": "phase:0012:P03", "type": "HAS_PHASE"}
+{"src": "adr:0012", "dst": "phase:0012:P04", "type": "HAS_PHASE"}
+{"src": "adr:0012", "dst": "phase:0012:P05", "type": "HAS_PHASE"}
+{"src": "adr:0012", "dst": "phase:0012:P06", "type": "HAS_PHASE"}
 {"src": "commit:864b54a", "dst": "file:.cursor/rules/architectural-alignment.mdc", "type": "TOUCHES_FILE"}
 {"src": "commit:864b54a", "dst": "file:ADRs/ADR-009.md", "type": "TOUCHES_FILE"}
 {"src": "commit:864b54a", "dst": "file:crates/northroot-engine/tests/test_phase4_spec.rs", "type": "TOUCHES_FILE"}
