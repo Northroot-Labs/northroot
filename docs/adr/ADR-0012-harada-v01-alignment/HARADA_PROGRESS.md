@@ -36,7 +36,7 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 |------|--------|-------|
 | **P1-T1** — Lock CBOR canonicalization | ✅ **COMPLETE** | CBOR canonicalization implemented in `northroot-receipts/src/canonical/`. All tests passing (8/8). RFC 8949 compliant. |
 | **P1-T2** — Finalize hashing and domain separation rules | ✅ **COMPLETE** | Comprehensive documentation in `docs/specs/hashing-and-domain-separation.md`. Rules frozen for v0.1. |
-| **P1-T3** — Freeze v0.1 chunk model | ⚠️ **PARTIAL** | Chunk model exists but not explicitly frozen for v0.1. |
+| **P1-T3** — Freeze v0.1 chunk model | ✅ **COMPLETE** | Chunk model frozen in `docs/specs/v01-chunk-model-freeze.md`. All Receipt, ReceiptKind, and Payload types declared frozen for v0.1. |
 | **P1-T4** — Implement golden tests for serialization | ✅ **COMPLETE** | Golden tests exist in `test_drift_detection.rs` with baseline hashes. |
 | **P1-T5** — Stabilize delta-reuse criteria in code | ❌ **PENDING** | Delta reuse logic exists but not stabilized. |
 | **P1-T6** — Clean up engine crate structure | ⚠️ **PARTIAL** | Structure is clean but needs dead code audit. |
