@@ -27,4 +27,7 @@ ciborium = "0.2"
 
 [dev-dependencies]
 tempfile = "3.10"
+northroot-engine = { path = "../northroot-engine" }
+serde_json = { workspace = true }
+rand = "0.8"
 

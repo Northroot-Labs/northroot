@@ -438,6 +438,9 @@ impl ReceiptStore for SqliteStore {
                 StorageError::NotFound(msg) => {
                     rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
                 }
+                StorageError::IoError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
             })
         })?;
 
@@ -468,6 +471,9 @@ impl ReceiptStore for SqliteStore {
                     rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
                 }
                 StorageError::NotFound(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::IoError(msg) => {
                     rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
                 }
             })
@@ -635,6 +641,9 @@ impl ReceiptStore for SqliteStore {
                 StorageError::NotFound(msg) => {
                     rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
                 }
+                StorageError::IoError(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
             })
         })?;
 
@@ -761,6 +770,9 @@ impl ReceiptStore for SqliteStore {
                     rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
                 }
                 StorageError::NotFound(msg) => {
+                    rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
+                }
+                StorageError::IoError(msg) => {
                     rusqlite::Error::InvalidColumnType(0, msg, rusqlite::types::Type::Blob)
                 }
             })

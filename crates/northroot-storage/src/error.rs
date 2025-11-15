@@ -24,4 +24,8 @@ pub enum StorageError {
     /// Invalid input parameter
     #[error("Invalid input: {0}")]
     InvalidInput(String),
+
+    /// I/O error
+    #[error("I/O error: {0}")]
+    IoError(String),
 }

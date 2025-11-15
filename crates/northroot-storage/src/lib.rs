@@ -5,10 +5,12 @@
 
 pub mod compaction;
 pub mod error;
+pub mod filesystem;
 pub mod sqlite;
 pub mod traits;
 
 pub use compaction::{CompactionTier, CompactionTierInfo, CompactionTierStore};
 pub use error::StorageError;
+pub use filesystem::FilesystemStore;
 pub use sqlite::SqliteStore;
 pub use traits::{ManifestMeta, ReceiptQuery, ReceiptStore};
