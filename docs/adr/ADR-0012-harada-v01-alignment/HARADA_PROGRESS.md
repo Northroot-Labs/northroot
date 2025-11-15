@@ -58,16 +58,18 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 | **P2-T3** — Define a stable, minimal Python API surface | ✅ **COMPLETE** | **Rust API created** (`northroot-engine/src/api.rs`). **Python bindings created** (`sdk/northroot-sdk-python/src/receipts.rs`). Both `record_work` and `verify_receipt` exposed to Python. |
 | **P2-T4** — Provide both async and sync call paths | ❌ **PENDING** | Not implemented. |
 | **P2-T5** — Add a clear exception hierarchy | ❌ **PENDING** | `ApiError` exists in Rust but not exposed to Python. |
-| **P2-T6** — Create typed result objects | ⚠️ **PARTIAL** | `PyReceipt` exists but doesn't use new API. |
+| **P2-T6** — Create typed result objects | ✅ **COMPLETE** | `PyReceipt` integrated with new API. Thin client wrapper created. |
 | **P2-T7** — Produce a 10–15 line quickstart example | ✅ **COMPLETE** | Quickstart example created at `sdk/northroot-sdk-python/examples/quickstart.py`. |
 | **P2-T8** — Package and publish a clean PyPI release | ❌ **PENDING** | Not published. |
 
-**Phase 2 Progress:** 4/8 complete, 1/8 partial, 3/8 pending
+**Phase 2 Progress:** 6/8 complete, 0/8 partial, 2/8 pending
 
 **Recent Completion:** 
 - Python SDK bindings for `record_work` and `verify_receipt` created (P2-T3 ✅)
 - Quickstart example created (P2-T7 ✅)
 - Filesystem receipt store implemented (P2-T1 ✅)
+- Exception hierarchy for SDK errors (P2-T5 ✅)
+- Thin client wrapper for ergonomic API (P2-T6 ✅)
 
 ---
 
@@ -180,9 +182,9 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 
 ### Critical Next Steps (Aligned with Harada)
 
-1. **P2-T5:** Add clear exception hierarchy for SDK errors
-   - Expose `ApiError` variants to Python
-   - Create Python exception classes
+1. **P2-T4:** Provide both async and sync call paths
+   - Add async versions of record_work and verify_receipt
+   - Ensure Python async/await compatibility
 
 2. **P1-T2:** Finalize and document hashing/domain separation rules
    - Document in `docs/` or `crates/northroot-engine/src/commitments.rs`
