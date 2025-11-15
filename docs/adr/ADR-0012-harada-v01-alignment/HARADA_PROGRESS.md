@@ -1,6 +1,6 @@
 # Harada v0.1 Progress Tracking
 
-**Last Updated:** 2025-01-17  
+**Last Updated:** 2025-11-15  
 **Harada Version:** 0.1  
 **ADR Reference:** ADR-0012
 
@@ -43,7 +43,7 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 | **P1-T7** — Document canonical forms | ✅ **COMPLETE** | Developer-facing reference created in `docs/guides/canonical-forms-reference.md`. Covers CBOR, JCS, JSON adapters, and best practices. |
 | **P1-T8** — Establish reproducible test suite | ✅ **COMPLETE** | Test suite exists and runs reproducibly. |
 
-**Phase 1 Progress:** 7/8 complete, 0/8 partial, 1/8 pending
+**Phase 1 Progress:** 8/8 complete, 0/8 partial, 0/8 pending
 
 ---
 
@@ -104,9 +104,10 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 
 | Task | Status | Notes |
 |------|--------|-------|
-| **P5-T1** through **P5-T8** | ❌ **PENDING** | All tasks pending. |
+| **P5-T1** — Build an OTEL span → proof transformer | ✅ **COMPLETE** | OTEL integration module created (`northroot/otel.py`). `span_to_receipt()` converts OTEL spans to receipts. `@trace_work` decorator for automatic receipt generation. Example created (`examples/otel_integration.py`). Optional dependency: `opentelemetry-api`. |
+| **P5-T2** through **P5-T8** | ❌ **PENDING** | Remaining tasks pending. |
 
-**Phase 5 Progress:** 0/8 complete
+**Phase 5 Progress:** 1/8 complete, 0/8 in progress, 7/8 pending
 
 ---
 
