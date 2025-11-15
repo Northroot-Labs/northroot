@@ -57,7 +57,7 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 | **P2-T2** — Add JSON boundary adapter | ✅ **COMPLETE** | JSON adapters exist in `northroot-receipts/src/adapters/json.rs`. |
 | **P2-T3** — Define a stable, minimal Python API surface | ✅ **COMPLETE** | **Rust API created** (`northroot-engine/src/api.rs`). **Python bindings created** (`sdk/northroot-sdk-python/src/receipts.rs`). Both `record_work` and `verify_receipt` exposed to Python. |
 | **P2-T4** — Provide both async and sync call paths | ❌ **PENDING** | Not implemented. |
-| **P2-T5** — Add a clear exception hierarchy | ❌ **PENDING** | `ApiError` exists in Rust but not exposed to Python. |
+| **P2-T5** — Add a clear exception hierarchy | ✅ **COMPLETE** | Error types mapped from Rust ApiError, clear hierarchy documented. |
 | **P2-T6** — Create typed result objects | ✅ **COMPLETE** | `PyReceipt` integrated with new API. Thin client wrapper created. |
 | **P2-T7** — Produce a 10–15 line quickstart example | ✅ **COMPLETE** | Quickstart example created at `sdk/northroot-sdk-python/examples/quickstart.py`. |
 | **P2-T8** — Package and publish a clean PyPI release | ❌ **PENDING** | Not published. |
