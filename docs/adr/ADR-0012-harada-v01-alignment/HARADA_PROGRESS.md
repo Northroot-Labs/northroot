@@ -4,6 +4,16 @@
 **Harada Version:** 0.1  
 **ADR Reference:** ADR-0012
 
+## Implementation Provenance
+
+**Latest Commit:** `e1c46853875535f4a4c4cfdce1d2233fdfa84bbc`  
+**Commit Date:** 2025-01-17  
+**Commit Message:** `feat(sdk): implement minimal API (P2-T3) and quickstart (P2-T7)`
+
+This commit implements:
+- P2-T3: Minimal Python API surface (Rust API + Python bindings)
+- P2-T7: Quickstart example
+
 ## Status Summary
 
 This document tracks progress against the Harada 64-cell grid defined in `goals/harada/northroot-active.md`. All work must align with Harada tasks to prevent scope drift.
@@ -144,6 +154,7 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
    - Python Bindings: `sdk/northroot-sdk-python/src/receipts.rs`
    - Functions: `record_work()`, `verify_receipt()`
    - Status: Fully implemented and tested (Rust: 4/4 tests passing, Python: bindings compile)
+   - **Implementation Commit:** `e1c46853875535f4a4c4cfdce1d2233fdfa84bbc`
 
 3. **JSON Adapters (P2-T2)** ✅
    - Location: `crates/northroot-receipts/src/adapters/json.rs`
@@ -152,6 +163,11 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 4. **Golden Tests (P1-T4)** ✅
    - Location: `crates/northroot-receipts/tests/test_drift_detection.rs`
    - Status: Baseline hashes locked, drift detection working
+
+5. **Quickstart Example (P2-T7)** ✅
+   - Location: `sdk/northroot-sdk-python/examples/quickstart.py`
+   - Status: Complete, demonstrates minimal API usage
+   - **Implementation Commit:** `e1c46853875535f4a4c4cfdce1d2233fdfa84bbc`
 
 ### Critical Next Steps (Aligned with Harada)
 
