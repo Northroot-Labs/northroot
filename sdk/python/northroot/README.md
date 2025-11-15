@@ -26,10 +26,11 @@ pip install -e .
 The minimal v0.1 API provides a simple interface for creating and verifying receipts:
 
 ```python
-import northroot_sdk
+from northroot import Client
+import northroot as nr
 
-# Record a unit of work and get a verifiable receipt
-receipt = northroot_sdk.receipts.record_work(
+# Thin client API (recommended) - simple and ergonomic
+receipt = nr.record_work(
     workload_id="normalize-prices",
     payload={"input_hash": "sha256:abc...", "output_hash": "sha256:def..."},
     tags=["etl", "batch"],
@@ -41,17 +42,21 @@ print(f"Receipt ID: {receipt.get_rid()}")
 print(f"Hash: {receipt.get_hash()}")
 
 # Verify receipt integrity
-is_valid = northroot_sdk.receipts.verify_receipt(receipt)
+is_valid = nr.verify_receipt(receipt)
 print(f"Receipt is valid: {is_valid}")
 
 # Create a DAG: child receipt linked to parent
-child_receipt = northroot_sdk.receipts.record_work(
+child_receipt = nr.record_work(
     workload_id="aggregate-totals",
     payload={"input_receipt": receipt.get_rid(), "result": "sum"},
     tags=["etl"],
     trace_id="trace-2025-01-17",  # Same trace
     parent_id=receipt.get_rid(),   # Parent link
 )
+
+# Or use Client class (storage decoupled and optional)
+client = Client()  # No storage required
+receipt_via_client = client.record_work(...)
 ```
 
 See `examples/quickstart.py` for a complete example.
@@ -59,7 +64,7 @@ See `examples/quickstart.py` for a complete example.
 ### Delta Compute
 
 ```python
-import northroot_sdk
+import northroot as nr
 
 # Decide whether to reuse based on overlap
 cost_model = {
@@ -69,48 +74,48 @@ cost_model = {
 }
 overlap_j = 0.15  # 15% Jaccard overlap
 
-result = northroot_sdk.delta.decide_reuse(overlap_j, cost_model)
+result = nr.delta.decide_reuse(overlap_j, cost_model)
 print(f"Decision: {result['decision']}")  # "reuse" or "recompute"
 print(f"Justification: {result['justification']}")
 
 # Compute economic delta (savings estimate)
-delta = northroot_sdk.delta.economic_delta(overlap_j, cost_model)
+delta = nr.delta.economic_delta(overlap_j, cost_model)
 print(f"Economic delta: {delta}")  # Positive = savings
 
 # Compute Jaccard similarity between two sets
 set1 = ["chunk1", "chunk2", "chunk3"]
 set2 = ["chunk2", "chunk3", "chunk4"]
-jaccard = northroot_sdk.delta.jaccard_similarity(set1, set2)
+jaccard = nr.delta.jaccard_similarity(set1, set2)
 print(f"Jaccard similarity: {jaccard}")  # 0.5 (2/4)
 ```
 
 ### Data Shapes
 
 ```python
-import northroot_sdk
+import northroot as nr
 
 # Compute data shape hash from file
-hash1 = northroot_sdk.shapes.compute_data_shape_hash_from_file(
+hash1 = nr.shapes.compute_data_shape_hash_from_file(
     "data.csv",
     chunk_scheme={"type": "cdc", "avg_size": 65536}
 )
 
 # Compute data shape hash from bytes
 data = b"some binary data"
-hash2 = northroot_sdk.shapes.compute_data_shape_hash_from_bytes(
+hash2 = nr.shapes.compute_data_shape_hash_from_bytes(
     data,
     chunk_scheme={"type": "fixed", "size": 1024}
 )
 
 # Compute method shape hash from code hash
 code_hash = "sha256:abc123..."
-method_hash = northroot_sdk.shapes.compute_method_shape_hash_from_code(
+method_hash = northroot.shapes.compute_method_shape_hash_from_code(
     code_hash,
     params={"batch_size": 1000}
 )
 
 # Compute method shape hash from signature
-method_hash2 = northroot_sdk.shapes.compute_method_shape_hash_from_signature(
+method_hash2 = northroot.shapes.compute_method_shape_hash_from_signature(
     "normalize_ledger",
     ["Vec<Transaction>", "Config"],
     "Ledger"
@@ -120,7 +125,7 @@ method_hash2 = northroot_sdk.shapes.compute_method_shape_hash_from_signature(
 ### Receipts
 
 ```python
-import northroot_sdk
+import northroot
 import json
 
 # Create receipt from JSON
@@ -131,7 +136,7 @@ receipt_json = json.dumps({
     # ... rest of receipt structure
 })
 
-receipt = northroot_sdk.receipts.receipt_from_json(receipt_json)
+receipt = northroot.receipts.receipt_from_json(receipt_json)
 
 # Validate receipt
 receipt.validate()  # Raises ValueError if invalid
@@ -257,16 +262,16 @@ pip install northroot-sdk
 ## Quick Start
 
 ```python
-import northroot_sdk
+import northroot
 
 # Delta compute operations
-from northroot_sdk.delta import decide_reuse, jaccard_similarity
+from northroot.delta import decide_reuse, jaccard_similarity
 
 # Receipt operations
-from northroot_sdk.receipts import Receipt
+from northroot.receipts import Receipt
 
 # Shape computation
-from northroot_sdk.shapes import compute_data_shape_hash
+from northroot.shapes import compute_data_shape_hash
 ```
 
 ## Architecture

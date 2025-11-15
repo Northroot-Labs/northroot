@@ -10,7 +10,8 @@ This example demonstrates the minimal v0.1 API with the thin client:
 This aligns with Harada P2-T7: Produce a 10-15 line quickstart example.
 """
 
-import northroot_sdk as nr
+from northroot import Client
+import northroot as nr
 
 # --- Thin Client API (Recommended) ---
 # Simple, ergonomic API - no need for 'nr.receipts.record_work'
@@ -55,8 +56,8 @@ print(f"Child valid: {nr.verify_receipt(receipt2)}")
 # The Client class provides the same API but can be extended with storage later
 # For v0.1, storage is decoupled and optional
 print("\n=== Client Class (Optional) ===")
-client = nr.Client()  # No storage (storage is decoupled)
-# client = nr.Client(storage_path="./receipts")  # With filesystem storage (future)
+client = Client()  # No storage (storage is decoupled)
+# client = Client(storage_path="./receipts")  # With filesystem storage (future)
 
 receipt_via_client = client.record_work(
     workload_id="client-example",

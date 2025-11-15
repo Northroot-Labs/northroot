@@ -7,7 +7,8 @@
 //! ## Usage
 //!
 //! ```python
-//! import northroot_sdk as nr
+//! from northroot import Client
+//! import northroot as nr
 //!
 //! # Simple usage (no storage)
 //! receipt = nr.record_work(
@@ -17,7 +18,7 @@
 //! )
 //!
 //! # With storage (optional)
-//! client = nr.Client(storage_path="./receipts")
+//! client = Client(storage_path="./receipts")
 //! receipt = client.record_work(...)
 //! client.store(receipt)
 //! ```
@@ -150,7 +151,7 @@ impl Client {
 /// # Example
 ///
 /// ```python
-/// import northroot_sdk as nr
+/// import northroot as nr
 ///
 /// receipt = nr.record_work(
 ///     workload_id="normalize-prices",
@@ -187,7 +188,7 @@ pub fn record_work_py(
 /// # Example
 ///
 /// ```python
-/// import northroot_sdk as nr
+/// import northroot as nr
 ///
 /// is_valid = nr.verify_receipt(receipt)
 /// ```

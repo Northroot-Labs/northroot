@@ -32,11 +32,11 @@ mod shapes;
 
 /// Python module definition
 #[pymodule]
-fn northroot_sdk(m: &Bound<'_, PyModule>) -> PyResult<()> {
+fn northroot(m: &Bound<'_, PyModule>) -> PyResult<()> {
     // Register error classes
     errors::register_errors(m)?;
 
-    // Register Client class
+    // Register Client class (direct import: from northroot import Client)
     m.add_class::<client::Client>()?;
 
     // Register module-level functions for ergonomic usage

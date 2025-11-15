@@ -128,7 +128,8 @@ fn receipt_from_json_py(json_str: String) -> PyResult<PyReceipt> {
 ///     ValueError: If receipt creation fails
 ///
 /// Example:
-///     >>> receipt = northroot_sdk.receipts.record_work(
+///     >>> import northroot as nr
+///     >>> receipt = nr.record_work(
 ///     ...     "normalize-prices",
 ///     ...     {"input_hash": "...", "output_hash": "..."},
 ///     ...     tags=["etl"],
@@ -186,7 +187,8 @@ pub fn record_work_py(
 ///     ValueError: If verification fails due to error (not invalid receipt)
 ///
 /// Example:
-///     >>> is_valid = northroot_sdk.receipts.verify_receipt(receipt)
+///     >>> import northroot as nr
+///     >>> is_valid = nr.verify_receipt(receipt)
 ///     >>> if is_valid:
 ///     ...     print(f"Receipt {receipt.get_rid()} is valid")
 #[pyfunction]

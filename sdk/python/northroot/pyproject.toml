@@ -33,5 +33,5 @@ Repository = "https://github.com/Northroot-Labs/northroot"
 [tool.maturin]
 features = []
 python-source = "."
-module-name = "northroot_sdk"
+module-name = "northroot"
 

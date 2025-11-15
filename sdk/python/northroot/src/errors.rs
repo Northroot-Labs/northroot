@@ -23,16 +23,12 @@ use pyo3::PyErr;
 /// Users can catch specific exception types:
 ///
 /// ```python
+/// import northroot as nr
 /// try:
-///     receipt = northroot_sdk.receipts.record_work(...)
-/// except northroot_sdk.SerializationError as e:
-///     # Handle serialization errors
-/// except northroot_sdk.HashError as e:
-///     # Handle hash errors
-/// except northroot_sdk.ValidationError as e:
-///     # Handle validation errors
+///     receipt = nr.record_work(...)
 /// except ValueError as e:
-///     # Catch all SDK errors (base class)
+///     # Handle SDK errors (SerializationError, HashError, ValidationError)
+///     # Error messages are prefixed with error type names
 /// ```
 pub fn api_error_to_python(e: northroot_engine::ApiError) -> PyErr {
     match e {

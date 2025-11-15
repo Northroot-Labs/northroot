@@ -449,6 +449,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "northroot"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "northroot-engine",
+ "northroot-policy",
+ "northroot-receipts",
+ "northroot-storage",
+ "pyo3",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "northroot-commons"
 version = "0.1.0"
 dependencies = [
@@ -501,21 +516,6 @@ dependencies = [
  "sha2",
  "thiserror",
  "uuid",
-]
-
-[[package]]
-name = "northroot-sdk-python"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "northroot-engine",
- "northroot-policy",
- "northroot-receipts",
- "northroot-storage",
- "pyo3",
- "serde",
- "serde_json",
- "thiserror",
 ]
 
 [[package]]
