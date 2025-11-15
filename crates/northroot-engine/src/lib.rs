@@ -24,6 +24,7 @@
 //! **Policy re-exports**: This crate re-exports policy validation functions for convenience,
 //! but policy validation lives in `northroot-policy` to maintain clear boundaries.
 
+pub mod api;
 pub mod cas;
 pub mod commitments;
 pub mod composition;
@@ -96,6 +97,9 @@ pub use strategies::{
 
 // Re-export delta module items for ReuseIndexed trait
 pub use delta::OverlapMetric;
+
+// Re-export API module items for SDK
+pub use api::{record_work, verify_receipt, ApiError};
 
 /// Trait for strategies that can compute overlap metrics for reuse decisions.
 ///

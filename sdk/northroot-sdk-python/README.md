@@ -4,6 +4,7 @@ Python SDK for the Northroot proof algebra system, providing high-level Python b
 
 ## Features
 
+- **Minimal API (v0.1)**: Simple `record_work` and `verify_receipt` functions for verifiable proofs
 - **Delta Compute**: Reuse decision logic, Jaccard similarity, economic delta computation
 - **Data Shapes**: Compute data and method shape hashes from files, bytes, or signatures
 - **Receipts**: Create, validate, and serialize receipts
@@ -19,6 +20,41 @@ pip install -e .
 ```
 
 ## Usage
+
+### Minimal API (v0.1) - Quick Start
+
+The minimal v0.1 API provides a simple interface for creating and verifying receipts:
+
+```python
+import northroot_sdk
+
+# Record a unit of work and get a verifiable receipt
+receipt = northroot_sdk.receipts.record_work(
+    workload_id="normalize-prices",
+    payload={"input_hash": "sha256:abc...", "output_hash": "sha256:def..."},
+    tags=["etl", "batch"],
+    trace_id="trace-2025-01-17",
+    parent_id=None,  # Optional: link to parent receipt for DAGs
+)
+
+print(f"Receipt ID: {receipt.get_rid()}")
+print(f"Hash: {receipt.get_hash()}")
+
+# Verify receipt integrity
+is_valid = northroot_sdk.receipts.verify_receipt(receipt)
+print(f"Receipt is valid: {is_valid}")
+
+# Create a DAG: child receipt linked to parent
+child_receipt = northroot_sdk.receipts.record_work(
+    workload_id="aggregate-totals",
+    payload={"input_receipt": receipt.get_rid(), "result": "sum"},
+    tags=["etl"],
+    trace_id="trace-2025-01-17",  # Same trace
+    parent_id=receipt.get_rid(),   # Parent link
+)
+```
+
+See `examples/quickstart.py` for a complete example.
 
 ### Delta Compute
 

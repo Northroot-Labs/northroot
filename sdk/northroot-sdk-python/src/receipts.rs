@@ -10,10 +10,12 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::wrap_pymodule;
 
+use northroot_engine::{api::verify_receipt as verify_receipt_rust, ApiError};
 use northroot_receipts::{
     adapters::json::{receipt_from_json, receipt_to_json},
     Receipt,
 };
+use pyo3::types::PyDict;
 
 /// Python wrapper for Receipt
 #[pyclass]
@@ -104,11 +106,116 @@ fn receipt_from_json_py(json_str: String) -> PyResult<PyReceipt> {
     Ok(PyReceipt { receipt })
 }
 
+/// Record a unit of work and produce a verifiable receipt.
+///
+/// This is the primary SDK entry point for creating receipts. It accepts
+/// a workload identifier, payload data, optional tags, and optional trace/parent
+/// IDs for causal composition.
+///
+/// Args:
+///     workload_id: Identifier for this unit of work (e.g., "normalize-prices", "train-model")
+///     payload: Work payload as a dictionary (will be hashed to compute data shape)
+///     tags: Optional tags for categorization (e.g., ["etl", "batch"])
+///     trace_id: Optional trace ID for grouping related work units
+///     parent_id: Optional parent receipt ID for DAG composition
+///
+/// Returns:
+///     PyReceipt object containing the verifiable proof of work
+///
+/// Raises:
+///     ValueError: If receipt creation fails
+///
+/// Example:
+///     >>> receipt = northroot_sdk.receipts.record_work(
+///     ...     "normalize-prices",
+///     ...     {"input_hash": "...", "output_hash": "..."},
+///     ...     tags=["etl"],
+///     ...     trace_id="trace-123",
+///     ...     parent_id=None
+///     ... )
+#[pyfunction]
+#[pyo3(signature = (workload_id, payload, tags = None, trace_id = None, parent_id = None))]
+fn record_work_py(
+    workload_id: String,
+    payload: &Bound<'_, PyDict>,
+    tags: Option<Vec<String>>,
+    trace_id: Option<String>,
+    parent_id: Option<String>,
+) -> PyResult<PyReceipt> {
+    // Convert Python dict to serde_json::Value
+    // Use Python's json module to serialize, then deserialize to serde_json::Value
+    let py = payload.py();
+    let json_module = py.import_bound("json")?;
+    let json_str: String = json_module
+        .call_method1("dumps", (payload,))?
+        .extract()?;
+    let payload_json: serde_json::Value = serde_json::from_str(&json_str)
+        .map_err(|e| PyValueError::new_err(format!("Failed to parse payload JSON: {}", e)))?;
+
+    // Convert tags
+    let tags_vec = tags.unwrap_or_default();
+
+    // Call Rust API
+    let receipt = northroot_engine::api::record_work(
+        &workload_id,
+        payload_json,
+        tags_vec,
+        trace_id,
+        parent_id,
+    )
+    .map_err(|e| match e {
+        ApiError::SerializationError(msg) => {
+            PyValueError::new_err(format!("Serialization error: {}", msg))
+        }
+        ApiError::HashError(msg) => PyValueError::new_err(format!("Hash error: {}", msg)),
+        ApiError::ValidationError(msg) => {
+            PyValueError::new_err(format!("Validation error: {}", msg))
+        }
+    })?;
+
+    Ok(PyReceipt { receipt })
+}
+
+/// Verify receipt integrity and hash correctness.
+///
+/// This performs basic verification:
+/// - Hash integrity: receipt.hash == compute_hash(receipt)
+/// - Syntactic validation: receipt structure is well-formed
+///
+/// Args:
+///     receipt: PyReceipt object to verify
+///
+/// Returns:
+///     True if receipt is valid, False if invalid
+///
+/// Raises:
+///     ValueError: If verification fails due to error (not invalid receipt)
+///
+/// Example:
+///     >>> is_valid = northroot_sdk.receipts.verify_receipt(receipt)
+///     >>> if is_valid:
+///     ...     print(f"Receipt {receipt.get_rid()} is valid")
+#[pyfunction]
+fn verify_receipt_py(receipt: &PyReceipt) -> PyResult<bool> {
+    verify_receipt_rust(&receipt.receipt)
+        .map_err(|e| match e {
+            ApiError::HashError(msg) => PyValueError::new_err(format!("Hash error: {}", msg)),
+            ApiError::ValidationError(msg) => {
+                PyValueError::new_err(format!("Validation error: {}", msg))
+            }
+            ApiError::SerializationError(msg) => {
+                PyValueError::new_err(format!("Serialization error: {}", msg))
+            }
+        })
+}
+
 /// Python bindings for receipt operations
 #[pymodule]
 fn receipts(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<PyReceipt>()?;
     m.add_function(wrap_pyfunction!(receipt_from_json_py, m)?)?;
+    m.add_function(wrap_pyfunction!(record_work_py, m)?)?;
+    m.add_function(wrap_pyfunction!(verify_receipt_py, m)?)?;
     Ok(())
 }
 
