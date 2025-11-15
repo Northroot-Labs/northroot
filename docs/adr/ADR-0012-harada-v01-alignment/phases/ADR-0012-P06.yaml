@@ -1,0 +1,34 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0012-P06
+adr_id: ADR-0012
+sequence: 6
+title: Narrative & Execution Discipline
+status: accepted
+proposed_at: '2025-11-15T00:00:00Z'
+decided_at: '2025-11-15T00:00:00Z'
+summary: Finish the product narrative, diagrams, use cases, and enforce the execution
+  operating rules outlined in Harada Pillars 6 & 8.
+decision_drivers:
+- Investors/customers need a crisp story that matches the shipped artifacts.
+- Scope discipline is mandatory to hit v0.1 dates.
+success_criteria:
+- Problem framing, positioning, proofs vs logs explainers, examples, diagrams, README, and YC-ready story complete (P6-T1–T8).
+- Weekly status, feature freeze cadence, prioritization, guardrails, and limits on TODO/test bloat enforced (P8-T1–T8).
+tasks:
+- P6-T1
+- P6-T2
+- P6-T3
+- P6-T4
+- P6-T5
+- P6-T6
+- P6-T7
+- P6-T8
+- P8-T1
+- P8-T2
+- P8-T3
+- P8-T4
+- P8-T5
+- P8-T6
+- P8-T7
+- P8-T8
+priority: medium

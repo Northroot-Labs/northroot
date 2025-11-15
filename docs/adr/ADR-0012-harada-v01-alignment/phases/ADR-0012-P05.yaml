@@ -1,0 +1,34 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0012-P05
+adr_id: ADR-0012
+sequence: 5
+title: Observability & Adoption Path
+status: accepted
+proposed_at: '2025-11-15T00:00:00Z'
+decided_at: '2025-11-15T00:00:00Z'
+summary: Bridge OTEL/logs to receipts, ship local demos, installers, templates, and
+  troubleshooting that make adoption trivial (Harada Pillars 5 & 7).
+decision_drivers:
+- Users must map existing traces/logs into proofs with <10 min onboarding.
+- Demos and docs drive early validation.
+success_criteria:
+- OTEL transformer, deterministic IDs, logging examples, sidecar mode, and integration samples complete (P5-T1–T5).
+- Install/demo/tutorial/troubleshooting assets delivered (P7-T1–T8).
+tasks:
+- P5-T1
+- P5-T2
+- P5-T3
+- P5-T4
+- P5-T5
+- P5-T6
+- P5-T7
+- P5-T8
+- P7-T1
+- P7-T2
+- P7-T3
+- P7-T4
+- P7-T5
+- P7-T6
+- P7-T7
+- P7-T8
+priority: high

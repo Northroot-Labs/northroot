@@ -1,13 +1,13 @@
 {
   "$schema": "./adr.index.schema.json",
   "version": "0.4",
-  "generated_at": "2025-11-12T21:20:59Z",
+  "generated_at": "2025-11-15T21:26:44Z",
   "adrs": [
     {
       "adr_id": "ADR-0001",
       "slug": "receipts-vs-engine-boundaries",
       "title": "Receipts vs Engine Boundaries",
-      "status": "accepted",
+      "status": "superseded",
       "tags": [
         "canonicalization",
         "delta-compute",
@@ -18,14 +18,13 @@
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
       "phases": [],
-      "accepted_at": "2025-11-08T00:00:00Z",
       "code_refs": []
     },
     {
       "adr_id": "ADR-0002",
       "slug": "canonicalization-strategy-cbor",
       "title": "Canonicalization Strategy (CBOR)",
-      "status": "accepted",
+      "status": "superseded",
       "tags": [
         "canonicalization",
         "storage",
@@ -35,14 +34,13 @@
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
       "phases": [],
-      "accepted_at": "2025-11-08T00:00:00Z",
       "code_refs": []
     },
     {
       "adr_id": "ADR-0003",
       "slug": "delta-compute-decisions-recorded-under-spendjustif",
       "title": "Delta Compute Decisions Recorded Under spend.justification",
-      "status": "accepted",
+      "status": "superseded",
       "tags": [
         "delta-compute",
         "receipts",
@@ -51,14 +49,13 @@
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
       "phases": [],
-      "accepted_at": "2025-11-08T00:00:00Z",
       "code_refs": []
     },
     {
       "adr_id": "ADR-0004",
       "slug": "identity-root-commitment",
       "title": "Identity Root Commitment",
-      "status": "accepted",
+      "status": "superseded",
       "tags": [
         "canonicalization",
         "receipts",
@@ -68,14 +65,13 @@
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
       "phases": [],
-      "accepted_at": "2025-11-08T00:00:00Z",
       "code_refs": []
     },
     {
       "adr_id": "ADR-0005",
       "slug": "engine-architecture",
       "title": "Engine Architecture",
-      "status": "accepted",
+      "status": "superseded",
       "tags": [
         "canonicalization",
         "delta-compute",
@@ -86,14 +82,13 @@
       "domain": "engine",
       "created_at": "2025-01-15T00:00:00Z",
       "phases": [],
-      "accepted_at": "2025-01-15T00:00:00Z",
       "code_refs": []
     },
     {
       "adr_id": "ADR-0006",
       "slug": "signature-verification-strategy",
       "title": "Signature Verification Strategy",
-      "status": "accepted",
+      "status": "superseded",
       "tags": [
         "delta-compute",
         "receipts",
@@ -103,7 +98,6 @@
       "domain": "engine",
       "created_at": "2025-11-08T00:00:00Z",
       "phases": [],
-      "accepted_at": "2025-11-08T00:00:00Z",
       "code_refs": []
     },
     {
@@ -141,7 +135,7 @@
       "adr_id": "ADR-0009",
       "slug": "hybrid-bytestreamrowmap-evidence-substrate-with-pr",
       "title": "Hybrid ByteStream/RowMap Evidence Substrate with Privacy-Preserving Resolver and Reuse Pipeline",
-      "status": "accepted",
+      "status": "superseded",
       "tags": [
         "canonicalization",
         "delta-compute",
@@ -226,7 +220,6 @@
           "implementation_commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
         }
       ],
-      "accepted_at": "2025-11-12T01:26:46Z",
       "implemented_at": "2025-11-12T07:57:26Z",
       "phase_ids": [
         "ADR-0009-P01",
@@ -238,90 +231,14 @@
         "ADR-0009-P07",
         "ADR-0009-P08"
       ],
-      "code_refs": [
-        {
-          "type": "file",
-          "path": ".cursor/rules/architectural-alignment.mdc",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "ADRs/ADR-009.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/test_phase4_spec.rs",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/README.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/phases/ADR-009-P4.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/phases/PHASE_4_PREPARATION.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/phases/README.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "docs/process/ADR_PHASE_ID_STANDARDS.md",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "schemas/adr/adr.index.schema.json",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "schemas/adr/adr.schema.json",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "schemas/adr/phase.schema.json",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "scripts/generate-adr-index.py",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "scripts/generate-adr-index.sh",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "scripts/migrate-adrs.py",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        },
-        {
-          "type": "file",
-          "path": "scripts/validate-adrs.py",
-          "commit": "864b54a55fb142872fc45bb44afea88efdb53ae8"
-        }
-      ],
+      "code_refs": [],
       "realized_at": "2025-11-12T07:41:08Z"
     },
     {
       "adr_id": "ADR-0010",
       "slug": "v010-release-readiness-evaluation",
       "title": "v0.1.0 Release Readiness Evaluation",
-      "status": "proposed",
+      "status": "superseded",
       "tags": [
         "release",
         "evaluation",
@@ -403,110 +320,14 @@
       "depends_on": [
         "ADR-0009"
       ],
-      "code_refs": [
-        {
-          "type": "file",
-          "path": "Cargo.lock",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/Cargo.toml",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/src/delta/data_shape.rs",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/src/delta/method_shape.rs",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/src/delta/mod.rs",
-          "commit": "9a254283a4c1d1b41b52ca3a9e89c675d2cc3679"
-        },
-        {
-          "type": "file",
-          "path": "Cargo.lock",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/Cargo.toml",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/property/edge_cases.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/property/generators.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/property/invariants.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-engine/tests/test_property.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "crates/northroot-storage/src/sqlite.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/README.md",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/data/billing_run1.csv",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/data/billing_run2.csv",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/main.rs",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/northroot.db",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/output/aggregated_run1.csv",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        },
-        {
-          "type": "file",
-          "path": "examples/finops_cost_attribution/output/aggregated_run2.csv",
-          "commit": "8c2594a6e859a4c996b4307f1461267d2249d0e8"
-        }
-      ],
+      "code_refs": [],
       "realized_at": "2025-11-12T12:00:00Z"
     },
     {
       "adr_id": "ADR-0011",
       "slug": "manifest-storage-and-retrieval-architecture",
       "title": "Manifest Storage and Retrieval Architecture",
-      "status": "proposed",
+      "status": "superseded",
       "tags": [
         "storage",
         "manifests",
@@ -663,39 +484,194 @@
         "ADR-0009",
         "ADR-0010"
       ],
-      "code_refs": [
+      "code_refs": [],
+      "realized_at": "2025-11-12T21:05:28Z"
+    },
+    {
+      "adr_id": "ADR-0012",
+      "slug": "harada-v01-alignment",
+      "title": "Harada v0.1 Alignment Plan",
+      "status": "accepted",
+      "tags": [
+        "harada",
+        "roadmap",
+        "sdk",
+        "engine"
+      ],
+      "domain": "strategy",
+      "created_at": "2025-11-15T00:00:00Z",
+      "phases": [
         {
-          "type": "file",
-          "path": "crates/northroot-engine/src/cas.rs",
-          "commit": "1f64d8b29465563bd29a6a023687f9621261e921"
+          "phase_id": "ADR-0012-P01",
+          "sequence": 1,
+          "status": "accepted",
+          "timestamp": "2025-11-15T00:00:00Z",
+          "decision_drivers": [
+            "Harada CG-1 requires deterministic receipts before SDK exposure.",
+            "Previous ADRs duplicated guidance; this phase consolidates everything into Harada tasks."
+          ],
+          "tasks": [
+            "P1-T1",
+            "P1-T2",
+            "P1-T3",
+            "P1-T4",
+            "P1-T5",
+            "P1-T6",
+            "P1-T7",
+            "P1-T8"
+          ],
+          "success_criteria": [
+            "All CBOR + hashing golden tests (P1-T1/T4) pass under CI.",
+            "Chunk model (P1-T3) and documentation (P1-T7) are frozen for v0.1."
+          ]
         },
         {
-          "type": "file",
-          "path": "crates/northroot-engine/src/lib.rs",
-          "commit": "1f64d8b29465563bd29a6a023687f9621261e921"
+          "phase_id": "ADR-0012-P02",
+          "sequence": 2,
+          "status": "accepted",
+          "timestamp": "2025-11-15T00:00:00Z",
+          "decision_drivers": [
+            "SDK must hide engine complexity and expose only the narrow slice.",
+            "Quickstart + packaging tasks unblock demos and adoption."
+          ],
+          "tasks": [
+            "P2-T1",
+            "P2-T2",
+            "P2-T3",
+            "P2-T4",
+            "P2-T5",
+            "P2-T6",
+            "P2-T7",
+            "P2-T8"
+          ],
+          "success_criteria": [
+            "Local filesystem store (P2-T1) + JSON adapters (P2-T2) shipped.",
+            "API surface, async/sync paths, exceptions, typed results, and PyPI release complete (P2-T3\u2013T8)."
+          ]
         },
         {
-          "type": "file",
-          "path": "crates/northroot-engine/src/serde_helpers.rs",
-          "commit": "1f64d8b29465563bd29a6a023687f9621261e921"
+          "phase_id": "ADR-0012-P03",
+          "sequence": 3,
+          "status": "accepted",
+          "timestamp": "2025-11-15T00:00:00Z",
+          "decision_drivers": [
+            "SDK + engine need the same stable receipt grammar.",
+            "Schema/test fixtures unblock integrations and docs."
+          ],
+          "tasks": [
+            "P3-T1",
+            "P3-T2",
+            "P3-T3",
+            "P3-T4",
+            "P3-T5",
+            "P3-T6",
+            "P3-T7",
+            "P3-T8"
+          ],
+          "success_criteria": [
+            "Schemas + version tags published (P3-T1\u2013T4).",
+            "Round-trip tests, diagrams, fixtures, and lifecycle docs complete (P3-T5\u2013T8)."
+          ]
         },
         {
-          "type": "file",
-          "path": "crates/northroot-engine/src/shapes.rs",
-          "commit": "1f64d8b29465563bd29a6a023687f9621261e921"
+          "phase_id": "ADR-0012-P04",
+          "sequence": 4,
+          "status": "accepted",
+          "timestamp": "2025-11-15T00:00:00Z",
+          "decision_drivers": [
+            "Reuse claims must be economically defensible before demos.",
+            "Policy + SDK rely on deterministic reuse classification."
+          ],
+          "tasks": [
+            "P4-T1",
+            "P4-T2",
+            "P4-T3",
+            "P4-T4",
+            "P4-T5",
+            "P4-T6",
+            "P4-T7",
+            "P4-T8"
+          ],
+          "success_criteria": [
+            "Weighted Jaccard + alpha plumbing implemented (P4-T1\u2013T3).",
+            "Reuse classification, inequality tests, benchmarks, and synthetic validations complete (P4-T4\u2013T8)."
+          ]
         },
         {
-          "type": "file",
-          "path": "crates/northroot-engine/src/cas.rs",
-          "commit": "a1f61f168cfbaaf8570abe8ff86bba7f1a51c38d"
+          "phase_id": "ADR-0012-P05",
+          "sequence": 5,
+          "status": "accepted",
+          "timestamp": "2025-11-15T00:00:00Z",
+          "decision_drivers": [
+            "Users must map existing traces/logs into proofs with <10 min onboarding.",
+            "Demos and docs drive early validation."
+          ],
+          "tasks": [
+            "P5-T1",
+            "P5-T2",
+            "P5-T3",
+            "P5-T4",
+            "P5-T5",
+            "P5-T6",
+            "P5-T7",
+            "P5-T8",
+            "P7-T1",
+            "P7-T2",
+            "P7-T3",
+            "P7-T4",
+            "P7-T5",
+            "P7-T6",
+            "P7-T7",
+            "P7-T8"
+          ],
+          "success_criteria": [
+            "OTEL transformer, deterministic IDs, logging examples, sidecar mode, and integration samples complete (P5-T1\u2013T5).",
+            "Install/demo/tutorial/troubleshooting assets delivered (P7-T1\u2013T8)."
+          ]
         },
         {
-          "type": "file",
-          "path": "crates/northroot-engine/src/lib.rs",
-          "commit": "a1f61f168cfbaaf8570abe8ff86bba7f1a51c38d"
+          "phase_id": "ADR-0012-P06",
+          "sequence": 6,
+          "status": "accepted",
+          "timestamp": "2025-11-15T00:00:00Z",
+          "decision_drivers": [
+            "Investors/customers need a crisp story that matches the shipped artifacts.",
+            "Scope discipline is mandatory to hit v0.1 dates."
+          ],
+          "tasks": [
+            "P6-T1",
+            "P6-T2",
+            "P6-T3",
+            "P6-T4",
+            "P6-T5",
+            "P6-T6",
+            "P6-T7",
+            "P6-T8",
+            "P8-T1",
+            "P8-T2",
+            "P8-T3",
+            "P8-T4",
+            "P8-T5",
+            "P8-T6",
+            "P8-T7",
+            "P8-T8"
+          ],
+          "success_criteria": [
+            "Problem framing, positioning, proofs vs logs explainers, examples, diagrams, README, and YC-ready story complete (P6-T1\u2013T8).",
+            "Weekly status, feature freeze cadence, prioritization, guardrails, and limits on TODO/test bloat enforced (P8-T1\u2013T8)."
+          ]
         }
       ],
-      "realized_at": "2025-11-12T21:05:28Z"
+      "accepted_at": "2025-11-15T00:00:00Z",
+      "phase_ids": [
+        "ADR-0012-P01",
+        "ADR-0012-P02",
+        "ADR-0012-P03",
+        "ADR-0012-P04",
+        "ADR-0012-P05",
+        "ADR-0012-P06"
+      ],
+      "code_refs": []
     }
   ]
 }

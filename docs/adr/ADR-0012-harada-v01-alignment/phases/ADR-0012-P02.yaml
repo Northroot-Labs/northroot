@@ -1,0 +1,26 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0012-P02
+adr_id: ADR-0012
+sequence: 2
+title: Python SDK Thin Slice
+status: accepted
+proposed_at: '2025-11-15T00:00:00Z'
+decided_at: '2025-11-15T00:00:00Z'
+summary: Deliver the minimal record_work / verify_receipt API, local store, adapters,
+  and documentation promised in Harada Pillar 2.
+decision_drivers:
+- SDK must hide engine complexity and expose only the narrow slice.
+- Quickstart + packaging tasks unblock demos and adoption.
+success_criteria:
+- Local filesystem store (P2-T1) + JSON adapters (P2-T2) shipped.
+- API surface, async/sync paths, exceptions, typed results, and PyPI release complete (P2-T3–T8).
+tasks:
+- P2-T1
+- P2-T2
+- P2-T3
+- P2-T4
+- P2-T5
+- P2-T6
+- P2-T7
+- P2-T8
+priority: critical

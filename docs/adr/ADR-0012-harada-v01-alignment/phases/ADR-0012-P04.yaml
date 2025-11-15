@@ -1,0 +1,26 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0012-P04
+adr_id: ADR-0012
+sequence: 4
+title: Delta Compute Economics
+status: accepted
+proposed_at: '2025-11-15T00:00:00Z'
+decided_at: '2025-11-15T00:00:00Z'
+summary: Implement the overlap metrics, alpha integration, break-even rule, and worked
+  examples mandated by Harada Pillar 4.
+decision_drivers:
+- Reuse claims must be economically defensible before demos.
+- Policy + SDK rely on deterministic reuse classification.
+success_criteria:
+- Weighted Jaccard + alpha plumbing implemented (P4-T1–T3).
+- Reuse classification, inequality tests, benchmarks, and synthetic validations complete (P4-T4–T8).
+tasks:
+- P4-T1
+- P4-T2
+- P4-T3
+- P4-T4
+- P4-T5
+- P4-T6
+- P4-T7
+- P4-T8
+priority: high

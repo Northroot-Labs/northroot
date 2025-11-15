@@ -1,0 +1,26 @@
+$schema: ../../../schemas/adr/phase.schema.json
+phase_id: ADR-0012-P01
+adr_id: ADR-0012
+sequence: 1
+title: Engine Rigor & Canonicalization
+status: accepted
+proposed_at: '2025-11-15T00:00:00Z'
+decided_at: '2025-11-15T00:00:00Z'
+summary: Lock down CBOR canonicalization, hashing, chunk model, and test harnesses so
+  the engine semantics match Harada Pillar 1.
+decision_drivers:
+- Harada CG-1 requires deterministic receipts before SDK exposure.
+- Previous ADRs duplicated guidance; this phase consolidates everything into Harada tasks.
+success_criteria:
+- All CBOR + hashing golden tests (P1-T1/T4) pass under CI.
+- Chunk model (P1-T3) and documentation (P1-T7) are frozen for v0.1.
+tasks:
+- P1-T1
+- P1-T2
+- P1-T3
+- P1-T4
+- P1-T5
+- P1-T6
+- P1-T7
+- P1-T8
+priority: critical
