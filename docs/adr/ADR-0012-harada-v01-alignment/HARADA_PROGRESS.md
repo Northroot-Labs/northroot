@@ -6,13 +6,14 @@
 
 ## Implementation Provenance
 
-**Latest Commit:** `e1c46853875535f4a4c4cfdce1d2233fdfa84bbc`  
-**Commit Date:** 2025-11-15 
-**Commit Message:** `feat(sdk): implement minimal API (P2-T3) and quickstart (P2-T7)`
+**Latest Commit:** `68037d7fa3ca317f48ac514ca833714451e19edd`  
+**Commit Date:** 2025-11-15  
+**Commit Message:** `feat(storage): implement filesystem receipt store (P2-T1)`
 
-This commit implements:
-- P2-T3: Minimal Python API surface (Rust API + Python bindings)
-- P2-T7: Quickstart example
+**Previous Commits:**
+- `e1c46853875535f4a4c4cfdce1d2233fdfa84bbc`: `feat(sdk): implement minimal API (P2-T3) and quickstart (P2-T7)`
+  - P2-T3: Minimal Python API surface (Rust API + Python bindings)
+  - P2-T7: Quickstart example
 
 ## Status Summary
 
@@ -175,7 +176,7 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 6. **Filesystem Receipt Store (P2-T1)** ✅
    - Location: `crates/northroot-storage/src/filesystem.rs`
    - Status: Complete, stores receipts as JSON files, all tests passing (3/3)
-   - **Implementation Commit:** (pending commit)
+   - **Implementation Commit:** `68037d7fa3ca317f48ac514ca833714451e19edd`
 
 ### Critical Next Steps (Aligned with Harada)
 
