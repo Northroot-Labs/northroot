@@ -10,12 +10,14 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::wrap_pymodule;
 
-use northroot_engine::{api::verify_receipt as verify_receipt_rust, ApiError};
+use northroot_engine::api::verify_receipt as verify_receipt_rust;
 use northroot_receipts::{
     adapters::json::{receipt_from_json, receipt_to_json},
     Receipt,
 };
 use pyo3::types::PyDict;
+
+use crate::errors::api_error_to_python;
 
 /// Python wrapper for Receipt
 #[pyclass]
@@ -163,15 +165,7 @@ fn record_work_py(
         trace_id,
         parent_id,
     )
-    .map_err(|e| match e {
-        ApiError::SerializationError(msg) => {
-            PyValueError::new_err(format!("Serialization error: {}", msg))
-        }
-        ApiError::HashError(msg) => PyValueError::new_err(format!("Hash error: {}", msg)),
-        ApiError::ValidationError(msg) => {
-            PyValueError::new_err(format!("Validation error: {}", msg))
-        }
-    })?;
+    .map_err(api_error_to_python)?;
 
     Ok(PyReceipt { receipt })
 }
@@ -197,16 +191,7 @@ fn record_work_py(
 ///     ...     print(f"Receipt {receipt.get_rid()} is valid")
 #[pyfunction]
 fn verify_receipt_py(receipt: &PyReceipt) -> PyResult<bool> {
-    verify_receipt_rust(&receipt.receipt)
-        .map_err(|e| match e {
-            ApiError::HashError(msg) => PyValueError::new_err(format!("Hash error: {}", msg)),
-            ApiError::ValidationError(msg) => {
-                PyValueError::new_err(format!("Validation error: {}", msg))
-            }
-            ApiError::SerializationError(msg) => {
-                PyValueError::new_err(format!("Serialization error: {}", msg))
-            }
-        })
+    verify_receipt_rust(&receipt.receipt).map_err(api_error_to_python)
 }
 
 /// Python bindings for receipt operations

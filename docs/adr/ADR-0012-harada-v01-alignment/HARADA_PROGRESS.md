@@ -180,9 +180,9 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 
 ### Critical Next Steps (Aligned with Harada)
 
-1. **P2-T1:** Implement simple local receipt store (filesystem-based)
-   - Create filesystem store implementation
-   - Integrate with SDK
+1. **P2-T5:** Add clear exception hierarchy for SDK errors
+   - Expose `ApiError` variants to Python
+   - Create Python exception classes
 
 2. **P1-T2:** Finalize and document hashing/domain separation rules
    - Document in `docs/` or `crates/northroot-engine/src/commitments.rs`
@@ -196,7 +196,7 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 - ✅ All work references Harada task IDs
 - ✅ ADR-0012 is the single source of truth
 - ✅ No work done outside Harada scope
-- ⚠️ Python SDK bindings need to be created to complete P2-T3
+- ✅ Python SDK bindings created (P2-T3 complete)
 
 ---
 

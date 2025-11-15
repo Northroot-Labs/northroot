@@ -18,6 +18,9 @@ use pyo3::prelude::*;
 /// Delta compute module
 mod delta;
 
+/// Error types module
+mod errors;
+
 /// Receipts module
 mod receipts;
 
@@ -27,6 +30,9 @@ mod shapes;
 /// Python module definition
 #[pymodule]
 fn northroot_sdk(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    // Register error classes
+    errors::register_errors(m)?;
+
     // Register submodules
     delta::register_module(m)?;
     receipts::register_module(m)?;
