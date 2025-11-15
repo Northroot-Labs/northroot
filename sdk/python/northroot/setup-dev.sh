@@ -32,7 +32,7 @@ pip install --upgrade pip
 
 # Install development dependencies
 echo "Installing development dependencies..."
-pip install -r requirements-dev.txt
+pip install -e ".[dev]"
 
 # Install the package in development mode
 echo "Installing northroot in development mode..."

@@ -5,9 +5,11 @@ Python SDK for the Northroot proof algebra system, providing high-level Python b
 ## Features
 
 - **Minimal API (v0.1)**: Simple `record_work` and `verify_receipt` functions for verifiable proofs
+- **Receipt Storage**: Filesystem-based storage with querying and filtering
+- **Async/Sync Support**: Both synchronous and asynchronous APIs available
+- **OpenTelemetry Integration**: Optional OTEL span → receipt conversion
 - **Delta Compute**: Reuse decision logic, Jaccard similarity, economic delta computation
 - **Data Shapes**: Compute data and method shape hashes from files, bytes, or signatures
-- **Receipts**: Create, validate, and serialize receipts
 
 ## Installation
 
@@ -20,27 +22,24 @@ pip install northroot
 ### From Source (Development)
 
 ```bash
-# Install maturin
-pip install maturin
+# Quick setup (recommended)
+cd sdk/python/northroot
+./setup-dev.sh
 
-# Build from source (requires Rust)
+# Or manual setup
+pip install maturin
 cd sdk/python/northroot
 maturin develop
-
-# Or install in development mode
-pip install -e .
 ```
 
-## Usage
+## Quick Start
 
-### Minimal API (v0.1) - Quick Start
-
-The minimal v0.1 API uses the `Client` class for a simple, consistent interface:
+### Minimal API (v0.1)
 
 ```python
 from northroot import Client
 
-# Create a client (storage is decoupled and optional for v0.1)
+# Create a client (storage is optional)
 client = Client()
 # client = Client(storage_path="./receipts")  # With filesystem storage
 
@@ -50,7 +49,6 @@ receipt = client.record_work(
     payload={"input_hash": "sha256:abc...", "output_hash": "sha256:def..."},
     tags=["etl", "batch"],
     trace_id="trace-2025-01-17",
-    parent_id=None,  # Optional: link to parent receipt for DAGs
 )
 
 print(f"Receipt ID: {receipt.get_rid()}")
@@ -60,13 +58,14 @@ print(f"Hash: {receipt.get_hash()}")
 is_valid = client.verify_receipt(receipt)
 print(f"Receipt is valid: {is_valid}")
 
-# Create a DAG: child receipt linked to parent
-child_receipt = client.record_work(
-    workload_id="aggregate-totals",
-    payload={"input_receipt": receipt.get_rid(), "result": "sum"},
-    tags=["etl"],
-    trace_id="trace-2025-01-17",  # Same trace
-    parent_id=receipt.get_rid(),   # Parent link
+# Store receipt (if storage_path was provided)
+client.store_receipt(receipt)
+
+# List receipts with filtering
+receipts = client.list_receipts(
+    workload_id="normalize-prices",
+    trace_id="trace-2025-01-17",
+    limit=10
 )
 
 # Async versions are also available
@@ -75,6 +74,52 @@ is_valid_async = await client.verify_receipt_async(receipt_async)
 ```
 
 See `examples/quickstart.py` for a complete example.
+
+## Usage Examples
+
+### Receipt Storage and Querying
+
+```python
+from northroot import Client
+
+client = Client(storage_path="./receipts")
+
+# Record and store receipts
+receipt1 = client.record_work("workload-1", {"data": "value1"})
+client.store_receipt(receipt1)
+
+receipt2 = client.record_work("workload-1", {"data": "value2"}, trace_id="trace-123")
+client.store_receipt(receipt2)
+
+# Query receipts
+all_receipts = client.list_receipts()
+workload_receipts = client.list_receipts(workload_id="workload-1")
+trace_receipts = client.list_receipts(trace_id="trace-123")
+```
+
+### OpenTelemetry Integration
+
+```python
+from northroot import Client
+from northroot.otel import trace_work, span_to_receipt
+from opentelemetry import trace
+
+client = Client()
+
+# Option 1: Decorator
+@trace_work(client, workload_id="my-workload")
+def my_function():
+    # Your code here
+    return {"result": "data"}
+
+# Option 2: Manual conversion
+tracer = trace.get_tracer(__name__)
+with tracer.start_as_current_span("my-operation") as span:
+    # Your code here
+    receipt = span_to_receipt(span, client, "my-workload", {"data": "value"})
+```
+
+See `examples/otel_integration.py` for more examples.
 
 ### Delta Compute
 
@@ -91,7 +136,6 @@ overlap_j = 0.15  # 15% Jaccard overlap
 
 result = nr.delta.decide_reuse(overlap_j, cost_model)
 print(f"Decision: {result['decision']}")  # "reuse" or "recompute"
-print(f"Justification: {result['justification']}")
 
 # Compute economic delta (savings estimate)
 delta = nr.delta.economic_delta(overlap_j, cost_model)
@@ -124,125 +168,67 @@ hash2 = nr.shapes.compute_data_shape_hash_from_bytes(
 
 # Compute method shape hash from code hash
 code_hash = "sha256:abc123..."
-method_hash = northroot.shapes.compute_method_shape_hash_from_code(
+method_hash = nr.shapes.compute_method_shape_hash_from_code(
     code_hash,
     params={"batch_size": 1000}
 )
-
-# Compute method shape hash from signature
-method_hash2 = northroot.shapes.compute_method_shape_hash_from_signature(
-    "normalize_ledger",
-    ["Vec<Transaction>", "Config"],
-    "Ledger"
-)
 ```
-
-### Receipts
-
-```python
-import northroot
-import json
-
-# Create receipt from JSON
-receipt_json = json.dumps({
-    "rid": "01234567-89ab-cdef-0123-456789abcdef",
-    "version": "0.3.0",
-    "kind": "execution",
-    # ... rest of receipt structure
-})
-
-receipt = northroot.receipts.receipt_from_json(receipt_json)
-
-# Validate receipt
-receipt.validate()  # Raises ValueError if invalid
-
-# Compute hash
-hash_value = receipt.compute_hash()
-print(f"Receipt hash: {hash_value}")
-
-# Serialize to JSON
-json_str = receipt.to_json()
-
-# Access receipt properties
-print(f"RID: {receipt.get_rid()}")
-print(f"Kind: {receipt.get_kind()}")
-print(f"Version: {receipt.get_version()}")
-print(f"Hash: {receipt.get_hash()}")
-```
-
-## API Reference
-
-### Delta Module
-
-- `decide_reuse(overlap_j: float, cost_model: dict, row_count: int | None = None) -> dict`
-  - Decide whether to reuse based on overlap and cost model
-  - Returns: `{"decision": str, "justification": dict}`
-
-- `economic_delta(overlap_j: float, cost_model: dict, row_count: int | None = None) -> float`
-  - Compute economic delta (savings estimate)
-  - Returns: Economic delta (positive = savings)
-
-- `jaccard_similarity(set1: list[str], set2: list[str]) -> float`
-  - Compute Jaccard similarity between two sets
-  - Returns: Similarity value in [0, 1]
-
-### Shapes Module
-
-- `compute_data_shape_hash_from_file(path: str, chunk_scheme: dict | None = None) -> str`
-  - Compute data shape hash from file
-  - Returns: Hash in format `sha256:<64hex>`
-
-- `compute_data_shape_hash_from_bytes(data: bytes, chunk_scheme: dict | None = None) -> str`
-  - Compute data shape hash from bytes
-  - Returns: Hash in format `sha256:<64hex>`
-
-- `compute_method_shape_hash_from_code(code_hash: str, params: dict | None = None) -> str`
-  - Compute method shape hash from code hash and parameters
-  - Returns: Hash in format `sha256:<64hex>`
-
-- `compute_method_shape_hash_from_signature(function_name: str, input_types: list[str], output_type: str) -> str`
-  - Compute method shape hash from function signature
-  - Returns: Hash in format `sha256:<64hex>`
-
-### Receipts Module
-
-- `receipt_from_json(json_str: str) -> PyReceipt`
-  - Create receipt from JSON string
-  - Returns: PyReceipt object
-
-#### PyReceipt Class
-
-- `validate() -> None`
-  - Validate receipt (raises ValueError if invalid)
-
-- `compute_hash() -> str`
-  - Compute hash from canonical body
-  - Returns: Hash in format `sha256:<64hex>`
-
-- `to_json() -> str`
-  - Serialize receipt to JSON string
-  - Returns: JSON string
-
-- `get_rid() -> str`
-  - Get receipt ID (RID)
-
-- `get_kind() -> str`
-  - Get receipt kind
-
-- `get_version() -> str`
-  - Get receipt version
-
-- `get_hash() -> str`
-  - Get receipt hash
 
 ## Development
 
+### Prerequisites
+
+- Rust toolchain (latest stable)
+- Python 3.10+ (3.12 recommended)
+- maturin
+
+### Quick Setup
+
 ```bash
+cd sdk/python/northroot
+./setup-dev.sh
+```
+
+This creates a virtual environment, installs dependencies, and builds the package.
+
+### Manual Setup
+
+```bash
+cd sdk/python/northroot
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate
+
+# Install development dependencies
+pip install -e ".[dev]"
+
 # Build in development mode
 maturin develop
+```
+
+### Development Workflow
+
+```bash
+# Activate environment
+cd sdk/python/northroot
+source venv/bin/activate
+
+# Rebuild after code changes
+maturin develop
+# Or use make
+make develop
+
+# Run examples
+./run-example.sh
+# Or manually
+python examples/quickstart.py
+
+# Build release wheels
+maturin build --release
 
 # Run tests
-pytest
+pytest tests/
 
 # Format code
 black .
@@ -251,51 +237,67 @@ black .
 mypy .
 ```
 
-## Status
+### Helper Scripts
 
-**v0.1.0 (Alpha)** - This SDK is in early development. API may change.
+- `setup-dev.sh` - One-command development environment setup
+- `run-example.sh` - Run examples with proper environment activation
+- `Makefile` - Convenience targets for common tasks
 
-## What's New in v0.1.0
+### Troubleshooting
 
-- ✅ Minimal API: `record_work()` and `verify_receipt()` for verifiable proofs
-- ✅ Receipt storage and listing with filtering (workload_id, trace_id)
-- ✅ Async/sync support for all operations
-- ✅ OpenTelemetry integration (optional)
-- ✅ Filesystem-based receipt storage
+**Build fails with "missing field `package`":**
+- Make sure you're in `sdk/python/northroot` directory
+- The `Cargo.toml` should have `[package]` section, not `[workspace]`
 
-## Installation
+**Import errors:**
+- Activate venv: `source venv/bin/activate`
+- Rebuild: `maturin develop`
+- Check that `northroot/__init__.py` exists
 
-### From Source (Development)
+**Rust compilation errors:**
+- Make sure Rust toolchain is installed: `rustc --version`
+- Update Rust: `rustup update`
+- Clean and rebuild: `cargo clean && maturin develop`
 
-```bash
-# Install maturin
-pip install maturin
+## API Reference
 
-# Build and install
-cd sdk/northroot-sdk-python
-maturin develop
-```
+### Client Class
 
-### From PyPI
+- `Client(storage_path: Optional[str] = None)` - Create a new client
+- `record_work(workload_id: str, payload: Dict, tags: Optional[List[str]] = None, trace_id: Optional[str] = None, parent_id: Optional[str] = None) -> PyReceipt`
+- `verify_receipt(receipt: PyReceipt) -> bool`
+- `store_receipt(receipt: PyReceipt) -> None`
+- `list_receipts(workload_id: Optional[str] = None, trace_id: Optional[str] = None, limit: Optional[int] = None) -> List[PyReceipt]`
+- `record_work_async(...)` - Async version of `record_work`
+- `verify_receipt_async(...)` - Async version of `verify_receipt`
+- `list_receipts_async(...)` - Async version of `list_receipts`
 
-```bash
-pip install northroot
-```
+### Delta Module
 
-## Quick Start
+- `decide_reuse(overlap_j: float, cost_model: dict, row_count: int | None = None) -> dict`
+- `economic_delta(overlap_j: float, cost_model: dict, row_count: int | None = None) -> float`
+- `jaccard_similarity(set1: list[str], set2: list[str]) -> float`
 
-```python
-import northroot
+### Shapes Module
 
-# Delta compute operations
-from northroot.delta import decide_reuse, jaccard_similarity
+- `compute_data_shape_hash_from_file(path: str, chunk_scheme: dict | None = None) -> str`
+- `compute_data_shape_hash_from_bytes(data: bytes, chunk_scheme: dict | None = None) -> str`
+- `compute_method_shape_hash_from_code(code_hash: str, params: dict | None = None) -> str`
+- `compute_method_shape_hash_from_signature(function_name: str, input_types: list[str], output_type: str) -> str`
 
-# Receipt operations
-from northroot.receipts import Receipt
+### Receipts Module
 
-# Shape computation
-from northroot.shapes import compute_data_shape_hash
-```
+- `receipt_from_json(json_str: str) -> PyReceipt`
+
+#### PyReceipt Class
+
+- `validate() -> None` - Validate receipt (raises ValueError if invalid)
+- `compute_hash() -> str` - Compute hash from canonical body
+- `to_json() -> str` - Serialize receipt to JSON string
+- `get_rid() -> str` - Get receipt ID (RID)
+- `get_kind() -> str` - Get receipt kind
+- `get_version() -> str` - Get receipt version
+- `get_hash() -> str` - Get receipt hash
 
 ## Architecture
 
@@ -305,31 +307,18 @@ This SDK provides Python bindings to the Rust `northroot-engine` crate via PyO3.
 - **Core Engine**: `crates/northroot-engine/` (Rust)
 - **Clear Boundaries**: SDK = language bindings, Engine = core logic
 
-## Development
+## Status
 
-### Prerequisites
+**v0.1.0 (Alpha)** - This SDK is in early development. API may change.
 
-- Rust toolchain (latest stable)
-- Python 3.8+
-- maturin
+### What's New in v0.1.0
 
-### Building
-
-```bash
-maturin develop
-```
-
-### Testing
-
-```bash
-# Rust tests
-cargo test
-
-# Python tests (when implemented)
-pytest tests/
-```
+- ✅ Minimal API: `record_work()` and `verify_receipt()` for verifiable proofs
+- ✅ Receipt storage and listing with filtering (workload_id, trace_id)
+- ✅ Async/sync support for all operations
+- ✅ OpenTelemetry integration (optional)
+- ✅ Filesystem-based receipt storage
 
 ## License
 
 Apache 2.0
-

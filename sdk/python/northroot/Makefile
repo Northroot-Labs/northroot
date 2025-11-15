@@ -25,7 +25,7 @@ venv:
 install-dev: venv
 	@echo "Installing development dependencies..."
 	@./venv/bin/pip install --upgrade pip
-	@./venv/bin/pip install maturin pytest black mypy
+	@./venv/bin/pip install -e ".[dev]"
 	@echo "✅ Development dependencies installed"
 
 # Build the package

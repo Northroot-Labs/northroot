@@ -39,6 +39,14 @@ classifiers = [
 
 [project.optional-dependencies]
 otel = ["opentelemetry-api>=1.20.0"]
+dev = [
+    "maturin>=1.0,<2.0",
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "black>=23.0.0",
+    "mypy>=1.0.0",
+    "ruff>=0.1.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/Northroot-Labs/northroot"
