@@ -1,11 +1,12 @@
-# Northroot — Harada 64-Cell Grid
-
 ---
+Title: Northroot — Harada 64-Cell Grid
 Version: 0.1
 Status: active
 Epoch: "v0.1 - Ship minimal verifiable compute layer + Python SDK. 
 Effective: 2025-11-15
 ---
+
+## Northroot - Harada 64-Cell Grid v0.1
 
 ## Central Goal
 

@@ -40,7 +40,7 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 | **P1-T4** — Implement golden tests for serialization | ✅ **COMPLETE** | Golden tests exist in `test_drift_detection.rs` with baseline hashes. |
 | **P1-T5** — Stabilize delta-reuse criteria in code | ❌ **PENDING** | Delta reuse logic exists but not stabilized. |
 | **P1-T6** — Clean up engine crate structure | ⚠️ **PARTIAL** | Structure is clean but needs dead code audit. |
-| **P1-T7** — Document canonical forms | ❌ **PENDING** | No developer-facing reference doc yet. |
+| **P1-T7** — Document canonical forms | ✅ **COMPLETE** | Developer-facing reference created in `docs/guides/canonical-forms-reference.md`. Covers CBOR, JCS, JSON adapters, and best practices. |
 | **P1-T8** — Establish reproducible test suite | ✅ **COMPLETE** | Test suite exists and runs reproducibly. |
 
 **Phase 1 Progress:** 3/8 complete, 3/8 partial, 2/8 pending
