@@ -26,6 +26,7 @@ pub mod schema;
 // and is not part of the public API
 pub mod test_utils;
 pub mod uuid_serde;
+pub mod bytes32_serde;
 pub mod validation;
 
 pub use canonical::{
@@ -537,7 +538,7 @@ pub struct ExecutionPayload {
     /// Optional Delta Lake Change Data Feed metadata for partition-level reuse tracking
     pub cdf_metadata: Option<Vec<CdfMetadata>>,
     /// Proof-addressable cache key (32 bytes)
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default, with = "crate::bytes32_serde")]
     pub pac: Option<[u8; 32]>,
     /// Change epoch: snapshot or commit ID (e.g., "snap-123", "commit-abc")
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -549,13 +550,13 @@ pub struct ExecutionPayload {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub hll_cardinality: Option<u64>,
     /// Hash pointer to full chunk manifest
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default, with = "crate::bytes32_serde")]
     pub chunk_manifest_hash: Option<[u8; 32]>,
     /// Size of uncompressed manifest in bytes
     #[serde(skip_serializing_if = "Option::is_none")]
     pub chunk_manifest_size_bytes: Option<u64>,
     /// Optional Merkle root for integrity verification
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default, with = "crate::bytes32_serde")]
     pub merkle_root: Option<[u8; 32]>,
     /// Previous execution RID for receipt chain
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -571,7 +572,7 @@ pub struct ExecutionPayload {
     /// Used when proving/recomputing at subpart granularity. Separate from `merkle_root`
     /// which is for generic integrity verification. Enables partial reuse proofs
     /// (e.g., reuse 3 of 5 parquet files).
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default, with = "crate::bytes32_serde")]
     pub manifest_root: Option<[u8; 32]>,
     /// Output MIME type (e.g., "application/parquet", "application/json")
     #[serde(skip_serializing_if = "Option::is_none")]

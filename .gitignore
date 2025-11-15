@@ -13,7 +13,8 @@ crates/**/Cargo.lock
 
 # IDE
 .idea/
-.vscode/
+# Keep .vscode/settings.json for workspace Python interpreter config
+# .vscode/
 *.swp
 *.swo
 *~
@@ -61,3 +62,30 @@ policies/*.local.json
 testdata/generated/
 vectors/generated/
 
+# Python virtual environments
+venv/
+env/
+.venv/
+**/venv/
+**/env/
+**/venv/**
+**/env/**
+
+# Python build artifacts
+**/dist/
+**/build/
+**/*.egg-info/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/*.pyw
+**/*.pyz
+
+# Rust build artifacts
+**/target/
+**/Cargo.lock
+**/*.rs.bk
+sdk/python/northroot/target/
+sdk/python/northroot/Cargo.lock
+sdk/python/northroot/**/*.rs.bk

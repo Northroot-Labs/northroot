@@ -4,6 +4,11 @@
 **Harada Version:** 0.1  
 **ADR Reference:** ADR-0012
 
+**Recent Fixes:**
+- Fixed JSON deserialization errors for `[u8; 32]` byte arrays (pac, chunk_manifest_hash, merkle_root, manifest_root)
+- Added custom serializer/deserializer with backward compatibility (handles both base64url strings and legacy number arrays)
+- Quickstart example now runs without warnings
+
 ## Implementation Provenance
 
 **Latest Commit:** `68037d7fa3ca317f48ac514ca833714451e19edd`  
@@ -60,9 +65,9 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 | **P2-T5** — Add a clear exception hierarchy | ✅ **COMPLETE** | Error types mapped from Rust ApiError, clear hierarchy documented. |
 | **P2-T6** — Create typed result objects | ✅ **COMPLETE** | `PyReceipt` integrated with new API. Thin client wrapper created. |
 | **P2-T7** — Produce a 10–15 line quickstart example | ✅ **COMPLETE** | Quickstart example created at `sdk/northroot-sdk-python/examples/quickstart.py`. |
-| **P2-T8** — Package and publish a clean PyPI release | ❌ **PENDING** | Not published. |
+| **P2-T8** — Package and publish a clean PyPI release | 🔄 **IN PROGRESS** | Package structure ready, metadata complete, build tested. Ready for PyPI publishing. |
 
-**Phase 2 Progress:** 7/8 complete, 0/8 partial, 1/8 pending
+**Phase 2 Progress:** 7/8 complete, 0/8 partial, 1/8 in progress
 
 **Recent Completion:** 
 - Python SDK bindings for `record_work` and `verify_receipt` created (P2-T3 ✅)

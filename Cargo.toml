@@ -8,6 +8,7 @@ members = [
     "crates/northroot-storage",
 ]
 exclude = [
+    "sdk/python/northroot",  # Python SDK has its own build process
     "sdk/northroot-sdk-python",  # Python SDK is separate (PyO3, not part of Rust workspace)
 ]
 resolver = "2"

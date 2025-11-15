@@ -2,6 +2,6 @@
 alwaysApply: true
 ---
 
-keep accurate date formatting across docs when adding new doc or making modification. 
+keep accurate date formatting across docs when adding new doc or making modification. use tools to enforce date ALWAYS.
 
 Format: yyy-mm-dd
