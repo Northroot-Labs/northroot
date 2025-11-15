@@ -11,8 +11,20 @@ Python SDK for the Northroot proof algebra system, providing high-level Python b
 
 ## Installation
 
+### From PyPI (Recommended)
+
 ```bash
-# Build from source (requires Rust and maturin)
+pip install northroot
+```
+
+### From Source (Development)
+
+```bash
+# Install maturin
+pip install maturin
+
+# Build from source (requires Rust)
+cd sdk/python/northroot
 maturin develop
 
 # Or install in development mode
@@ -30,7 +42,7 @@ from northroot import Client
 
 # Create a client (storage is decoupled and optional for v0.1)
 client = Client()
-# client = Client(storage_path="./receipts")  # With filesystem storage (future)
+# client = Client(storage_path="./receipts")  # With filesystem storage
 
 # Record a unit of work and get a verifiable receipt
 receipt = client.record_work(
@@ -241,7 +253,15 @@ mypy .
 
 ## Status
 
-**Alpha** - This SDK is in early development. API may change.
+**v0.1.0 (Alpha)** - This SDK is in early development. API may change.
+
+## What's New in v0.1.0
+
+- ✅ Minimal API: `record_work()` and `verify_receipt()` for verifiable proofs
+- ✅ Receipt storage and listing with filtering (workload_id, trace_id)
+- ✅ Async/sync support for all operations
+- ✅ OpenTelemetry integration (optional)
+- ✅ Filesystem-based receipt storage
 
 ## Installation
 
@@ -256,10 +276,10 @@ cd sdk/northroot-sdk-python
 maturin develop
 ```
 
-### From PyPI (Future)
+### From PyPI
 
 ```bash
-pip install northroot-sdk
+pip install northroot
 ```
 
 ## Quick Start
@@ -281,7 +301,7 @@ from northroot.shapes import compute_data_shape_hash
 
 This SDK provides Python bindings to the Rust `northroot-engine` crate via PyO3.
 
-- **SDK Location**: `sdk/northroot-sdk-python/` (not `crates/`)
+- **SDK Location**: `sdk/python/northroot/` (not `crates/`)
 - **Core Engine**: `crates/northroot-engine/` (Rust)
 - **Clear Boundaries**: SDK = language bindings, Engine = core logic
 

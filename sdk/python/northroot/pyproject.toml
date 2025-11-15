@@ -3,31 +3,42 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "northroot-sdk"
+name = "northroot"
 version = "0.1.0"
-description = "Python SDK for Northroot proof algebra system"
+description = "Python SDK for Northroot proof algebra system - verifiable proofs of compute work"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 dependencies = []
-optional-dependencies = {
-    otel = ["opentelemetry-api>=1.20.0"]
-}
 authors = [
     { name = "Northroot Contributors" }
+]
+keywords = [
+    "proof",
+    "verification",
+    "compute",
+    "receipt",
+    "delta-compute",
+    "data-shapes",
+    "observability",
+    "audit",
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Rust",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Distributed Computing",
+    "Topic :: System :: Logging",
 ]
+
+[project.optional-dependencies]
+otel = ["opentelemetry-api>=1.20.0"]
 
 [project.urls]
 Homepage = "https://github.com/Northroot-Labs/northroot"
@@ -35,7 +46,8 @@ Documentation = "https://docs.northroot.dev"
 Repository = "https://github.com/Northroot-Labs/northroot"
 
 [tool.maturin]
-features = []
-python-source = "."
-module-name = "_northroot"  # Internal module name, wrapped by northroot/__init__.py
+features = ["storage"]  # Enable storage feature by default
+python-source = "."  # Look for Python package in current directory
+module-name = "_northroot"  # Internal Rust module name, wrapped by northroot/__init__.py
+# The northroot/ directory (with __init__.py) should be in the same directory as pyproject.toml
 

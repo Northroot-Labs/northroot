@@ -7,8 +7,8 @@ description = "Python SDK for Northroot proof algebra system"
 license = "Apache-2.0"
 repository = "https://github.com/northroot/northroot"
 
-# Explicitly exclude from workspace (SDK is separate Python package)
-[workspace]
+# Note: This crate is explicitly excluded from the root workspace
+# It's a standalone Python package with its own build process
 
 [lib]
 name = "_northroot"  # Internal module name, wrapped by northroot/__init__.py
