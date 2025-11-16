@@ -8,7 +8,7 @@ from pathlib import Path
 def query_receipts(run_id: str, storage_path: str = None):
     """Query all receipts for a given run_id."""
     try:
-        from northroot import Client
+        from northroot import Client  # type: ignore[import-untyped]
     except ImportError:
         print("ERROR: northroot not installed")
         print("Install with: pip install northroot")

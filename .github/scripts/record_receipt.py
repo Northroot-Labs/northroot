@@ -8,7 +8,7 @@ from pathlib import Path
 def record_step(workload_id: str, step_name: str, status: str, metadata: dict = None):
     """Record a workflow step as a receipt."""
     try:
-        from northroot import Client
+        from northroot import Client  # type: ignore[import-untyped]
     except ImportError:
         print("⚠️  northroot not installed, skipping receipt recording")
         return None
