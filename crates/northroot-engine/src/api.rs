@@ -11,6 +11,19 @@
 //! - **Simple semantics**: workload_id = span-level work unit, trace_id = correlation ID
 //! - **Composable**: DAGs built from spans via parent_id and receipt references
 //! - **Future-proof**: Engine can evolve internally without breaking SDK contract
+//!
+//! ## Receipt Population Strategy
+//!
+//! **Core Fields (Always Populated):**
+//! - Envelope: `rid`, `version`, `kind`, `dom`, `cod`, `links`, `hash`
+//! - Context: `timestamp` (audit trail)
+//! - Execution: `trace_id`, `method_ref`, `data_shape_hash`, `span_commitments`, `roots`
+//!
+//! **Optional Fields (Policy/Feature-Driven):**
+//! - Context: `policy_ref`, `identity_ref`, `nonce`, `determinism` (set when policy enabled)
+//! - Execution: `pac`, `change_epoch`, `output_mime_type`, `output_size_bytes` (set when needed)
+//! - Execution: `input_locator_refs`, `output_locator_ref` (set when resolver used)
+//! - All other fields: Reserved for future features, always `None` in v0.1
 
 use northroot_receipts::{
     Context, DeterminismClass, ExecutionPayload, MethodRef, Payload, Receipt, ReceiptKind,
@@ -103,12 +116,28 @@ pub fn record_work(
     let roots = compute_execution_roots(&[span_commitment.clone()], identity_root);
 
     // Build execution payload
+    // 
+    // Core fields (always populated for verifiable compute):
+    // - trace_id: For grouping related work
+    // - method_ref: Workload identifier and method shape
+    // - data_shape_hash: Input data commitment (also used as dom)
+    // - span_commitments: Output commitments
+    // - roots: Merkle roots for composition (trace_set_root used as cod)
+    //
+    // Optional fields (populated by policy/features when needed):
+    // - pac: Proof-addressable cache key (for caching)
+    // - change_epoch: Snapshot/version tracking
+    // - output_mime_type, output_size_bytes: Metadata (when available)
+    // - identity_ref, policy_ref: Set by policy when enabled
+    // - input_locator_refs, output_locator_ref: Set when resolver is used
+    // - All other fields: Reserved for future features
     let execution_payload = ExecutionPayload {
         trace_id: trace_id.clone(),
         method_ref,
         data_shape_hash: data_shape_hash.clone(),
         span_commitments: vec![span_commitment],
         roots: roots.clone(),
+        // Optional fields - only populate when needed
         cdf_metadata: None,
         pac: None,
         change_epoch: None,
@@ -120,7 +149,7 @@ pub fn record_work(
         prev_execution_rid: parent_id
             .as_ref()
             .and_then(|p| Uuid::parse_str(p).ok()),
-        output_digest: Some(data_shape_hash.clone()),
+        output_digest: None, // Removed: redundant with data_shape_hash (which is already in dom)
         manifest_root: None,
         output_mime_type: None,
         output_size_bytes: None,

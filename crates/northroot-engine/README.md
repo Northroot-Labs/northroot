@@ -133,6 +133,21 @@ The engine provides `decide_reuse()` and `economic_delta()` functions for reuse 
 
 **We have proofs of structure and authenticity, not proofs of computation.**
 
+## Receipt Population Strategy
+
+**Core Fields (Always Populated for Verifiable Compute):**
+- Envelope: `rid`, `version`, `kind`, `dom`, `cod`, `links`, `hash`
+- Context: `timestamp` (audit trail)
+- Execution: `trace_id`, `method_ref`, `data_shape_hash`, `span_commitments`, `roots`
+
+**Optional Fields (Policy/Feature-Driven):**
+- Context: `policy_ref`, `identity_ref`, `nonce`, `determinism` (populated when policy enabled)
+- Execution: `pac` (caching), `change_epoch` (versioning), `output_mime_type`, `output_size_bytes` (metadata)
+- Execution: `input_locator_refs`, `output_locator_ref` (when resolver used)
+- All other fields: Reserved for future features, always `None` in v0.1
+
+The structure is extensible - optional fields are populated only when needed, keeping receipts minimal for core use cases while supporting advanced features when enabled.
+
 ## Testing
 
 ```bash
