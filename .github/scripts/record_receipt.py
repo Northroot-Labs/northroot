@@ -46,11 +46,20 @@ def record_step(workload_id: str, step_name: str, status: str, metadata: dict = 
     
     receipt_file = receipt_dir / f"{workload_id}-{receipt.get_rid()}.json"
     with open(receipt_file, "w") as f:
-        receipt_dict = receipt.to_dict() if hasattr(receipt, 'to_dict') else {
-            "rid": str(receipt.get_rid()),
-            "hash": receipt.get_hash(),
-            "payload": payload
-        }
+        # Use the receipt's to_json() method
+        try:
+            receipt_json_str = receipt.to_json()
+            receipt_dict = json.loads(receipt_json_str)
+        except Exception as e:
+            # Fallback: create minimal receipt record
+            print(f"⚠️  Could not serialize receipt to JSON: {e}")
+            receipt_dict = {
+                "rid": str(receipt.get_rid()),
+                "hash": receipt.get_hash() if hasattr(receipt, 'get_hash') else "unknown",
+                "trace_id": f"run-{run_id}",
+                "workload_id": workload_id,
+                "payload": payload
+            }
         json.dump(receipt_dict, f, indent=2)
     
     print(f"✅ Recorded receipt: {receipt.get_rid()}")
