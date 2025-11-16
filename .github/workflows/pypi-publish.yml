@@ -51,16 +51,59 @@ jobs:
       - name: Install northroot (for receipts)
         if: always()
         run: |
-          pip install northroot || echo "⚠️  northroot not available, skipping receipts"
+          pip install northroot || echo "[SKIP] northroot not available"
         continue-on-error: true
 
       - name: Record build start
         if: always()
-        working-directory: sdk/python/northroot
         shell: bash
         run: |
-          python ../../../.github/scripts/record_receipt.py "build-wheel" "build-start" "${{ job.status }}" '{"platform": "${{ matrix.os }}", "python": "${{ matrix.python-version }}"}'
+          python3 << 'PYEOF'
+          import json
+          import os
+          import sys
+          
+          try:
+              from northroot import Client
+              
+              run_id = os.environ.get('GITHUB_RUN_ID', 'unknown')
+              workflow = os.environ.get('GITHUB_WORKFLOW', 'unknown')
+              job_name = os.environ.get('GITHUB_JOB', 'unknown')
+              platform = os.environ.get('RUNNER_OS', 'unknown')
+              python_version = os.environ.get('PYTHON_VERSION', 'unknown')
+              job_status = os.environ.get('JOB_STATUS', 'unknown')
+              
+              client = Client()
+              
+              payload = {
+                  'step': 'build-start',
+                  'status': job_status,
+                  'workflow': workflow,
+                  'job': job_name,
+                  'platform': platform,
+                  'python': python_version,
+                  'run_id': run_id
+              }
+              
+              receipt = client.record_work(
+                  workload_id='build-wheel',
+                  payload=payload,
+                  trace_id=f'run-{run_id}',
+                  tags=['ci', 'github-actions', workflow, job_name]
+              )
+              
+              print(f'[OK] Recorded receipt: {receipt.get_rid()}')
+          except ImportError:
+              print('[SKIP] northroot not available')
+              sys.exit(0)
+          except Exception as e:
+              print(f'[WARN] Receipt recording failed: {str(e)}')
+              sys.exit(0)
+          PYEOF
         continue-on-error: true
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          JOB_STATUS: ${{ job.status }}
 
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
@@ -199,12 +242,58 @@ jobs:
 
       - name: Record build completion
         if: always()
-        working-directory: sdk/python/northroot
         shell: bash
         run: |
           WHEEL_COUNT=$(find dist target/wheels -name '*.whl' -type f 2>/dev/null | wc -l || echo "0")
-          python ../../../.github/scripts/record_receipt.py "build-wheel" "build-complete" "${{ job.status }}" "{\"wheel_count\": \"$WHEEL_COUNT\", \"platform\": \"${{ matrix.os }}\", \"python\": \"${{ matrix.python-version }}\"}"
+          python3 << 'PYEOF'
+          import json
+          import os
+          import sys
+          
+          try:
+              from northroot import Client
+              
+              run_id = os.environ.get('GITHUB_RUN_ID', 'unknown')
+              workflow = os.environ.get('GITHUB_WORKFLOW', 'unknown')
+              job_name = os.environ.get('GITHUB_JOB', 'unknown')
+              platform = os.environ.get('RUNNER_OS', 'unknown')
+              python_version = os.environ.get('PYTHON_VERSION', 'unknown')
+              job_status = os.environ.get('JOB_STATUS', 'unknown')
+              wheel_count = os.environ.get('WHEEL_COUNT', '0')
+              
+              client = Client()
+              
+              payload = {
+                  'step': 'build-complete',
+                  'status': job_status,
+                  'workflow': workflow,
+                  'job': job_name,
+                  'platform': platform,
+                  'python': python_version,
+                  'run_id': run_id,
+                  'wheel_count': wheel_count
+              }
+              
+              receipt = client.record_work(
+                  workload_id='build-wheel',
+                  payload=payload,
+                  trace_id=f'run-{run_id}',
+                  tags=['ci', 'github-actions', workflow, job_name]
+              )
+              
+              print(f'[OK] Recorded receipt: {receipt.get_rid()}')
+          except ImportError:
+              print('[SKIP] northroot not available')
+              sys.exit(0)
+          except Exception as e:
+              print(f'[WARN] Receipt recording failed: {str(e)}')
+              sys.exit(0)
+          PYEOF
         continue-on-error: true
+        env:
+          PYTHON_VERSION: ${{ matrix.python-version }}
+          JOB_STATUS: ${{ job.status }}
+          WHEEL_COUNT: ${{ env.WHEEL_COUNT }}
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
