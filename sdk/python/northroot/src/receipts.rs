@@ -89,6 +89,34 @@ impl PyReceipt {
     fn get_hash(&self) -> String {
         self.receipt.hash.clone()
     }
+
+    /// Get domain shape commitment (dom).
+    fn get_dom(&self) -> String {
+        self.receipt.dom.clone()
+    }
+
+    /// Get codomain shape commitment (cod).
+    fn get_cod(&self) -> String {
+        self.receipt.cod.clone()
+    }
+
+    /// Get workload ID from execution payload (if this is an execution receipt).
+    ///
+    /// Returns None if this is not an execution receipt or if workload_id is not available.
+    fn get_workload_id(&self) -> Option<String> {
+        // For now, execution receipts don't have a direct workload_id field
+        // It's stored in the payload. We'll need to extract it from the payload.
+        // For v0.1, we can return None and let the demo work around it
+        None
+    }
+
+    /// Get trace ID from execution payload (if this is an execution receipt).
+    fn get_trace_id(&self) -> Option<String> {
+        match &self.receipt.payload {
+            northroot_receipts::Payload::Execution(exec) => Some(exec.trace_id.clone()),
+            _ => None,
+        }
+    }
 }
 
 impl PyReceipt {
