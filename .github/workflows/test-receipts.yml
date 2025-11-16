@@ -43,27 +43,59 @@ jobs:
           echo "=== Package Files ==="
           python3 -c "import site; import os; print('Site packages:', site.getsitepackages()); print('User site:', site.getusersitepackages())" || echo "[WARN] site check failed"
           echo ""
-          # Check if package files exist
+          # Check if package files exist - directly check the installation location
           python3 << 'PYEOF'
           import site
           import os
           import sys
           
-          # Find where packages are installed
-          for path in sys.path:
-              northroot_path = os.path.join(path, 'northroot')
-              if os.path.exists(northroot_path):
-                  print(f'[OK] Found northroot at: {northroot_path}')
-                  # List contents
-                  try:
-                      contents = os.listdir(northroot_path)
-                      print(f'[OK] Contents: {contents}')
-                  except:
-                      pass
-                  break
+          # Get the site-packages directory
+          site_packages = site.getsitepackages()[0]
+          print(f'[INFO] Site packages directory: {site_packages}')
+          
+          # Check if directory exists
+          if os.path.exists(site_packages):
+              print(f'[OK] Site packages directory exists')
+              # List all packages
+              try:
+                  all_packages = os.listdir(site_packages)
+                  print(f'[INFO] All packages in site-packages: {len(all_packages)} items')
+                  # Look for northroot
+                  northroot_items = [p for p in all_packages if 'northroot' in p.lower()]
+                  if northroot_items:
+                      print(f'[OK] Found northroot-related items: {northroot_items}')
+                      for item in northroot_items:
+                          item_path = os.path.join(site_packages, item)
+                          if os.path.isdir(item_path):
+                              contents = os.listdir(item_path)
+                              print(f'[OK] Contents of {item}: {contents}')
+                          else:
+                              print(f'[INFO] {item} is a file, size: {os.path.getsize(item_path)} bytes')
+                  else:
+                      print('[WARN] No northroot-related items found in site-packages')
+                      print(f'[INFO] Sample packages: {all_packages[:10]}')
+              except Exception as e:
+                  print(f'[ERROR] Failed to list site-packages: {e}')
           else:
-              print('[WARN] northroot directory not found in sys.path')
-              print(f'[INFO] Searched paths: {sys.path}')
+              print(f'[ERROR] Site packages directory does not exist: {site_packages}')
+          
+          # Also check the exact path from pip show
+          exact_path = '/opt/hostedtoolcache/Python/3.12.12/x64/lib/python3.12/site-packages'
+          northroot_path = os.path.join(exact_path, 'northroot')
+          print(f'[INFO] Checking exact path: {northroot_path}')
+          if os.path.exists(northroot_path):
+              print(f'[OK] northroot directory exists at exact path')
+              contents = os.listdir(northroot_path)
+              print(f'[OK] Contents: {contents}')
+          else:
+              print(f'[ERROR] northroot directory does NOT exist at: {northroot_path}')
+              # Check parent directory
+              if os.path.exists(exact_path):
+                  parent_contents = os.listdir(exact_path)
+                  northroot_items = [p for p in parent_contents if 'northroot' in p.lower()]
+                  print(f'[INFO] Parent directory exists, northroot items: {northroot_items}')
+              else:
+                  print(f'[ERROR] Parent directory does not exist: {exact_path}')
           PYEOF
           echo ""
           # Verify installation with better error handling
