@@ -48,15 +48,29 @@ jobs:
           pip install --upgrade pip
           pip install maturin
 
-      - name: Build wheel (Linux/Windows)
-        if: runner.os != 'macOS'
+      - name: Build wheel (Linux)
+        if: runner.os == 'Linux'
         working-directory: sdk/python/northroot
+        shell: bash
         run: |
           maturin build --release --out dist
           # Ensure dist directory exists and has wheels
           mkdir -p dist
           # Copy wheels from target/wheels if they exist (fallback)
           if [ -d target/wheels ] && [ -n "$(ls -A target/wheels/*.whl 2>/dev/null)" ]; then
+            cp target/wheels/*.whl dist/ 2>/dev/null || true
+          fi
+
+      - name: Build wheel (Windows)
+        if: runner.os == 'Windows'
+        working-directory: sdk/python/northroot
+        shell: bash
+        run: |
+          maturin build --release --out dist
+          # Ensure dist directory exists and has wheels
+          mkdir -p dist
+          # Copy wheels from target/wheels if they exist (fallback)
+          if [ -d target/wheels ] && [ -n "$(find target/wheels -name '*.whl' -type f 2>/dev/null | head -1)" ]; then
             cp target/wheels/*.whl dist/ 2>/dev/null || true
           fi
 
@@ -77,6 +91,7 @@ jobs:
 
       - name: List build artifacts
         working-directory: sdk/python/northroot
+        shell: bash
         run: |
           echo "=== Build artifacts in dist/ ==="
           ls -lah dist/*.whl 2>/dev/null || echo "No wheels in dist/"
