@@ -34,10 +34,40 @@ jobs:
             exit 0
           }
           # Debug: Check where it was installed
+          echo "=== Package Info ==="
           python3 -m pip show northroot || echo "[WARN] pip show failed"
-          # Debug: Check Python path
-          python3 -c "import sys; print('Python path:', sys.path)" || echo "[WARN] sys.path check failed"
+          echo ""
+          echo "=== Python Info ==="
+          python3 -c "import sys; print('Python version:', sys.version); print('Python executable:', sys.executable); print('Python path:', sys.path)" || echo "[WARN] sys.path check failed"
+          echo ""
+          echo "=== Package Files ==="
+          python3 -c "import site; import os; print('Site packages:', site.getsitepackages()); print('User site:', site.getusersitepackages())" || echo "[WARN] site check failed"
+          echo ""
+          # Check if package files exist
+          python3 << 'PYEOF'
+          import site
+          import os
+          import sys
+          
+          # Find where packages are installed
+          for path in sys.path:
+              northroot_path = os.path.join(path, 'northroot')
+              if os.path.exists(northroot_path):
+                  print(f'[OK] Found northroot at: {northroot_path}')
+                  # List contents
+                  try:
+                      contents = os.listdir(northroot_path)
+                      print(f'[OK] Contents: {contents}')
+                  except:
+                      pass
+                  break
+          else:
+              print('[WARN] northroot directory not found in sys.path')
+              print(f'[INFO] Searched paths: {sys.path}')
+          PYEOF
+          echo ""
           # Verify installation with better error handling
+          echo "=== Import Test ==="
           python3 << 'PYEOF'
           import sys
           try:
@@ -48,6 +78,8 @@ jobs:
               print(f'[ERROR] ImportError: {e}')
               print(f'[ERROR] Python version: {sys.version}')
               print(f'[ERROR] Python executable: {sys.executable}')
+              import traceback
+              traceback.print_exc()
               sys.exit(1)
           except Exception as e:
               print(f'[ERROR] Unexpected error: {e}')
