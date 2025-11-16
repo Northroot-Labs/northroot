@@ -24,24 +24,166 @@ where
     // For JSON, we can use serde_json::Value as intermediate
     // For CBOR, we use CborValue
     if deserializer.is_human_readable() {
-        // JSON path: use serde_json::Value as intermediate, then convert to CborValue
-        let json_value: serde_json::Value = serde_json::Value::deserialize(deserializer)?;
-
-        // Convert JSON Value to CBOR bytes, then to CborValue
-        let mut cbor_bytes = Vec::new();
-        ciborium::ser::into_writer(&json_value, &mut cbor_bytes)
-            .map_err(|e| Error::custom(format!("JSON to CBOR conversion failed: {}", e)))?;
-
-        let value: CborValue = ciborium::de::from_reader(cbor_bytes.as_slice())
-            .map_err(|e| Error::custom(format!("CBOR deserialization failed: {}", e)))?;
-
-        // Continue with CborValue processing
-        deserialize_from_cbor_value(value)
+        // JSON path: deserialize directly from JSON to preserve custom deserializers
+        // This ensures that custom deserializers (like bytes32_serde) work correctly
+        // with JSON format (base64url strings) instead of being converted to CBOR first
+        deserialize_from_json_value(deserializer)
     } else {
         // CBOR path: deserialize directly as CborValue
         let value = CborValue::deserialize(deserializer)?;
         deserialize_from_cbor_value(value)
     }
+}
+
+/// Deserialize Receipt directly from JSON (preserves custom deserializers).
+fn deserialize_from_json_value<'de, D>(deserializer: D) -> Result<Receipt, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    use serde_json::Value as JsonValue;
+    
+    // Deserialize as JSON value first
+    let json_value: JsonValue = JsonValue::deserialize(deserializer)?;
+    
+    // Extract fields from JSON
+    let obj = json_value.as_object().ok_or_else(|| {
+        Error::invalid_type(serde::de::Unexpected::Other("expected object"), &"an object")
+    })?;
+    
+    // Extract kind
+    let kind_str = obj.get("kind")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| Error::missing_field("kind"))?;
+    let kind = match kind_str {
+        "data_shape" => ReceiptKind::DataShape,
+        "method_shape" => ReceiptKind::MethodShape,
+        "reasoning_shape" => ReceiptKind::ReasoningShape,
+        "execution" => ReceiptKind::Execution,
+        "spend" => ReceiptKind::Spend,
+        "settlement" => ReceiptKind::Settlement,
+        _ => return Err(Error::invalid_value(
+            serde::de::Unexpected::Str(kind_str),
+            &"one of: data_shape, method_shape, reasoning_shape, execution, spend, settlement",
+        )),
+    };
+    
+    // Deserialize payload directly from JSON value using a JSON deserializer
+    // This preserves the is_human_readable() context for custom deserializers
+    let payload_value = obj.get("payload")
+        .ok_or_else(|| Error::missing_field("payload"))?;
+    
+    // Convert JSON value to string and deserialize with proper JSON deserializer
+    // This ensures custom deserializers see is_human_readable() == true
+    let payload_json_str = serde_json::to_string(payload_value)
+        .map_err(|e| Error::custom(format!("Failed to serialize payload to JSON: {}", e)))?;
+    
+    let payload = match kind {
+        ReceiptKind::DataShape => Payload::DataShape(
+            serde_json::from_str(&payload_json_str).map_err(|e| {
+                Error::custom(format!("Failed to deserialize DataShapePayload: {}", e))
+            })?,
+        ),
+        ReceiptKind::MethodShape => Payload::MethodShape(
+            serde_json::from_str(&payload_json_str).map_err(|e| {
+                Error::custom(format!("Failed to deserialize MethodShapePayload: {}", e))
+            })?,
+        ),
+        ReceiptKind::ReasoningShape => Payload::ReasoningShape(
+            serde_json::from_str(&payload_json_str).map_err(|e| {
+                Error::custom(format!("Failed to deserialize ReasoningShapePayload: {}", e))
+            })?,
+        ),
+        ReceiptKind::Execution => Payload::Execution(
+            serde_json::from_str(&payload_json_str).map_err(|e| {
+                Error::custom(format!("Failed to deserialize ExecutionPayload: {}", e))
+            })?,
+        ),
+        ReceiptKind::Spend => Payload::Spend(
+            serde_json::from_str(&payload_json_str).map_err(|e| {
+                Error::custom(format!("Failed to deserialize SpendPayload: {}", e))
+            })?,
+        ),
+        ReceiptKind::Settlement => Payload::Settlement(
+            serde_json::from_str(&payload_json_str).map_err(|e| {
+                Error::custom(format!("Failed to deserialize SettlementPayload: {}", e))
+            })?,
+        ),
+    };
+    
+    // Extract other fields
+    let rid_str = obj.get("rid")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| Error::missing_field("rid"))?;
+    let rid = Uuid::parse_str(rid_str)
+        .map_err(|e| Error::custom(format!("Invalid UUID in rid: {}", e)))?;
+    
+    let version = obj.get("version")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| Error::missing_field("version"))?
+        .to_string();
+    let dom = obj.get("dom")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| Error::missing_field("dom"))?
+        .to_string();
+    let cod = obj.get("cod")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| Error::missing_field("cod"))?
+        .to_string();
+    
+    // Extract links (array of UUID strings)
+    let links = obj.get("links")
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|item| {
+                    item.as_str()
+                        .and_then(|s| Uuid::parse_str(s).ok())
+                })
+                .collect()
+        })
+        .unwrap_or_default();
+    
+    // Extract ctx - deserialize directly from JSON
+    let ctx_value = obj.get("ctx")
+        .ok_or_else(|| Error::missing_field("ctx"))?;
+    let ctx_json = serde_json::to_string(ctx_value)
+        .map_err(|e| Error::custom(format!("Failed to serialize ctx to JSON: {}", e)))?;
+    let ctx: crate::Context = serde_json::from_str(&ctx_json)
+        .map_err(|e| Error::custom(format!("Failed to deserialize Context: {}", e)))?;
+    
+    // Extract attest (optional)
+    let attest = obj.get("attest").map(|v| {
+        // Convert JSON to CBOR Value for attest
+        let mut cbor_bytes = Vec::new();
+        ciborium::ser::into_writer(v, &mut cbor_bytes).ok()?;
+        ciborium::de::from_reader(cbor_bytes.as_slice()).ok()
+    }).flatten();
+    
+    // Extract sig (optional)
+    let sig = obj.get("sig").and_then(|v| {
+        let mut cbor_bytes = Vec::new();
+        ciborium::ser::into_writer(v, &mut cbor_bytes).ok()?;
+        ciborium::de::from_reader(cbor_bytes.as_slice()).ok()
+    });
+    
+    let hash = obj.get("hash")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| Error::missing_field("hash"))?
+        .to_string();
+    
+    Ok(Receipt {
+        rid,
+        version,
+        kind,
+        dom,
+        cod,
+        links,
+        ctx,
+        payload,
+        attest,
+        sig,
+        hash,
+    })
 }
 
 /// Deserialize Receipt from a CborValue (internal helper).

@@ -1052,6 +1052,7 @@ dependencies = [
 name = "northroot-receipts"
 version = "0.1.0"
 dependencies = [
+ "base64",
  "ciborium",
  "hex",
  "jsonschema",
