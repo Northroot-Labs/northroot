@@ -33,11 +33,28 @@ jobs:
             echo "[WARN] Failed to install northroot from PyPI"
             exit 0
           }
-          # Verify installation
-          python3 -c "import northroot; print('[OK] northroot installed successfully')" || {
-            echo "[WARN] northroot import failed after installation"
-            exit 0
-          }
+          # Debug: Check where it was installed
+          python3 -m pip show northroot || echo "[WARN] pip show failed"
+          # Debug: Check Python path
+          python3 -c "import sys; print('Python path:', sys.path)" || echo "[WARN] sys.path check failed"
+          # Verify installation with better error handling
+          python3 << 'PYEOF'
+          import sys
+          try:
+              import northroot
+              print('[OK] northroot imported successfully')
+              print(f'[OK] northroot location: {northroot.__file__}')
+          except ImportError as e:
+              print(f'[ERROR] ImportError: {e}')
+              print(f'[ERROR] Python version: {sys.version}')
+              print(f'[ERROR] Python executable: {sys.executable}')
+              sys.exit(1)
+          except Exception as e:
+              print(f'[ERROR] Unexpected error: {e}')
+              import traceback
+              traceback.print_exc()
+              sys.exit(1)
+          PYEOF
         continue-on-error: true
 
       - name: Setup receipt storage
