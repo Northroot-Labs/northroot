@@ -12,14 +12,119 @@ on:
         default: false
 
 jobs:
-  publish:
-    name: Build and Publish Python Package
-    runs-on: ubuntu-latest
-    # Optional: Add environment protection (uncomment and configure in GitHub Settings)
-    # environment:
-    #   name: pypi
-    #   url: https://pypi.org/project/northroot/
+  build-wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.10", "3.11", "3.12"]
+        exclude:
+          # Reduce matrix size - build Python 3.12 on all platforms, others on Linux only
+          - os: macos-latest
+            python-version: "3.10"
+          - os: macos-latest
+            python-version: "3.11"
+          - os: windows-latest
+            python-version: "3.10"
+          - os: windows-latest
+            python-version: "3.11"
 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install maturin
+        run: |
+          pip install --upgrade pip
+          pip install maturin
+
+      - name: Build wheel (Linux/Windows)
+        if: runner.os != 'macOS'
+        working-directory: sdk/python/northroot
+        run: |
+          maturin build --release --out dist
+
+      - name: Build wheel (macOS)
+        if: runner.os == 'macOS'
+        working-directory: sdk/python/northroot
+        run: |
+          # Build for native architecture (GitHub macOS runners are Apple Silicon)
+          # For Universal2 support, we'd need to build both architectures and merge
+          # For now, building native architecture - users on other arch can build from source
+          maturin build --release --out dist
+
+      - name: List build artifacts
+        working-directory: sdk/python/northroot
+        run: |
+          echo "Build artifacts in dist/:"
+          ls -lah dist/ 2>/dev/null || echo "dist/ directory does not exist"
+          echo ""
+          echo "Build artifacts in target/wheels/ (if any):"
+          ls -lah target/wheels/ 2>/dev/null || echo "target/wheels/ does not exist"
+
+      - name: Verify wheel (Unix)
+        if: runner.os != 'Windows'
+        working-directory: sdk/python/northroot
+        shell: bash
+        run: |
+          # Find the built wheel file
+          WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
+          if [ -z "$WHEEL_FILE" ]; then
+            WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
+          fi
+          
+          if [ -z "$WHEEL_FILE" ]; then
+            echo "❌ No wheel file found"
+            exit 1
+          fi
+          
+          echo "Found wheel: $WHEEL_FILE"
+          pip install "$WHEEL_FILE" --force-reinstall --no-deps
+          python -c "from northroot import Client; print('✅ Package imports successfully')"
+
+      - name: Verify wheel (Windows)
+        if: runner.os == 'Windows'
+        working-directory: sdk/python/northroot
+        shell: pwsh
+        run: |
+          # Find the built wheel file
+          $wheelFile = Get-ChildItem -Path target/wheels/*.whl -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $wheelFile) {
+            $wheelFile = Get-ChildItem -Path dist/*.whl -ErrorAction SilentlyContinue | Select-Object -First 1
+          }
+          
+          if (-not $wheelFile) {
+            Write-Host "❌ No wheel file found"
+            exit 1
+          }
+          
+          Write-Host "Found wheel: $($wheelFile.FullName)"
+          pip install $wheelFile.FullName --force-reinstall --no-deps
+          python -c "from northroot import Client; print('✅ Package imports successfully')"
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wheels-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: |
+            sdk/python/northroot/dist/*.whl
+            sdk/python/northroot/target/wheels/*.whl
+          retention-days: 7
+          if-no-files-found: error
+
+  build-sdist:
+    name: Build source distribution
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,40 +142,50 @@ jobs:
           pip install --upgrade pip
           pip install maturin
 
-      - name: Build package
+      - name: Build source distribution
         working-directory: sdk/python/northroot
         run: |
-          maturin build --release --out dist
+          maturin sdist --out dist
 
-      - name: List build artifacts
-        working-directory: sdk/python/northroot
+      - name: Upload sdist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sdist
+          path: sdk/python/northroot/dist/*.tar.gz
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: Publish to PyPI
+    needs: [build-wheels, build-sdist]
+    runs-on: ubuntu-latest
+    # Optional: Add environment protection (uncomment and configure in GitHub Settings)
+    # environment:
+    #   name: pypi
+    #   url: https://pypi.org/project/northroot/
+
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: wheels-*
+          path: dist/wheels
+          merge-multiple: true
+
+      - name: Download source distribution
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sdist
+          path: dist/sdist
+          merge-multiple: true
+
+      - name: List all artifacts
         run: |
-          echo "Build artifacts in dist/:"
-          ls -lah dist/ || echo "dist/ directory does not exist"
+          echo "=== Wheels ==="
+          find dist/wheels -name "*.whl" -type f || echo "No wheels found"
           echo ""
-          echo "Build artifacts in target/wheels/ (if any):"
-          ls -lah target/wheels/ 2>/dev/null || echo "target/wheels/ does not exist"
-
-      - name: Verify wheel
-        working-directory: sdk/python/northroot
-        run: |
-          # Find the built wheel file (check target/wheels/ first, then dist/)
-          # Maturin defaults to target/wheels/ even with --out dist
-          WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
-          if [ -z "$WHEEL_FILE" ]; then
-            WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
-          fi
-          if [ -z "$WHEEL_FILE" ]; then
-            echo "❌ No wheel file found in target/wheels/ or dist/"
-            echo "Checking target/wheels/:"
-            ls -la target/wheels/ 2>/dev/null || echo "target/wheels/ does not exist"
-            echo "Checking dist/:"
-            ls -la dist/ 2>/dev/null || echo "dist/ does not exist"
-            exit 1
-          fi
-          echo "Found wheel: $WHEEL_FILE"
-          pip install "$WHEEL_FILE"
-          python -c "from northroot import Client; print('✅ Package imports successfully')"
+          echo "=== Source distributions ==="
+          find dist/sdist -name "*.tar.gz" -type f || echo "No sdist found"
 
       - name: Verify and prepare TestPyPI token
         if: ${{ inputs.testpypi == true }}
@@ -80,65 +195,8 @@ jobs:
             echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
             exit 1
           fi
-          # Check token length (should be substantial)
           TOKEN_LENGTH=$(echo -n "${{ secrets.TESTPYPI_API_TOKEN }}" | wc -c)
           echo "✅ Token is set (length: $TOKEN_LENGTH characters)"
-          if [ "$TOKEN_LENGTH" -lt 20 ]; then
-            echo "⚠️  Warning: Token seems too short. Verify it's the full API token from test.pypi.org"
-          fi
-          # Check if token starts with expected prefix
-          TOKEN_PREFIX=$(echo -n "${{ secrets.TESTPYPI_API_TOKEN }}" | cut -c1-5)
-          if [ "$TOKEN_PREFIX" != "pypi-" ]; then
-            echo "⚠️  Warning: Token doesn't start with 'pypi-'. Make sure this is a TestPyPI API token."
-            echo "   Generate at: https://test.pypi.org/manage/account/token/"
-          fi
-
-      - name: Install twine
-        if: ${{ inputs.testpypi == true }}
-        run: |
-          pip install twine
-
-      - name: Publish to TestPyPI
-        if: ${{ inputs.testpypi == true }}
-        working-directory: sdk/python/northroot
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
-        run: |
-          # Strip whitespace/newlines from token (common issue with GitHub secrets)
-          CLEAN_TOKEN=$(echo -n "$TWINE_PASSWORD" | tr -d '\n\r\t ')
-          export TWINE_PASSWORD="$CLEAN_TOKEN"
-
-          echo "Publishing to TestPyPI using twine..."
-          echo "Repository: testpypi"
-          echo "Username: __token__"
-          echo "Token length: ${#CLEAN_TOKEN} characters"
-          echo "Token prefix: ${CLEAN_TOKEN:0:10}..."
-
-          # Find wheel and source distribution
-          WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
-          if [ -z "$WHEEL_FILE" ]; then
-            WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
-          fi
-
-          SDIST_FILE=$(ls target/wheels/*.tar.gz 2>/dev/null | head -1)
-          if [ -z "$SDIST_FILE" ]; then
-            SDIST_FILE=$(ls dist/*.tar.gz 2>/dev/null | head -1)
-          fi
-
-          if [ -z "$WHEEL_FILE" ] && [ -z "$SDIST_FILE" ]; then
-            echo "❌ No wheel or source distribution found"
-            exit 1
-          fi
-
-          # Upload using twine (more reliable than maturin for authentication)
-          if [ -n "$WHEEL_FILE" ] && [ -n "$SDIST_FILE" ]; then
-            twine upload --repository testpypi "$WHEEL_FILE" "$SDIST_FILE"
-          elif [ -n "$WHEEL_FILE" ]; then
-            twine upload --repository testpypi "$WHEEL_FILE"
-          else
-            twine upload --repository testpypi "$SDIST_FILE"
-          fi
 
       - name: Verify and prepare PyPI token
         if: ${{ inputs.testpypi != true }}
@@ -150,63 +208,85 @@ jobs:
           fi
           TOKEN_LENGTH=$(echo -n "${{ secrets.PYPI_API_TOKEN }}" | wc -c)
           echo "✅ Token is set (length: $TOKEN_LENGTH characters)"
-          if [ "$TOKEN_LENGTH" -lt 20 ]; then
-            echo "⚠️  Warning: Token seems too short. Verify it's the full API token from pypi.org"
-          fi
 
       - name: Install twine
-        if: ${{ inputs.testpypi != true }}
         run: |
+          pip install --upgrade pip
           pip install twine
+
+      - name: Publish to TestPyPI
+        if: ${{ inputs.testpypi == true }}
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
+        run: |
+          # Strip whitespace/newlines from token
+          CLEAN_TOKEN=$(echo -n "$TWINE_PASSWORD" | tr -d '\n\r\t ')
+          export TWINE_PASSWORD="$CLEAN_TOKEN"
+
+          echo "Publishing to TestPyPI..."
+          echo "Token length: ${#CLEAN_TOKEN} characters"
+
+          # Collect all wheels and sdist
+          WHEELS=$(find dist/wheels -name "*.whl" -type f)
+          SDIST=$(find dist/sdist -name "*.tar.gz" -type f | head -1)
+
+          if [ -z "$WHEELS" ] && [ -z "$SDIST" ]; then
+            echo "❌ No wheels or source distribution found"
+            exit 1
+          fi
+
+          # Upload all artifacts
+          if [ -n "$SDIST" ]; then
+            twine upload --repository testpypi "$SDIST"
+          fi
+          if [ -n "$WHEELS" ]; then
+            echo "$WHEELS" | xargs -n1 twine upload --repository testpypi
+          fi
 
       - name: Publish to PyPI
         if: ${{ inputs.testpypi != true }}
-        working-directory: sdk/python/northroot
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          # Strip whitespace/newlines from token (common issue with GitHub secrets)
+          # Strip whitespace/newlines from token
           CLEAN_TOKEN=$(echo -n "$TWINE_PASSWORD" | tr -d '\n\r\t ')
           export TWINE_PASSWORD="$CLEAN_TOKEN"
 
-          echo "Publishing to PyPI using twine..."
-          echo "Username: __token__"
+          echo "Publishing to PyPI..."
           echo "Token length: ${#CLEAN_TOKEN} characters"
-          echo "Token prefix: ${CLEAN_TOKEN:0:10}..."
 
-          # Find wheel and source distribution
-          WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
-          if [ -z "$WHEEL_FILE" ]; then
-            WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
-          fi
+          # Collect all wheels and sdist
+          WHEELS=$(find dist/wheels -name "*.whl" -type f)
+          SDIST=$(find dist/sdist -name "*.tar.gz" -type f | head -1)
 
-          SDIST_FILE=$(ls target/wheels/*.tar.gz 2>/dev/null | head -1)
-          if [ -z "$SDIST_FILE" ]; then
-            SDIST_FILE=$(ls dist/*.tar.gz 2>/dev/null | head -1)
-          fi
-
-          if [ -z "$WHEEL_FILE" ] && [ -z "$SDIST_FILE" ]; then
-            echo "❌ No wheel or source distribution found"
+          if [ -z "$WHEELS" ] && [ -z "$SDIST" ]; then
+            echo "❌ No wheels or source distribution found"
             exit 1
           fi
 
-          # Upload using twine (more reliable than maturin for authentication)
-          if [ -n "$WHEEL_FILE" ] && [ -n "$SDIST_FILE" ]; then
-            twine upload "$WHEEL_FILE" "$SDIST_FILE"
-          elif [ -n "$WHEEL_FILE" ]; then
-            twine upload "$WHEEL_FILE"
-          else
-            twine upload "$SDIST_FILE"
+          # Upload all artifacts together (twine handles multiple files)
+          FILES=""
+          if [ -n "$SDIST" ]; then
+            FILES="$SDIST"
+          fi
+          if [ -n "$WHEELS" ]; then
+            FILES="$FILES $(echo "$WHEELS" | tr '\n' ' ')"
           fi
 
-      - name: Upload artifacts
+          echo "Uploading files:"
+          echo "$FILES" | tr ' ' '\n' | grep -v '^$'
+          
+          twine upload $FILES
+
+      - name: Upload all artifacts (backup)
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: wheels
+          name: all-wheels-and-sdist
           path: |
-            sdk/python/northroot/dist/*.whl
-            sdk/python/northroot/target/wheels/*.whl
+            dist/wheels/**/*.whl
+            dist/sdist/**/*.tar.gz
           retention-days: 30
           if-no-files-found: warn
