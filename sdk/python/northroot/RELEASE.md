@@ -97,6 +97,22 @@
 - [ ] Update CHANGELOG.md
 - [ ] Announce release (if applicable)
 
+## Local Testing (Recommended First Step)
+
+Before using GitHub Actions, test locally:
+
+```bash
+cd sdk/python/northroot
+./test-publish.sh
+```
+
+This script will:
+- Build the package
+- Verify artifacts are created
+- Test wheel installation
+- Check package metadata
+- Validate with twine (without uploading)
+
 ## Build Commands
 
 ### Development Build
@@ -108,7 +124,7 @@ maturin develop
 ### Production Build
 ```bash
 cd sdk/python/northroot
-maturin build --release
+maturin build --release --out dist
 ```
 
 ### Test Installation
@@ -116,14 +132,20 @@ maturin build --release
 pip install dist/northroot-0.1.0-*.whl
 ```
 
-### Publish to TestPyPI
+### Manual Publish to TestPyPI (using twine)
 ```bash
-maturin publish --repository testpypi
+cd sdk/python/northroot
+export TWINE_USERNAME=__token__
+export TWINE_PASSWORD='your-testpypi-token'  # No quotes needed, just the token
+twine upload --repository testpypi dist/*
 ```
 
-### Publish to PyPI
+### Manual Publish to PyPI (using twine)
 ```bash
-maturin publish
+cd sdk/python/northroot
+export TWINE_USERNAME=__token__
+export TWINE_PASSWORD='your-pypi-token'
+twine upload dist/*
 ```
 
 ## GitHub Actions Setup
