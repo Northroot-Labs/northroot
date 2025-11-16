@@ -104,10 +104,10 @@ jobs:
         working-directory: sdk/python/northroot
         shell: bash
         run: |
-          # Find the built wheel file
-          WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
+          # Find the built wheel file (use find to avoid glob expansion issues)
+          WHEEL_FILE=$(find dist -name '*.whl' -type f 2>/dev/null | head -1)
           if [ -z "$WHEEL_FILE" ]; then
-            WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
+            WHEEL_FILE=$(find target/wheels -name '*.whl' -type f 2>/dev/null | head -1)
           fi
           
           if [ -z "$WHEEL_FILE" ]; then
