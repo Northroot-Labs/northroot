@@ -48,6 +48,23 @@ jobs:
           pip install --upgrade pip
           pip install maturin
 
+      - name: Install northroot (for receipts)
+        if: always()
+        run: |
+          pip install northroot || echo "⚠️  northroot not available, skipping receipts"
+        continue-on-error: true
+
+      - name: Record build start
+        if: always()
+        working-directory: sdk/python/northroot
+        run: |
+          python ../../.github/scripts/record_receipt.py \
+            "build-wheel" \
+            "build-start" \
+            "${{ job.status }}" \
+            '{"platform": "${{ matrix.os }}", "python": "${{ matrix.python-version }}"}'
+        continue-on-error: true
+
       - name: Build wheel (Linux)
         if: runner.os == 'Linux'
         working-directory: sdk/python/northroot
@@ -66,12 +83,40 @@ jobs:
         working-directory: sdk/python/northroot
         shell: bash
         run: |
+          set -e
+          echo "Building wheel on Windows..."
           maturin build --release --out dist
-          # Ensure dist directory exists and has wheels
+          
+          # Ensure dist directory exists
           mkdir -p dist
+          
+          # Check where maturin actually put the wheel
+          echo "Checking for wheels in dist/:"
+          ls -la dist/*.whl 2>/dev/null || echo "No wheels in dist/"
+          
+          echo "Checking for wheels in target/wheels/:"
+          ls -la target/wheels/*.whl 2>/dev/null || echo "No wheels in target/wheels/"
+          
           # Copy wheels from target/wheels if they exist (fallback)
-          if [ -d target/wheels ] && [ -n "$(find target/wheels -name '*.whl' -type f 2>/dev/null | head -1)" ]; then
-            cp target/wheels/*.whl dist/ 2>/dev/null || true
+          if [ -d target/wheels ]; then
+            WHEEL_COUNT=$(find target/wheels -name '*.whl' -type f 2>/dev/null | wc -l)
+            if [ "$WHEEL_COUNT" -gt 0 ]; then
+              echo "Found $WHEEL_COUNT wheel(s) in target/wheels/, copying to dist/"
+              cp target/wheels/*.whl dist/ 2>/dev/null || true
+            fi
+          fi
+          
+          # Final check - fail if no wheels found
+          FINAL_COUNT=$(find dist -name '*.whl' -type f 2>/dev/null | wc -l)
+          if [ "$FINAL_COUNT" -eq 0 ]; then
+            echo "❌ ERROR: No wheel files found after build!"
+            echo "Build output locations checked:"
+            echo "  - dist/"
+            echo "  - target/wheels/"
+            exit 1
+          else
+            echo "✅ Found $FINAL_COUNT wheel file(s) in dist/"
+            ls -la dist/*.whl
           fi
 
       - name: Build wheel (macOS)
@@ -146,13 +191,26 @@ jobs:
           }
           
           if (-not $wheelFile) {
-            Write-Host "❌ No wheel file found"
+            Write-Host "ERROR: No wheel file found"
             exit 1
           }
           
           Write-Host "Found wheel: $($wheelFile.FullName)"
           pip install $wheelFile.FullName --force-reinstall --no-deps
-          python -c "from northroot import Client; print('✅ Package imports successfully')"
+          # Use ASCII-safe output to avoid Unicode encoding issues
+          python -c "from northroot import Client; print('[OK] Package imports successfully')"
+
+      - name: Record build completion
+        if: always()
+        working-directory: sdk/python/northroot
+        run: |
+          WHEEL_COUNT=$(find dist target/wheels -name '*.whl' -type f 2>/dev/null | wc -l || echo "0")
+          python ../../.github/scripts/record_receipt.py \
+            "build-wheel" \
+            "build-complete" \
+            "${{ job.status }}" \
+            "{\"wheel_count\": \"$WHEEL_COUNT\", \"platform\": \"${{ matrix.os }}\", \"python\": \"${{ matrix.python-version }}\"}"
+        continue-on-error: true
 
       - name: Upload wheel artifact
         uses: actions/upload-artifact@v4
@@ -163,6 +221,16 @@ jobs:
             sdk/python/northroot/target/wheels/*.whl
           retention-days: 7
           if-no-files-found: warn
+
+      - name: Upload receipts artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: receipts-run-${{ github.run_id }}-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: |
+            sdk/python/northroot/receipts/*.json
+          retention-days: 90
+          if-no-files-found: ignore
 
   build-sdist:
     name: Build source distribution
