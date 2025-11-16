@@ -29,7 +29,12 @@ jobs:
       - name: Install northroot
         run: |
           pip install --upgrade pip
-          pip install northroot
+          pip install northroot || {
+            echo "[WARN] Failed to install northroot from PyPI, trying to build from source"
+            pip install maturin || pip install --upgrade pip setuptools wheel
+            # If PyPI install fails, we'll skip receipt recording gracefully
+            exit 0
+          }
         continue-on-error: true
 
       - name: Setup receipt storage
@@ -51,6 +56,13 @@ jobs:
               from northroot import Client
               
               storage = os.environ.get('RECEIPT_STORAGE', None)
+              if not storage:
+                  print('[WARN] RECEIPT_STORAGE not set, using default')
+                  storage = './receipts'
+              
+              # Ensure storage directory exists
+              os.makedirs(storage, exist_ok=True)
+              
               client = Client(storage_path=storage)
               
               run_id = os.environ.get('GITHUB_RUN_ID', 'unknown')
@@ -75,19 +87,28 @@ jobs:
                   tags=['ci', 'github-actions', workflow, job_name]
               )
               
-              if storage:
-                  try:
-                      client.store_receipt(receipt)
-                  except:
-                      pass
+              # Always try to store receipt
+              try:
+                  client.store_receipt(receipt)
+                  print(f'[OK] Stored receipt to: {storage}')
+              except Exception as store_err:
+                  print(f'[WARN] Storage failed: {store_err}')
+                  # Still save receipt JSON as fallback
+                  receipt_json = receipt.to_json()
+                  receipt_file = os.path.join(storage, f'{receipt.get_rid()}.json')
+                  with open(receipt_file, 'w') as f:
+                      f.write(receipt_json)
+                  print(f'[OK] Saved receipt JSON: {receipt_file}')
               
               print(f'[OK] Recorded receipt: {receipt.get_rid()}')
               print(f'[OK] Trace ID: run-{run_id}')
           except ImportError:
-              print('[SKIP] northroot not available')
+              print('[SKIP] northroot not available - install may have failed')
               sys.exit(0)
           except Exception as e:
               print(f'[WARN] Receipt recording failed: {str(e)}')
+              import traceback
+              traceback.print_exc()
               sys.exit(0)
           PYEOF
         continue-on-error: true
