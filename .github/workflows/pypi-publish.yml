@@ -53,6 +53,12 @@ jobs:
         working-directory: sdk/python/northroot
         run: |
           maturin build --release --out dist
+          # Ensure dist directory exists and has wheels
+          mkdir -p dist
+          # Copy wheels from target/wheels if they exist (fallback)
+          if [ -d target/wheels ] && [ -n "$(ls -A target/wheels/*.whl 2>/dev/null)" ]; then
+            cp target/wheels/*.whl dist/ 2>/dev/null || true
+          fi
 
       - name: Build wheel (macOS)
         if: runner.os == 'macOS'
@@ -62,15 +68,36 @@ jobs:
           # For Universal2 support, we'd need to build both architectures and merge
           # For now, building native architecture - users on other arch can build from source
           maturin build --release --out dist
+          # Ensure dist directory exists and has wheels
+          mkdir -p dist
+          # Copy wheels from target/wheels if they exist (fallback)
+          if [ -d target/wheels ] && [ -n "$(ls -A target/wheels/*.whl 2>/dev/null)" ]; then
+            cp target/wheels/*.whl dist/ 2>/dev/null || true
+          fi
 
       - name: List build artifacts
         working-directory: sdk/python/northroot
         run: |
-          echo "Build artifacts in dist/:"
-          ls -lah dist/ 2>/dev/null || echo "dist/ directory does not exist"
+          echo "=== Build artifacts in dist/ ==="
+          ls -lah dist/*.whl 2>/dev/null || echo "No wheels in dist/"
           echo ""
-          echo "Build artifacts in target/wheels/ (if any):"
-          ls -lah target/wheels/ 2>/dev/null || echo "target/wheels/ does not exist"
+          echo "=== Build artifacts in target/wheels/ ==="
+          ls -lah target/wheels/*.whl 2>/dev/null || echo "No wheels in target/wheels/"
+          echo ""
+          echo "=== Verifying at least one wheel exists ==="
+          FOUND_WHEEL=false
+          if [ -n "$(find dist -name '*.whl' -type f 2>/dev/null | head -1)" ]; then
+            FOUND_WHEEL=true
+          fi
+          if [ -n "$(find target/wheels -name '*.whl' -type f 2>/dev/null | head -1)" ]; then
+            FOUND_WHEEL=true
+          fi
+          if [ "$FOUND_WHEEL" = "false" ]; then
+            echo "❌ ERROR: No wheel files found in either location!"
+            exit 1
+          else
+            echo "✅ Wheel file(s) found"
+          fi
 
       - name: Verify wheel (Unix)
         if: runner.os != 'Windows'
@@ -120,7 +147,7 @@ jobs:
             sdk/python/northroot/dist/*.whl
             sdk/python/northroot/target/wheels/*.whl
           retention-days: 7
-          if-no-files-found: error
+          if-no-files-found: warn
 
   build-sdist:
     name: Build source distribution
