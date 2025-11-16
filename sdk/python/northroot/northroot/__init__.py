@@ -172,7 +172,7 @@ class Client:
 # Optional OTEL integration
 try:
     from northroot.otel import span_to_receipt, trace_work, OTEL_AVAILABLE
-    __all__ = [
+    _all_list = [
         "Client",
         "receipts",
         "delta",
@@ -183,10 +183,34 @@ try:
     ]
 except ImportError:
     # OTEL module may not be available if dependencies are missing
-    __all__ = [
+    _all_list = [
         "Client",
         "receipts",
         "delta",
         "shapes",
     ]
+
+# Optional produce operations helpers
+try:
+    from northroot.produce import (
+        record_harvest_planted,
+        record_harvest_executed,
+        record_harvest_outcome,
+        record_load_prepared,
+        record_load_shipped,
+        record_load_received,
+    )
+    _all_list.extend([
+        "record_harvest_planted",
+        "record_harvest_executed",
+        "record_harvest_outcome",
+        "record_load_prepared",
+        "record_load_shipped",
+        "record_load_received",
+    ])
+except ImportError:
+    # Produce module may not be available
+    pass
+
+__all__ = _all_list
 
