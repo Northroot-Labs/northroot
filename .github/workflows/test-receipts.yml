@@ -201,19 +201,31 @@ jobs:
           try:
               from northroot import Client
               
-              storage = os.environ.get('RECEIPT_STORAGE', None)
+              storage = os.environ.get('RECEIPT_STORAGE', './receipts')
+              os.makedirs(storage, exist_ok=True)
               client = Client(storage_path=storage)
               
               run_id = os.environ.get('GITHUB_RUN_ID', 'unknown')
               job_status = os.environ.get('JOB_STATUS', 'unknown')
               platform = os.environ.get('RUNNER_OS', 'unknown')
+              build_exit_code = os.environ.get('BUILD_EXIT_CODE', '0')
+              
+              # Capture error info if failed
+              error_info = None
+              if job_status == 'failure':
+                  error_info = {
+                      'exit_code': build_exit_code,
+                      'failed': True,
+                      'message': 'Build step failed'
+                  }
               
               payload = {
                   'step': 'build-complete',
                   'status': job_status,
                   'platform': platform,
                   'run_id': run_id,
-                  'duration_sec': 2
+                  'duration_sec': 2,
+                  'error': error_info
               }
               
               receipt = client.record_work(
@@ -223,24 +235,32 @@ jobs:
                   tags=['ci', 'github-actions', 'build']
               )
               
-              if storage:
-                  try:
-                      client.store_receipt(receipt)
-                  except:
-                      pass
+              try:
+                  client.store_receipt(receipt)
+                  print(f'[OK] Stored receipt to: {storage}')
+              except Exception as store_err:
+                  receipt_json = receipt.to_json()
+                  receipt_file = os.path.join(storage, f'{receipt.get_rid()}.json')
+                  with open(receipt_file, 'w') as f:
+                      f.write(receipt_json)
+                  print(f'[OK] Saved receipt JSON: {receipt_file}')
               
-              print(f'[OK] Recorded receipt: {receipt.get_rid()}')
+              status_emoji = '[FAIL]' if job_status == 'failure' else '[OK]'
+              print(f'{status_emoji} Recorded receipt: {receipt.get_rid()} (status: {job_status})')
           except ImportError:
-              print('[SKIP] northroot not available')
+              print('[SKIP] northroot not available - install may have failed')
               sys.exit(0)
           except Exception as e:
               print(f'[WARN] Receipt recording failed: {str(e)}')
+              import traceback
+              traceback.print_exc()
               sys.exit(0)
           PYEOF
         continue-on-error: true
         env:
           RECEIPT_STORAGE: ./receipts
           JOB_STATUS: ${{ job.status }}
+          BUILD_EXIT_CODE: ${{ job.status == 'failure' && '1' || '0' }}
 
       - name: Simulate test step
         shell: bash
@@ -261,19 +281,31 @@ jobs:
           try:
               from northroot import Client
               
-              storage = os.environ.get('RECEIPT_STORAGE', None)
+              storage = os.environ.get('RECEIPT_STORAGE', './receipts')
+              os.makedirs(storage, exist_ok=True)
               client = Client(storage_path=storage)
               
               run_id = os.environ.get('GITHUB_RUN_ID', 'unknown')
               job_status = os.environ.get('JOB_STATUS', 'unknown')
               platform = os.environ.get('RUNNER_OS', 'unknown')
+              test_exit_code = os.environ.get('TEST_EXIT_CODE', '0')
+              
+              # Capture error info if failed
+              error_info = None
+              if job_status == 'failure':
+                  error_info = {
+                      'exit_code': test_exit_code,
+                      'failed': True,
+                      'message': 'Test step failed'
+                  }
               
               payload = {
                   'step': 'test-complete',
                   'status': job_status,
                   'platform': platform,
                   'run_id': run_id,
-                  'tests_passed': True
+                  'tests_passed': job_status == 'success',
+                  'error': error_info
               }
               
               receipt = client.record_work(
@@ -283,24 +315,32 @@ jobs:
                   tags=['ci', 'github-actions', 'test']
               )
               
-              if storage:
-                  try:
-                      client.store_receipt(receipt)
-                  except:
-                      pass
+              try:
+                  client.store_receipt(receipt)
+                  print(f'[OK] Stored receipt to: {storage}')
+              except Exception as store_err:
+                  receipt_json = receipt.to_json()
+                  receipt_file = os.path.join(storage, f'{receipt.get_rid()}.json')
+                  with open(receipt_file, 'w') as f:
+                      f.write(receipt_json)
+                  print(f'[OK] Saved receipt JSON: {receipt_file}')
               
-              print(f'[OK] Recorded receipt: {receipt.get_rid()}')
+              status_emoji = '[FAIL]' if job_status == 'failure' else '[OK]'
+              print(f'{status_emoji} Recorded receipt: {receipt.get_rid()} (status: {job_status})')
           except ImportError:
-              print('[SKIP] northroot not available')
+              print('[SKIP] northroot not available - install may have failed')
               sys.exit(0)
           except Exception as e:
               print(f'[WARN] Receipt recording failed: {str(e)}')
+              import traceback
+              traceback.print_exc()
               sys.exit(0)
           PYEOF
         continue-on-error: true
         env:
           RECEIPT_STORAGE: ./receipts
           JOB_STATUS: ${{ job.status }}
+          TEST_EXIT_CODE: ${{ job.status == 'failure' && '1' || '0' }}
 
       - name: Query and verify receipts
         if: always()
