@@ -95,10 +95,11 @@ table.
 
 ## Changelog Integrity
 
-- **Never commit changelog manually** before first release
-- Changelog auto-generates from commits when `scripts/update-changelog.sh release <version>` is run
-- After first release, changelog updates automatically from commits
+- **Changelog auto-generates** from commits when `scripts/update-changelog.sh release <version>` is run
+- **Update before release**: Run `bash scripts/update-changelog.sh update` to generate entries
+- **Create release section**: Run `bash scripts/update-changelog.sh release X.Y.Z` to finalize
 - All commits must follow conventional format for proper categorization
+- See [VERSIONING.md](../../docs/process/VERSIONING.md) and [RELEASE_WORKFLOW.md](../../docs/process/RELEASE_WORKFLOW.md) for details
 
 ## Enforcement
 
