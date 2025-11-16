@@ -40,22 +40,31 @@ jobs:
       - name: Build package
         working-directory: sdk/python/northroot
         run: |
-          maturin build --release
+          maturin build --release --out dist
 
       - name: List build artifacts
         working-directory: sdk/python/northroot
         run: |
-          echo "Build artifacts:"
+          echo "Build artifacts in dist/:"
           ls -lah dist/ || echo "dist/ directory does not exist"
+          echo ""
+          echo "Build artifacts in target/wheels/ (if any):"
+          ls -lah target/wheels/ 2>/dev/null || echo "target/wheels/ does not exist"
 
       - name: Verify wheel
         working-directory: sdk/python/northroot
         run: |
-          # Find the built wheel file
+          # Find the built wheel file (check dist/ first, then target/wheels/)
           WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
           if [ -z "$WHEEL_FILE" ]; then
-            echo "❌ No wheel file found in dist/"
-            ls -la dist/ || echo "dist/ directory does not exist"
+            WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
+          fi
+          if [ -z "$WHEEL_FILE" ]; then
+            echo "❌ No wheel file found in dist/ or target/wheels/"
+            echo "Checking dist/:"
+            ls -la dist/ 2>/dev/null || echo "dist/ does not exist"
+            echo "Checking target/wheels/:"
+            ls -la target/wheels/ 2>/dev/null || echo "target/wheels/ does not exist"
             exit 1
           fi
           echo "Found wheel: $WHEEL_FILE"
@@ -83,6 +92,8 @@ jobs:
         if: always()
         with:
           name: wheels
-          path: sdk/python/northroot/dist/*.whl
+          path: |
+            sdk/python/northroot/dist/*.whl
+            sdk/python/northroot/target/wheels/*.whl
           retention-days: 30
           if-no-files-found: warn
