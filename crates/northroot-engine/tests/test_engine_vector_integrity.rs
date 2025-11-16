@@ -267,6 +267,8 @@ fn test_execution_roots_integrity() {
 
 #[test]
 fn test_merkle_row_map_integrity() {
+    // MerkleRowMap tests removed - rowmap module deleted as dead weight
+    /*
     let merkle_data = load_json_vector("../../vectors/engine/merkle_row_map_examples.json")
         .unwrap_or_else(|e| panic!("Failed to load Merkle Row-Map examples: {}", e));
 
@@ -327,4 +329,5 @@ fn test_merkle_row_map_integrity() {
         map2.compute_root(),
         "Order independence test failed: roots should match regardless of insertion order"
     );
+    */
 }

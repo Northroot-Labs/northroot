@@ -30,12 +30,9 @@ pub mod commitments;
 pub mod composition;
 pub mod delta;
 pub mod execution;
-pub mod resolver;
-pub mod rowmap;
 pub mod serde_helpers;
 pub mod shapes;
 pub mod signature;
-pub mod strategies;
 
 pub use commitments::{
     cbor_deterministic, cbor_hash, commit_seq_root, commit_set_root, jcs, sha256_prefixed,
@@ -66,11 +63,7 @@ pub use delta::{
 // Re-export execution module items
 pub use execution::{
     compute_execution_roots, generate_trace_id, validate_method_ref, ExecutionReceiptBuilder,
-    MerkleRowMap,
 };
-
-// Re-export rowmap module items
-pub use rowmap::{normalize_row, DeltaUpdate, MerkleFrontier, RowMapError};
 
 // Re-export cas module items
 pub use cas::{
@@ -79,41 +72,13 @@ pub use cas::{
     BloomParams, ByteStreamManifest, CasError, Chunk, ExternalSetRef, OverlapIndex, SketchData,
 };
 
-// Re-export resolver module items
-pub use resolver::{
-    ArtifactLocation, ArtifactMetadata, ArtifactResolver, CacheError, ManagedCache, ResolverError,
-};
-
 // Re-export shapes module items
 pub use shapes::{
     compute_data_shape_hash, ChunkScheme, DataShape, DataShapeError, KeyFormat, RowValueRepr,
 };
 
-// Re-export strategies module items
-pub use strategies::{
-    default_registry, ExecutionMode, IncrementalSumStrategy, PartitionStrategy, Strategy,
-    StrategyError, StrategyRegistry,
-};
-
-// Re-export delta module items for ReuseIndexed trait
+// Re-export delta module items for OverlapMetric
 pub use delta::OverlapMetric;
 
 // Re-export API module items for SDK
 pub use api::{record_work, verify_receipt, ApiError};
-
-/// Trait for strategies that can compute overlap metrics for reuse decisions.
-///
-/// This trait enables strategies to expose overlap information (Jaccard similarity,
-/// chunk counts) without requiring double passes over the data. Strategies implement
-/// this trait to provide reuse metadata alongside their execution results.
-pub trait ReuseIndexed {
-    /// Compute overlap metric between current and previous execution states.
-    ///
-    /// This method should compute Jaccard similarity and related statistics
-    /// based on the strategy's internal state and previous state (if available).
-    ///
-    /// # Returns
-    ///
-    /// `OverlapMetric` containing Jaccard similarity and chunk counts
-    fn overlap(&self) -> OverlapMetric;
-}

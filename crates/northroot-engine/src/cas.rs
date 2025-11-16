@@ -12,7 +12,6 @@
 //! - Odd nodes promoted upward
 
 use crate::delta::chunk_id_from_bytes;
-use crate::delta::manifest_summary::generate_minhash_sketch;
 use crate::shapes::ChunkScheme;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -339,30 +338,12 @@ pub fn build_bytestream_manifest(
     chunks: &[Chunk],
     scheme: ChunkScheme,
 ) -> Result<ByteStreamManifest, CasError> {
-    // Generate MinHash sketch for overlap estimation
-    let minhash_sketch = if chunks.is_empty() {
-        generate_minhash_sketch(std::iter::empty::<&str>(), 128)
-            .map_err(|e| CasError::manifest(format!("MinHash generation failed: {}", e), Some(0)))?
-    } else {
-        generate_minhash_sketch(chunks.iter().map(|c| c.id.as_str()), 128)
-            .map_err(|e| CasError::manifest(
-                format!("MinHash generation failed: {}", e),
-                Some(chunks.len()),
-            ))?
-    };
-
-    // Convert MinHash sketch to SketchData format
-    let sketch_hashes: Vec<String> = minhash_sketch
-        .min_hashes
-        .iter()
-        .map(|h| format!("{:016x}", h))
-        .collect();
-
+    // Create minimal overlap index (no sketch generation - removed as dead weight)
     let overlap_index = OverlapIndex {
-        algo: "minhash".to_string(),
+        algo: "none".to_string(),
         sketch: SketchData {
-            k: 128,
-            hashes: sketch_hashes,
+            k: 0,
+            hashes: Vec::new(),
             bloom: None,
         },
         inline_set: None,
@@ -536,6 +517,10 @@ pub fn estimate_jaccard_from_indices(
     }
 
     match index1.algo.as_str() {
+        "none" => {
+            // No overlap estimation available (dead weight removed)
+            Ok(0.0)
+        }
         "minhash" => {
             if index1.sketch.k != index2.sketch.k {
                 return Err(CasError::manifest(
@@ -781,26 +766,20 @@ mod tests {
         let data = b"test data for overlap index";
         let manifest = build_manifest_from_data(data, ChunkScheme::Fixed { size: 8 }).unwrap();
 
-        // Verify overlap_index is present
-        assert_eq!(manifest.overlap_index.algo, "minhash");
-        assert_eq!(manifest.overlap_index.sketch.k, 128);
-        assert_eq!(manifest.overlap_index.sketch.hashes.len(), 128);
-        
-        // Verify all hash values are hex strings
-        for hash in &manifest.overlap_index.sketch.hashes {
-            assert_eq!(hash.len(), 16); // 16 hex chars for u64
-            assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
-        }
+        // Verify overlap_index is present (but empty - MinHash removed as dead weight)
+        assert_eq!(manifest.overlap_index.algo, "none");
+        assert_eq!(manifest.overlap_index.sketch.k, 0);
+        assert_eq!(manifest.overlap_index.sketch.hashes.len(), 0);
     }
 
     #[test]
     fn test_manifest_overlap_index_empty() {
         let manifest = build_bytestream_manifest(&[], ChunkScheme::Fixed { size: 8 }).unwrap();
 
-        // Empty manifest should still have overlap_index
-        assert_eq!(manifest.overlap_index.algo, "minhash");
-        assert_eq!(manifest.overlap_index.sketch.k, 128);
-        assert_eq!(manifest.overlap_index.sketch.hashes.len(), 128);
+        // Empty manifest should still have overlap_index (but empty - MinHash removed)
+        assert_eq!(manifest.overlap_index.algo, "none");
+        assert_eq!(manifest.overlap_index.sketch.k, 0);
+        assert_eq!(manifest.overlap_index.sketch.hashes.len(), 0);
     }
 
     #[test]
@@ -809,7 +788,7 @@ mod tests {
         let manifest1 = build_manifest_from_data(data, ChunkScheme::Fixed { size: 8 }).unwrap();
         let manifest2 = build_manifest_from_data(data, ChunkScheme::Fixed { size: 8 }).unwrap();
 
-        // Overlap indices should be identical for same data
+        // Overlap indices should be identical (both empty - MinHash removed)
         assert_eq!(manifest1.overlap_index.sketch.hashes, manifest2.overlap_index.sketch.hashes);
     }
 
@@ -832,22 +811,13 @@ mod tests {
 
     #[test]
     fn test_estimate_jaccard_from_indices() {
-        // Test identical manifests
-        let data = b"identical test data";
+        // Test with "none" algo (MinHash removed as dead weight)
+        let data = b"test data";
         let manifest1 = build_manifest_from_data(data, ChunkScheme::Fixed { size: 8 }).unwrap();
         let manifest2 = build_manifest_from_data(data, ChunkScheme::Fixed { size: 8 }).unwrap();
 
+        // With "none" algo, should return 0.0 (no overlap estimation available)
         let j = estimate_jaccard_from_indices(&manifest1.overlap_index, &manifest2.overlap_index).unwrap();
-        assert!((j - 1.0).abs() < 0.01, "Identical manifests should have J≈1.0, got {}", j);
-
-        // Test different manifests
-        let data1 = b"different data one";
-        let data2 = b"different data two";
-        let manifest1 = build_manifest_from_data(data1, ChunkScheme::Fixed { size: 8 }).unwrap();
-        let manifest2 = build_manifest_from_data(data2, ChunkScheme::Fixed { size: 8 }).unwrap();
-
-        let j = estimate_jaccard_from_indices(&manifest1.overlap_index, &manifest2.overlap_index).unwrap();
-        assert!(j < 0.5, "Different manifests should have J<0.5, got {}", j);
-        assert!(j >= 0.0, "Jaccard should be >= 0, got {}", j);
+        assert_eq!(j, 0.0, "With 'none' algo, Jaccard should be 0.0, got {}", j);
     }
 }

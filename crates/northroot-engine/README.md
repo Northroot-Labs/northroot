@@ -16,11 +16,10 @@ The engine implements the core proof algebra operations: hash computation, recei
 
 The engine provides:
 
-- **Commitment computation**: SHA-256 hashing with canonical JSON (JCS)
+- **Commitment computation**: SHA-256 hashing with canonical CBOR (RFC 8949) and JSON (JCS)
 - **Receipt validation**: Hash integrity, signature verification, kind-specific rules
 - **Composition**: Sequential (cod == dom) and parallel (tensor) receipt chains
-- **Delta compute**: Overlap estimation, reuse decisions, Merkle Row-Map operations
-- **Strategies**: Composable compute strategies for incremental execution
+- **Delta compute**: Overlap estimation (Jaccard similarity), reuse decisions, economic delta calculations
 
 ## Core Modules
 
@@ -33,13 +32,13 @@ Provides canonical hashing primitives:
 - `commit_set_root()`: Merkle root for unordered sets
 - `commit_seq_root()`: Merkle root for ordered sequences
 
-### Strategies (`strategies/`)
+### Delta Compute (`delta/`)
 
-Composable compute strategies for delta/incremental compute:
+Incremental recomputation with reuse decisions:
 
-- **Partition strategies**: Row-based chunking with stable hashing
-- **Incremental operators**: State-preserving transformations
-- **Reuse decision logic**: Policy-driven overlap thresholds
+- **Overlap estimation**: Jaccard similarity between chunk sets
+- **Reuse decisions**: Economic threshold-based reuse logic
+- **Cost models**: Policy-driven cost evaluation
 
 ## Usage
 
@@ -114,17 +113,25 @@ Where:
 - `C_comp`: Baseline compute cost
 - `α`: Operator incrementality factor [0,1]
 
-See [Incremental Compute Strategy](strategies/README.md) for details.
+The engine provides `decide_reuse()` and `economic_delta()` functions for reuse decisions.
 
-## Strategies
+## What We Actually Verify
 
-Strategies are composable compute patterns:
+**Cryptographically signed, tamper-evident receipts with economic metadata** - better than logs because:
 
-- **Partition**: Stable row-based chunking
-- **Incremental Sum**: State-preserving aggregation with Merkle Row-Map
-- **Delta Apply**: Efficient updates to previous state
+- **Hash Integrity**: `receipt.hash == compute_hash(receipt)` - tamper-evident
+- **Signature Verification**: Ed25519 signatures over hash - authenticates creator
+- **Canonical Form**: CBOR deterministic encoding (RFC 8949) - independently verifiable
+- **Composition Verification**: `cod(R_i) == dom(R_{i+1})` - chain integrity
+- **Merkle Roots**: For span commitments and identity roots
 
-See `strategies/README.md` for strategy documentation.
+**What we DON'T verify** (what we claim):
+
+- **Proofs of Computation Correctness**: We don't verify computation actually ran or output is correct
+- **Proofs of Reuse Decision Correctness**: We just record the decision, don't verify it was optimal
+- **Proofs of Data Matching Shapes**: Shape commitments are hashes, not verified against actual data
+
+**We have proofs of structure and authenticity, not proofs of computation.**
 
 ## Testing
 
@@ -141,9 +148,7 @@ cargo test --test test_execution_and_method
 ## Documentation
 
 - **[Proof Algebra](../../docs/specs/proof_algebra.md)**: Unified algebra spec
-- **[Incremental Compute](../../docs/specs/incremental_compute.md)**: Delta strategy
 - **[Delta Compute](../../docs/specs/delta_compute.md)**: Formal reuse spec
-- **[Merkle Row-Map](../../docs/specs/merkle_row_map.md)**: State structure
 
 ## Dependencies
 

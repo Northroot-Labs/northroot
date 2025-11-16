@@ -3,7 +3,6 @@
 //! These tests verify that the engine components work together correctly
 //! in realistic scenarios, including:
 //! - Full receipt composition chains
-//! - Strategy pipeline execution
 //! - Delta compute workflows
 //! - Error propagation
 
@@ -128,86 +127,7 @@ fn test_full_composition_workflow() {
     }
 }
 
-#[test]
-fn test_strategy_pipeline() {
-    // Test partition -> incremental_sum pipeline
-    let registry = default_registry();
-
-    let partition_strategy = registry.get("partition").unwrap();
-    let sum_strategy = registry.get("incremental_sum").unwrap();
-
-    // Input data
-    let input = json!([
-        {"id": "1", "value": 10.0},
-        {"id": "2", "value": 20.0},
-        {"id": "3", "value": 30.0},
-    ]);
-
-    // Step 1: Partition
-    let (partition_output, partition_state) = partition_strategy
-        .execute(&input, ExecutionMode::Full, None)
-        .unwrap();
-
-    assert_eq!(partition_output["chunk_count"], 3);
-    assert!(partition_state.len() == 3);
-
-    // Step 2: Incremental sum
-    let (sum_output, sum_state) = sum_strategy
-        .execute(&input, ExecutionMode::Full, None)
-        .unwrap();
-
-    assert_eq!(sum_output["sum"], 60.0);
-    assert_eq!(sum_state.len(), 3);
-}
-
-#[test]
-fn test_delta_compute_workflow() {
-    // Test full execution -> delta execution -> full execution
-    let strategy = IncrementalSumStrategy::new();
-
-    // Initial full execution
-    let input1 = json!([
-        {"id": "1", "value": 10.0},
-        {"id": "2", "value": 20.0},
-    ]);
-
-    let (output1, state1) = strategy
-        .execute(&input1, ExecutionMode::Full, None)
-        .unwrap();
-
-    assert_eq!(output1["sum"], 30.0);
-    assert_eq!(state1.len(), 2);
-
-    // Delta execution: add one row
-    let input2 = json!([
-        {"id": "3", "value": 30.0},
-    ]);
-
-    let (output2, state2) = strategy
-        .execute(&input2, ExecutionMode::Delta, Some(&state1))
-        .unwrap();
-
-    // Delta mode outputs incremental sum (new row only) in the "sum" field
-    assert_eq!(output2["sum"], 30.0); // Incremental sum (new row)
-    assert_eq!(output2["incremental_sum"], 30.0);
-    assert_eq!(state2.len(), 3);
-
-    // Full execution again (should produce same result)
-    let input3 = json!([
-        {"id": "1", "value": 10.0},
-        {"id": "2", "value": 20.0},
-        {"id": "3", "value": 30.0},
-    ]);
-
-    let (output3, state3) = strategy
-        .execute(&input3, ExecutionMode::Full, None)
-        .unwrap();
-
-    assert_eq!(output3["sum"], 60.0);
-    assert_eq!(state3.len(), 3);
-    // State hashes should match (same data)
-    assert_eq!(state2.state_hash(), state3.state_hash());
-}
+// Strategy tests removed - strategies module deleted as dead weight
 
 #[test]
 fn test_error_propagation() {
@@ -272,30 +192,7 @@ fn test_error_propagation() {
         _ => panic!("Expected InvalidChain error for circular dependency"),
     }
 
-    // Test 3: Strategy error propagation
-    let strategy = IncrementalSumStrategy::new();
-
-    // Invalid input (not an array)
-    let invalid_input = json!({"not": "an array"});
-    let result = strategy.execute(&invalid_input, ExecutionMode::Full, None);
-    assert!(result.is_err());
-    match result.unwrap_err() {
-        StrategyError::InvalidInput(msg) => {
-            assert!(msg.contains("array"));
-        }
-        _ => panic!("Expected InvalidInput error"),
-    }
-
-    // Delta mode without previous state
-    let valid_input = json!([{"id": "1", "value": 10.0}]);
-    let result = strategy.execute(&valid_input, ExecutionMode::Delta, None);
-    assert!(result.is_err());
-    match result.unwrap_err() {
-        StrategyError::StateMismatch(msg) => {
-            assert!(msg.contains("Previous state is required"));
-        }
-        _ => panic!("Expected StateMismatch error"),
-    }
+    // Strategy error propagation tests removed - strategies module deleted
 }
 
 #[test]
@@ -318,30 +215,4 @@ fn test_parallel_composition() {
     assert_ne!(root1, root3);
 }
 
-#[test]
-fn test_strategy_registry_integration() {
-    // Test that strategy registry works with actual strategies
-    let mut registry = StrategyRegistry::new();
-
-    assert!(registry.is_empty());
-    assert_eq!(registry.len(), 0);
-
-    registry.register(PartitionStrategy::new());
-    registry.register(IncrementalSumStrategy::new());
-
-    assert_eq!(registry.len(), 2);
-    assert!(registry.contains("partition"));
-    assert!(registry.contains("incremental_sum"));
-
-    // Test default registry
-    let default = default_registry();
-    assert!(!default.is_empty());
-    assert!(default.contains("partition"));
-    assert!(default.contains("incremental_sum"));
-
-    // Test strategy execution through registry
-    let strategy = default.get("incremental_sum").unwrap();
-    let input = json!([{"id": "1", "value": 42.0}]);
-    let (output, _state) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
-    assert_eq!(output["sum"], 42.0);
-}
+// Strategy registry tests removed - strategies module deleted as dead weight

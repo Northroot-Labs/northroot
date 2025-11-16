@@ -8,9 +8,7 @@
 use ciborium::value::Value as CborValue;
 use northroot_engine::{
     cas::{build_manifest_from_data, chunk_by_fixed},
-    rowmap::MerkleRowMap,
     shapes::{compute_data_shape_hash, ChunkScheme, DataShape, KeyFormat, RowValueRepr},
-    strategies::{ExecutionMode, IncrementalSumStrategy, Strategy},
 };
 use serde_json::json;
 
@@ -32,100 +30,7 @@ fn json_to_cbor_value(value: &serde_json::Value) -> CborValue {
     }
 }
 
-/// Phase 2: Verify MerkleRowMap RFC-6962 domain separation invariants
-mod phase2_merkle_row_map {
-    use super::*;
-
-    #[test]
-    fn test_empty_map_root_deterministic() {
-        // Invariant: Empty map root should be deterministic
-        let map1 = MerkleRowMap::new();
-        let map2 = MerkleRowMap::new();
-        let root1 = map1.compute_root();
-        let root2 = map2.compute_root();
-
-        assert_eq!(root1, root2, "Empty map root must be deterministic");
-        assert!(root1.starts_with("sha256:"));
-        assert_eq!(root1.len(), 71); // "sha256:" + 64 hex chars
-
-        // Verify it's H(0x00 || "") not H("leaf:" || "")
-        // The new root should be different from old "leaf:" prefix
-        let old_style_root =
-            "sha256:08679e383d66dbc4192bae473a37843066188e42635077349d1c7db7cf25b20c";
-        assert_ne!(
-            root1, old_style_root,
-            "New RFC-6962 root should differ from old 'leaf:' prefix root"
-        );
-    }
-
-    #[test]
-    fn test_determinism_invariant() {
-        // Invariant: Same entries → same root
-        let mut map1 = MerkleRowMap::new();
-        map1.insert("key1".to_string(), CborValue::Integer(42.into()));
-        map1.insert("key2".to_string(), CborValue::Text("value".to_string()));
-
-        let mut map2 = MerkleRowMap::new();
-        map2.insert("key1".to_string(), CborValue::Integer(42.into()));
-        map2.insert("key2".to_string(), CborValue::Text("value".to_string()));
-
-        assert_eq!(
-            map1.compute_root(),
-            map2.compute_root(),
-            "Same entries must produce same root (determinism invariant)"
-        );
-    }
-
-    #[test]
-    fn test_order_independence_invariant() {
-        // Invariant: Insertion order doesn't affect root (BTreeMap maintains sorted order)
-        let mut map1 = MerkleRowMap::new();
-        map1.insert("b".to_string(), CborValue::Integer(2.into()));
-        map1.insert("a".to_string(), CborValue::Integer(1.into()));
-
-        let mut map2 = MerkleRowMap::new();
-        map2.insert("a".to_string(), CborValue::Integer(1.into()));
-        map2.insert("b".to_string(), CborValue::Integer(2.into()));
-
-        assert_eq!(
-            map1.compute_root(),
-            map2.compute_root(),
-            "Insertion order must not affect root (order independence invariant)"
-        );
-    }
-
-    #[test]
-    fn test_state_hash_alias() {
-        // Invariant: state_hash() should be alias for compute_root()
-        let mut map = MerkleRowMap::new();
-        map.insert("key1".to_string(), CborValue::Integer(42.into()));
-
-        assert_eq!(
-            map.compute_root(),
-            map.state_hash(),
-            "state_hash() must equal compute_root()"
-        );
-    }
-
-    #[test]
-    fn test_rfc6962_domain_separation() {
-        // Verify RFC-6962 style domain separation (0x00/0x01) is used
-        // This is a structural test - we can't directly verify the byte prefixes,
-        // but we can verify the roots are different from old style and deterministic
-
-        let mut map = MerkleRowMap::new();
-        map.insert("test".to_string(), CborValue::Integer(123.into()));
-
-        let root = map.compute_root();
-
-        // Verify format
-        assert!(root.starts_with("sha256:"));
-        assert_eq!(root.len(), 71);
-
-        // Verify it's different from old "leaf:" style (if we had access to old implementation)
-        // The fact that test vectors fail confirms this is working
-    }
-}
+// Phase 2 tests removed - MerkleRowMap module deleted as dead weight
 
 /// Phase 1: Verify DataShape enum invariants
 mod phase1_data_shape {
@@ -297,28 +202,7 @@ mod phase3_cas {
 mod cross_phase_invariants {
     use super::*;
 
-    #[test]
-    fn test_strategies_still_work() {
-        // Invariant: Strategies using MerkleRowMap still function correctly
-        // (even though roots changed, functionality should be preserved)
-
-        let strategy = IncrementalSumStrategy::new();
-        let input = json!([
-            {"id": "1", "value": 10.0},
-            {"id": "2", "value": 20.0},
-        ]);
-
-        let (output, state) = strategy.execute(&input, ExecutionMode::Full, None).unwrap();
-
-        // Verify functionality still works
-        assert_eq!(output["sum"], 30.0);
-        assert_eq!(state.len(), 2);
-
-        // Verify state hash is valid (format, not specific value)
-        let state_hash = state.state_hash();
-        assert!(state_hash.starts_with("sha256:"));
-        assert_eq!(state_hash.len(), 71);
-    }
+    // Strategy tests removed - strategies module deleted as dead weight
 
     #[test]
     fn test_data_shape_integration() {

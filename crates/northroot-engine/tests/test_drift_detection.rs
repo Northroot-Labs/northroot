@@ -4,7 +4,7 @@
 //! any changes to root computation algorithms that would break compatibility.
 
 use northroot_engine::{
-    commit_seq_root, commit_set_root, compute_execution_roots, compute_tensor_root, MerkleRowMap,
+    commit_seq_root, commit_set_root, compute_execution_roots, compute_tensor_root,
 };
 use serde_json::json;
 use std::collections::HashMap;
@@ -87,20 +87,7 @@ const BASELINE_ROOTS: &[(&str, &str)] = &[
         "compute_tensor_root_three_items",
         "sha256:b294e910ea566785d193092a0f165f09d7aa909a44d6e41c1ab19846a9092bdb",
     ),
-    // MerkleRowMap baselines (CBOR canonicalization with RFC-6962 domain separation)
-    // Updated in Phase 2: Changed from "leaf:"/"node:" prefixes to 0x00/0x01 byte prefixes
-    (
-        "merkle_row_map_empty",
-        "sha256:6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
-    ),
-    (
-        "merkle_row_map_single",
-        "sha256:8cabe6e0ab8e9056357d16a91cb9cd298fbf0703c0b031124c13a4e755f77798",
-    ),
-    (
-        "merkle_row_map_multiple",
-        "sha256:db69612db7577aaae0000ea8c81807f70eca03783f5c5776f3f2e4680508f8ec",
-    ),
+    // MerkleRowMap baselines removed - rowmap module deleted as dead weight
     // compute_execution_roots baselines (trace_set_root values)
     (
         "compute_execution_roots_empty_trace_set",
@@ -227,46 +214,7 @@ fn test_compute_tensor_root_baselines() {
     println!("compute_tensor_root three_items: {}", root1);
 }
 
-#[allow(dead_code)]
-fn test_merkle_row_map_baselines() {
-    use northroot_engine::MerkleRowMap;
-
-    // Empty map
-    let empty_map = MerkleRowMap::new();
-    let empty_root = empty_map.compute_root();
-
-    // Single entry
-    let mut single_map = MerkleRowMap::new();
-    single_map.insert("key1".to_string(), json_to_cbor(&json!(42)));
-    let single_root = single_map.compute_root();
-
-    // Multiple entries
-    let mut multi_map = MerkleRowMap::new();
-    multi_map.insert("key1".to_string(), json_to_cbor(&json!(42)));
-    multi_map.insert("key2".to_string(), json_to_cbor(&json!("value")));
-    multi_map.insert("key3".to_string(), json_to_cbor(&json!(true)));
-    let multi_root = multi_map.compute_root();
-
-    // Order independence (BTreeMap maintains sorted order)
-    let mut map1 = MerkleRowMap::new();
-    map1.insert("a".to_string(), json_to_cbor(&json!(1)));
-    map1.insert("b".to_string(), json_to_cbor(&json!(2)));
-
-    let mut map2 = MerkleRowMap::new();
-    map2.insert("b".to_string(), json_to_cbor(&json!(2)));
-    map2.insert("a".to_string(), json_to_cbor(&json!(1)));
-
-    assert_eq!(
-        map1.compute_root(),
-        map2.compute_root(),
-        "MerkleRowMap should be order-independent"
-    );
-
-    // Print for baseline population
-    println!("MerkleRowMap empty: {}", empty_root);
-    println!("MerkleRowMap single: {}", single_root);
-    println!("MerkleRowMap multiple: {}", multi_root);
-}
+// MerkleRowMap baseline test removed - rowmap module deleted as dead weight
 
 #[allow(dead_code)]
 fn test_compute_execution_roots_baselines() {
@@ -397,34 +345,7 @@ fn test_root_computation_baselines() {
         }
     }
 
-    // Test MerkleRowMap
-    let empty_map = MerkleRowMap::new();
-    let empty_map_root = empty_map.compute_root();
-    if let Some(expected) = baseline_map.get("merkle_row_map_empty") {
-        if empty_map_root != *expected {
-            mismatches.push(("merkle_row_map_empty", expected, empty_map_root.clone()));
-        }
-    }
-
-    let mut single_map = MerkleRowMap::new();
-    single_map.insert("key1".to_string(), json_to_cbor(&json!(42)));
-    let single_map_root = single_map.compute_root();
-    if let Some(expected) = baseline_map.get("merkle_row_map_single") {
-        if single_map_root != *expected {
-            mismatches.push(("merkle_row_map_single", expected, single_map_root.clone()));
-        }
-    }
-
-    let mut multi_map = MerkleRowMap::new();
-    multi_map.insert("key1".to_string(), json_to_cbor(&json!(42)));
-    multi_map.insert("key2".to_string(), json_to_cbor(&json!("value")));
-    multi_map.insert("key3".to_string(), json_to_cbor(&json!(true)));
-    let multi_map_root = multi_map.compute_root();
-    if let Some(expected) = baseline_map.get("merkle_row_map_multiple") {
-        if multi_map_root != *expected {
-            mismatches.push(("merkle_row_map_multiple", expected, multi_map_root.clone()));
-        }
-    }
+    // MerkleRowMap tests removed - rowmap module deleted as dead weight
 
     // Test compute_execution_roots
     let identity_root =
@@ -526,7 +447,6 @@ fn test_root_computations_are_deterministic() {
 
     use northroot_engine::{
         commit_seq_root, commit_set_root, compute_execution_roots, compute_tensor_root,
-        MerkleRowMap,
     };
 
     let h1 = "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
@@ -547,18 +467,7 @@ fn test_root_computations_are_deterministic() {
     let root6 = compute_tensor_root(&[h1.clone(), h2.clone()]);
     assert_eq!(root5, root6, "compute_tensor_root should be deterministic");
 
-    // MerkleRowMap
-    let mut map1 = MerkleRowMap::new();
-    map1.insert("key1".to_string(), json_to_cbor(&json!(42)));
-    let root7 = map1.compute_root();
-
-    let mut map2 = MerkleRowMap::new();
-    map2.insert("key1".to_string(), json_to_cbor(&json!(42)));
-    let root8 = map2.compute_root();
-    assert_eq!(
-        root7, root8,
-        "MerkleRowMap::compute_root should be deterministic"
-    );
+    // MerkleRowMap tests removed - rowmap module deleted as dead weight
 
     // compute_execution_roots
     let roots1 = compute_execution_roots(&[h1.clone()], h2.clone());

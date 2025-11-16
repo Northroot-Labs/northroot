@@ -46,7 +46,7 @@ The active goal grid plan is maintained in:
 
 ## Background
 
-This planning framework is inspired by the Harada Method, a goal-setting system developed by Takashi Harada. Northroot adapted the structural grid approach (64-cell organization) for v0.1 planning to maintain focus and prevent scope drift.
+This planning framework is inspired by the Harada Method, a goal-setting system developed by Takashi Harada. Northroot adapted the structural grid approach (64-cell organization) for v0.1 planning to maintain focus and prevent scope drift. As it turns out, it also keeps agents well aligned to the task at hand and simplifies the search space. 
 
 ---
 

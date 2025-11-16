@@ -1,9 +1,10 @@
 //! Spec-first tests for ADR-009-P4: Privacy-Preserving Resolver API and Storage Extensions
 //!
 //! Phase ID: ADR-009-P4
-//! These tests specify the expected behavior and will fail until ADR-009-P4 is implemented.
-//! Mark with #[ignore] until implementation, then remove ignore to verify.
+//! NOTE: Resolver module was removed as dead weight. These tests are commented out.
+//! If resolver functionality is needed in the future, it can be re-added independently.
 
+/*
 use northroot_receipts::EncryptedLocatorRef;
 use uuid::Uuid;
 
@@ -433,3 +434,4 @@ mod integration_contracts {
         // 4. Verify summary data matches
     }
 }
+*/

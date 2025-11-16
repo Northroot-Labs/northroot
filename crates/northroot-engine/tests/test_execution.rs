@@ -65,37 +65,7 @@ fn test_compute_execution_roots() {
     assert!(roots.trace_seq_root.unwrap().starts_with("sha256:"));
 }
 
-#[test]
-fn test_merkle_row_map() {
-    let mut map = MerkleRowMap::new();
-    map.insert("key1".to_string(), json_to_cbor_value(&json!(42)));
-    map.insert("key2".to_string(), json_to_cbor_value(&json!("value")));
-
-    let root1 = map.compute_root();
-    assert!(root1.starts_with("sha256:"));
-
-    // Same entries should produce same root
-    let mut map2 = MerkleRowMap::new();
-    map2.insert("key1".to_string(), json_to_cbor_value(&json!(42)));
-    map2.insert("key2".to_string(), json_to_cbor_value(&json!("value")));
-    let root2 = map2.compute_root();
-
-    assert_eq!(root1, root2);
-}
-
-#[test]
-fn test_merkle_row_map_deterministic() {
-    let mut map1 = MerkleRowMap::new();
-    map1.insert("a".to_string(), json_to_cbor_value(&json!(1)));
-    map1.insert("b".to_string(), json_to_cbor_value(&json!(2)));
-
-    let mut map2 = MerkleRowMap::new();
-    map2.insert("b".to_string(), json_to_cbor_value(&json!(2)));
-    map2.insert("a".to_string(), json_to_cbor_value(&json!(1)));
-
-    // BTreeMap maintains sorted order, so roots should be same
-    assert_eq!(map1.compute_root(), map2.compute_root());
-}
+// MerkleRowMap tests removed - rowmap module deleted as dead weight
 
 #[test]
 fn test_execution_receipt_builder() {
