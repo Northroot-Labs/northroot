@@ -38,13 +38,15 @@ jobs:
         run: |
           mkdir -p ./receipts
           echo "RECEIPT_STORAGE=./receipts" >> $GITHUB_ENV
-          echo "Receipt storage: ${{ env.RECEIPT_STORAGE }}"
+          echo "Receipt storage: ./receipts"
 
       - name: Record workflow start
         shell: bash
+        env:
+          RECEIPT_STORAGE: ./receipts
         run: |
           python .github/scripts/record_receipt.py \
-            --storage "${{ env.RECEIPT_STORAGE }}" \
+            --storage "$RECEIPT_STORAGE" \
             "test-workflow" \
             "start" \
             "in_progress" \
@@ -60,9 +62,11 @@ jobs:
       - name: Record build completion
         if: always()
         shell: bash
+        env:
+          RECEIPT_STORAGE: ./receipts
         run: |
           python .github/scripts/record_receipt.py \
-            --storage "${{ env.RECEIPT_STORAGE }}" \
+            --storage "$RECEIPT_STORAGE" \
             "test-build" \
             "complete" \
             "${{ job.status }}" \
@@ -78,9 +82,11 @@ jobs:
       - name: Record test completion
         if: always()
         shell: bash
+        env:
+          RECEIPT_STORAGE: ./receipts
         run: |
           python .github/scripts/record_receipt.py \
-            --storage "${{ env.RECEIPT_STORAGE }}" \
+            --storage "$RECEIPT_STORAGE" \
             "test-test" \
             "complete" \
             "${{ job.status }}" \
@@ -89,10 +95,12 @@ jobs:
       - name: Query and verify receipts
         if: always()
         shell: bash
+        env:
+          RECEIPT_STORAGE: ./receipts
         run: |
           echo "=== Querying receipts for run ${{ github.run_id }} ==="
           python .github/scripts/query_receipts.py \
-            --storage "${{ env.RECEIPT_STORAGE }}" \
+            --storage "$RECEIPT_STORAGE" \
             "${{ github.run_id }}"
 
       - name: Upload receipts as artifact
