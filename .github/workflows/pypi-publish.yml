@@ -54,22 +54,44 @@ jobs:
       - name: Verify wheel
         working-directory: sdk/python/northroot
         run: |
-          # Find the built wheel file (check dist/ first, then target/wheels/)
-          WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
+          # Find the built wheel file (check target/wheels/ first, then dist/)
+          # Maturin defaults to target/wheels/ even with --out dist
+          WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
           if [ -z "$WHEEL_FILE" ]; then
-            WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
+            WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
           fi
           if [ -z "$WHEEL_FILE" ]; then
-            echo "❌ No wheel file found in dist/ or target/wheels/"
-            echo "Checking dist/:"
-            ls -la dist/ 2>/dev/null || echo "dist/ does not exist"
+            echo "❌ No wheel file found in target/wheels/ or dist/"
             echo "Checking target/wheels/:"
             ls -la target/wheels/ 2>/dev/null || echo "target/wheels/ does not exist"
+            echo "Checking dist/:"
+            ls -la dist/ 2>/dev/null || echo "dist/ does not exist"
             exit 1
           fi
           echo "Found wheel: $WHEEL_FILE"
           pip install "$WHEEL_FILE"
           python -c "from northroot import Client; print('✅ Package imports successfully')"
+
+      - name: Verify and prepare TestPyPI token
+        if: ${{ inputs.testpypi == true }}
+        run: |
+          if [ -z "${{ secrets.TESTPYPI_API_TOKEN }}" ]; then
+            echo "❌ TESTPYPI_API_TOKEN secret is not set"
+            echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          # Check token length (should be substantial)
+          TOKEN_LENGTH=$(echo -n "${{ secrets.TESTPYPI_API_TOKEN }}" | wc -c)
+          echo "✅ Token is set (length: $TOKEN_LENGTH characters)"
+          if [ "$TOKEN_LENGTH" -lt 20 ]; then
+            echo "⚠️  Warning: Token seems too short. Verify it's the full API token from test.pypi.org"
+          fi
+          # Check if token starts with expected prefix
+          TOKEN_PREFIX=$(echo -n "${{ secrets.TESTPYPI_API_TOKEN }}" | cut -c1-5)
+          if [ "$TOKEN_PREFIX" != "pypi-" ]; then
+            echo "⚠️  Warning: Token doesn't start with 'pypi-'. Make sure this is a TestPyPI API token."
+            echo "   Generate at: https://test.pypi.org/manage/account/token/"
+          fi
 
       - name: Publish to TestPyPI
         if: ${{ inputs.testpypi == true }}
@@ -77,7 +99,31 @@ jobs:
         env:
           MATURIN_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
         run: |
+          # Strip whitespace/newlines from token (common issue with GitHub secrets)
+          # This handles cases where the token was pasted with trailing newlines
+          CLEAN_TOKEN=$(echo -n "$MATURIN_PASSWORD" | tr -d '\n\r\t ')
+          export MATURIN_PASSWORD="$CLEAN_TOKEN"
+
+          echo "Publishing to TestPyPI..."
+          echo "Repository: testpypi"
+          echo "Username: __token__"
+          echo "Token length: ${#CLEAN_TOKEN} characters"
+
           maturin publish --repository testpypi --username __token__
+
+      - name: Verify and prepare PyPI token
+        if: ${{ inputs.testpypi != true }}
+        run: |
+          if [ -z "${{ secrets.PYPI_API_TOKEN }}" ]; then
+            echo "❌ PYPI_API_TOKEN secret is not set"
+            echo "Go to: Settings → Secrets and variables → Actions → New repository secret"
+            exit 1
+          fi
+          TOKEN_LENGTH=$(echo -n "${{ secrets.PYPI_API_TOKEN }}" | wc -c)
+          echo "✅ Token is set (length: $TOKEN_LENGTH characters)"
+          if [ "$TOKEN_LENGTH" -lt 20 ]; then
+            echo "⚠️  Warning: Token seems too short. Verify it's the full API token from pypi.org"
+          fi
 
       - name: Publish to PyPI
         if: ${{ inputs.testpypi != true }}
@@ -85,6 +131,14 @@ jobs:
         env:
           MATURIN_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
+          # Strip whitespace/newlines from token (common issue with GitHub secrets)
+          CLEAN_TOKEN=$(echo -n "$MATURIN_PASSWORD" | tr -d '\n\r\t ')
+          export MATURIN_PASSWORD="$CLEAN_TOKEN"
+
+          echo "Publishing to PyPI..."
+          echo "Username: __token__"
+          echo "Token length: ${#CLEAN_TOKEN} characters"
+
           maturin publish --username __token__
 
       - name: Upload artifacts
