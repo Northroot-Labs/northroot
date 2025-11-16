@@ -28,11 +28,14 @@ jobs:
 
       - name: Install northroot
         run: |
-          pip install --upgrade pip
-          pip install northroot || {
-            echo "[WARN] Failed to install northroot from PyPI, trying to build from source"
-            pip install maturin || pip install --upgrade pip setuptools wheel
-            # If PyPI install fails, we'll skip receipt recording gracefully
+          python3 -m pip install --upgrade pip
+          python3 -m pip install northroot || {
+            echo "[WARN] Failed to install northroot from PyPI"
+            exit 0
+          }
+          # Verify installation
+          python3 -c "import northroot; print('[OK] northroot installed successfully')" || {
+            echo "[WARN] northroot import failed after installation"
             exit 0
           }
         continue-on-error: true
@@ -47,6 +50,12 @@ jobs:
         if: always()
         shell: bash
         run: |
+          # Verify northroot is available
+          python3 -c "import northroot; print('[OK] northroot available')" || {
+            echo "[SKIP] northroot not available - skipping receipt recording"
+            exit 0
+          }
+          
           python3 << 'PYEOF'
           import json
           import os
@@ -54,6 +63,7 @@ jobs:
           
           try:
               from northroot import Client
+              print('[OK] Successfully imported northroot.Client')
               
               storage = os.environ.get('RECEIPT_STORAGE', './receipts')
               os.makedirs(storage, exist_ok=True)
