@@ -155,6 +155,44 @@ receipt = client.record_work(
 
 **Result**: 142% cost savings, $684K annual reduction.
 
+### 4. Agricultural Produce Operations
+
+**Problem**: Supply chain operations lack verifiable proof of events (harvest, shipping, quality checks).
+
+**Solution**: Create cryptographic receipts for supply chain events using semantic workload_id patterns.
+
+```python
+# Record harvest lifecycle
+intent_receipt = client.record_work(
+    workload_id="harvest_planted",
+    payload={"field_id": "field-123", "crop": "potatoes", "planned_date": "2025-11-20"},
+    trace_id="harvest-field-123-2025-11-20"
+)
+
+execution_receipt = client.record_work(
+    workload_id="harvest_executed",
+    payload={"field_id": "field-123", "actual_start_time": "2025-11-20T08:00:00Z"},
+    trace_id="harvest-field-123-2025-11-20",
+    parent_id=str(intent_receipt.get_rid())
+)
+
+outcome_receipt = client.record_work(
+    workload_id="harvest_outcome",
+    payload={"field_id": "field-123", "total_yield_lbs": 4850, "grade_distribution": {...}},
+    trace_id="harvest-field-123-2025-11-20",
+    parent_id=str(execution_receipt.get_rid())
+)
+
+# Record shipping
+shipment_receipt = client.record_work(
+    workload_id="load_shipped",
+    payload={"batch_id": "batch-001", "truck_id": "truck-789", "departure_time": "2025-11-21T08:00:00Z"},
+    trace_id="shipment-batch-001-2025-11-21"
+)
+```
+
+**Result**: Verifiable supply chain proof, clean data at ingestion, queryable by operation type.
+
 ## Installation
 
 ### From PyPI (Recommended)
