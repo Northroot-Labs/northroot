@@ -1,7 +1,7 @@
 //! Python exception hierarchy for SDK errors.
 //!
 //! This module provides Python exception classes that map to Rust `ApiError` variants.
-//! Aligns with Harada P2-T5: Add a clear exception hierarchy for SDK errors.
+//! Aligns with Goal Grid P2-T5: Add a clear exception hierarchy for SDK errors.
 //!
 //! For v0.1, we use PyValueError as the base (all exceptions extend ValueError).
 //! Each error type has a distinct class that can be caught specifically.

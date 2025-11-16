@@ -9,7 +9,7 @@ This example demonstrates the minimal v0.1 API using the Client class:
 - client.list_receipts: List and filter receipts
 - client.record_work_async / client.verify_receipt_async: Async versions
 
-This aligns with Harada P2-T7: Produce a 10-15 line quickstart example.
+This aligns with Goal Grid P2-T7: Produce a 10-15 line quickstart example.
 """
 
 from northroot import Client

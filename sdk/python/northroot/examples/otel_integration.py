@@ -5,7 +5,7 @@ OpenTelemetry Integration Example
 This example demonstrates how to integrate Northroot receipts with OpenTelemetry spans,
 enabling seamless observability for existing workflows.
 
-This aligns with Harada P5-T1: Build an OTEL span → proof transformer.
+This aligns with Goal Grid P5-T1: Build an OTEL span → proof transformer.
 """
 
 try:
