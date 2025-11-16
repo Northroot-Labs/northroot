@@ -1,0 +1,125 @@
+name: Test Receipt Recording
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/test-receipts.yml'
+      - '.github/scripts/record_receipt.py'
+      - '.github/scripts/query_receipts.py'
+
+jobs:
+  test-receipts:
+    name: Test receipt recording on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install northroot
+        run: |
+          pip install --upgrade pip
+          pip install northroot
+
+      - name: Setup receipt storage
+        shell: bash
+        run: |
+          mkdir -p ./receipts
+          echo "RECEIPT_STORAGE=./receipts" >> $GITHUB_ENV
+          echo "Receipt storage: ${{ env.RECEIPT_STORAGE }}"
+
+      - name: Record workflow start
+        shell: bash
+        run: |
+          python .github/scripts/record_receipt.py \
+            --storage "${{ env.RECEIPT_STORAGE }}" \
+            "test-workflow" \
+            "start" \
+            "in_progress" \
+            '{"platform": "${{ matrix.os }}", "test": true}'
+
+      - name: Simulate build step
+        shell: bash
+        run: |
+          echo "Simulating build process..."
+          sleep 2
+          echo "Build complete"
+
+      - name: Record build completion
+        if: always()
+        shell: bash
+        run: |
+          python .github/scripts/record_receipt.py \
+            --storage "${{ env.RECEIPT_STORAGE }}" \
+            "test-build" \
+            "complete" \
+            "${{ job.status }}" \
+            '{"platform": "${{ matrix.os }}", "duration_sec": 2}'
+
+      - name: Simulate test step
+        shell: bash
+        run: |
+          echo "Simulating test process..."
+          sleep 1
+          echo "Tests complete"
+
+      - name: Record test completion
+        if: always()
+        shell: bash
+        run: |
+          python .github/scripts/record_receipt.py \
+            --storage "${{ env.RECEIPT_STORAGE }}" \
+            "test-test" \
+            "complete" \
+            "${{ job.status }}" \
+            '{"platform": "${{ matrix.os }}", "tests_passed": true}'
+
+      - name: Query and verify receipts
+        if: always()
+        shell: bash
+        run: |
+          echo "=== Querying receipts for run ${{ github.run_id }} ==="
+          python .github/scripts/query_receipts.py \
+            --storage "${{ env.RECEIPT_STORAGE }}" \
+            "${{ github.run_id }}"
+
+      - name: Upload receipts as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: receipts-test-run-${{ github.run_id }}-${{ matrix.os }}
+          path: |
+            receipts/*.json
+            receipts/*.db
+          retention-days: 30
+          if-no-files-found: warn
+
+      - name: Verify receipt integrity
+        if: always()
+        shell: bash
+        run: |
+          echo "=== Verifying receipt integrity ==="
+          python -c "
+          from northroot import Client
+          import os
+          client = Client(storage_path='./receipts')
+          receipts = client.list_receipts(trace_id='run-${{ github.run_id }}')
+          print(f'Found {len(receipts)} receipt(s)')
+          for r in receipts:
+              is_valid = client.verify_receipt(r)
+              status = '✅ Valid' if is_valid else '❌ Invalid'
+              print(f'  {r.get_rid()}: {status}')
+          "
+
