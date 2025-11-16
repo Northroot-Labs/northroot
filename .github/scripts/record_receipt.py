@@ -5,7 +5,7 @@ import os
 import sys
 from pathlib import Path
 
-def record_step(workload_id: str, step_name: str, status: str, metadata: dict = None):
+def record_step(workload_id: str, step_name: str, status: str, metadata: dict = None, storage_path: str = None, parent_id: str = None):
     """Record a workflow step as a receipt."""
     try:
         from northroot import Client  # type: ignore[import-untyped]
@@ -19,7 +19,11 @@ def record_step(workload_id: str, step_name: str, status: str, metadata: dict = 
     job_name = os.environ.get("GITHUB_JOB", "unknown")
     runner_os = os.environ.get("RUNNER_OS", os.environ.get("ImageOS", "unknown"))
     
-    client = Client()
+    # Use provided storage path or default to receipts directory
+    if storage_path is None:
+        storage_path = os.environ.get("RECEIPT_STORAGE", None)
+    
+    client = Client(storage_path=storage_path)
     
     payload = {
         "step": step_name,
@@ -36,8 +40,16 @@ def record_step(workload_id: str, step_name: str, status: str, metadata: dict = 
         workload_id=workload_id,
         payload=payload,
         trace_id=f"run-{run_id}",  # All receipts in this run share trace_id
+        parent_id=parent_id,  # Link to parent receipt for DAG composition
         tags=["ci", "github-actions", workflow, job_name]
     )
+    
+    # Store receipt if storage is configured
+    if storage_path:
+        try:
+            client.store_receipt(receipt)
+        except Exception as e:
+            print(f"⚠️  Could not store receipt: {e}")
     
     # Store receipt JSON for artifact upload
     receipt_dir = Path(os.environ.get("GITHUB_STEP_SUMMARY", "./receipts"))
@@ -69,14 +81,25 @@ def record_step(workload_id: str, step_name: str, status: str, metadata: dict = 
     return receipt.get_rid()
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Usage: record_receipt.py <workload_id> <step_name> <status> [metadata_json]")
-        sys.exit(1)
+    import argparse
     
-    workload_id = sys.argv[1]
-    step_name = sys.argv[2]
-    status = sys.argv[3]
-    metadata = json.loads(sys.argv[4]) if len(sys.argv) > 4 else None
+    parser = argparse.ArgumentParser(description="Record a workflow step as a Northroot receipt")
+    parser.add_argument("workload_id", help="Workload identifier (e.g., 'build-wheel')")
+    parser.add_argument("step_name", help="Step name (e.g., 'build-start')")
+    parser.add_argument("status", help="Step status (e.g., 'success', 'failure')")
+    parser.add_argument("metadata", nargs="?", help="JSON metadata string")
+    parser.add_argument("--storage", help="Storage path for receipts (optional)")
+    parser.add_argument("--parent-id", help="Parent receipt ID for DAG composition (optional)")
     
-    record_step(workload_id, step_name, status, metadata)
+    args = parser.parse_args()
+    
+    metadata = json.loads(args.metadata) if args.metadata else None
+    record_step(
+        args.workload_id,
+        args.step_name,
+        args.status,
+        metadata,
+        storage_path=args.storage,
+        parent_id=args.parent_id
+    )
 
