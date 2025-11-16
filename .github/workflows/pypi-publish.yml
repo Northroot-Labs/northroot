@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       testpypi:
-        description: 'Publish to TestPyPI instead of PyPI'
+        description: "Publish to TestPyPI instead of PyPI"
         required: false
         type: boolean
         default: false
@@ -19,7 +19,7 @@ jobs:
     # environment:
     #   name: pypi
     #   url: https://pypi.org/project/northroot/
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -42,10 +42,24 @@ jobs:
         run: |
           maturin build --release
 
+      - name: List build artifacts
+        working-directory: sdk/python/northroot
+        run: |
+          echo "Build artifacts:"
+          ls -lah dist/ || echo "dist/ directory does not exist"
+
       - name: Verify wheel
         working-directory: sdk/python/northroot
         run: |
-          pip install dist/*.whl
+          # Find the built wheel file
+          WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
+          if [ -z "$WHEEL_FILE" ]; then
+            echo "❌ No wheel file found in dist/"
+            ls -la dist/ || echo "dist/ directory does not exist"
+            exit 1
+          fi
+          echo "Found wheel: $WHEEL_FILE"
+          pip install "$WHEEL_FILE"
           python -c "from northroot import Client; print('✅ Package imports successfully')"
 
       - name: Publish to TestPyPI
@@ -71,3 +85,4 @@ jobs:
           name: wheels
           path: sdk/python/northroot/dist/*.whl
           retention-days: 30
+          if-no-files-found: warn

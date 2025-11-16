@@ -85,7 +85,7 @@ async def async_example():
         workload_id="async-example",
         payload={"async": True},
         tags=["async"]
-    )
+)
     print(f"Async receipt: {receipt_async.get_rid()}")
     is_valid_async = await client.verify_receipt_async(receipt_async)
     print(f"Async receipt valid: {is_valid_async}")
