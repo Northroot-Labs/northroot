@@ -36,17 +36,41 @@
 - [ ] Test storage functionality
 - [ ] Test listing functionality
 
-### ⏳ PyPI Account Setup (To Do)
+### ✅ PyPI Account Setup
 
-- [ ] Create PyPI account (if needed)
-- [ ] Create TestPyPI account (for testing)
+- [x] PyPI account created
+- [x] TestPyPI account created (for testing)
 - [ ] Generate API token
-- [ ] Configure credentials: `~/.pypirc` or environment variables
+- [ ] Add secrets to GitHub repository:
+  - `PYPI_API_TOKEN` - PyPI API token
+  - `TESTPYPI_API_TOKEN` - TestPyPI API token (optional)
 
 ### ⏳ Release Process (To Do)
 
+#### Option 1: GitHub Actions (Recommended)
+
+1. **Create a GitHub release:**
+   - Go to: https://github.com/Northroot-Labs/Northroot/releases/new
+   - Tag: `v0.1.0` (must match version in `pyproject.toml`)
+   - Title: `v0.1.0`
+   - Description: Release notes
+   - Click "Publish release"
+
+2. **Workflow will automatically:**
+   - Build the package
+   - Verify the wheel
+   - Publish to PyPI
+   - Upload artifacts
+
+3. **For TestPyPI testing:**
+   - Use "Run workflow" → Select "Publish to TestPyPI"
+   - Or manually trigger: Actions → "Publish to PyPI" → Run workflow → Check "testpypi"
+
+#### Option 2: Manual Publishing
+
 1. **Test on TestPyPI first:**
    ```bash
+   cd sdk/python/northroot
    maturin publish --repository testpypi
    ```
 
@@ -57,6 +81,7 @@
 
 3. **Publish to PyPI:**
    ```bash
+   cd sdk/python/northroot
    maturin publish
    ```
 
@@ -101,6 +126,30 @@ maturin publish --repository testpypi
 maturin publish
 ```
 
+## GitHub Actions Setup
+
+### Required Secrets
+
+Add these secrets to your GitHub repository (Settings → Secrets and variables → Actions):
+
+1. **PYPI_API_TOKEN** (required)
+   - Generate at: https://pypi.org/manage/account/token/
+   - Scope: Entire account (or project-specific)
+   - Add as repository secret: `PYPI_API_TOKEN`
+
+2. **TESTPYPI_API_TOKEN** (optional, for testing)
+   - Generate at: https://test.pypi.org/manage/account/token/
+   - Add as repository secret: `TESTPYPI_API_TOKEN`
+
+### Optional: Environment Protection
+
+To add environment protection (requires approval before publishing):
+
+1. Go to: Settings → Environments → New environment
+2. Name: `pypi`
+3. Add protection rules (reviewers, wait timer, etc.)
+4. Uncomment the `environment:` section in `.github/workflows/pypi-publish.yml`
+
 ## Notes
 
 - Package name: `northroot`
@@ -108,6 +157,7 @@ maturin publish
 - Minimum Python: 3.10
 - License: Apache-2.0
 - Features: `storage` enabled by default
+- GitHub Actions workflow: `.github/workflows/pypi-publish.yml`
 
 ## Known Issues
 
