@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2025-11-16
+
+### Added
+- Multi-platform wheel builds for PyPI: Linux, macOS, and Windows
+- GitHub Actions workflow for automated cross-platform builds
+- Support for Python 3.10, 3.11, and 3.12 across all platforms
+
+### Changed
+- PyPI publish workflow now builds wheels for multiple platforms and Python versions
+- Improved build matrix to reduce CI time while maintaining coverage
+
 ## [0.1.0] - 2025-11-15
 
 ### Added

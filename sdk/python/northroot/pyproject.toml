@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "northroot"
-version = "0.1.0"
+version = "0.1.1"
 description = "Python SDK providing high-level bindings to the Northroot Engine. Record work, verify receipts, and manage proof storage with simple async/sync APIs."
 readme = "README.md"
 requires-python = ">=3.10"

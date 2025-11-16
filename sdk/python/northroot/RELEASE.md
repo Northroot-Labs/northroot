@@ -1,15 +1,15 @@
 # PyPI Release Checklist
 
-**Version:** 0.1.0  
-**Date:** 2025-11-15  
-**Status:** Pre-release
+**Version:** 0.1.1  
+**Date:** 2025-11-16  
+**Status:** Ready for release (cross-platform support added)
 
 ## Pre-Release Checklist
 
 ### ✅ Metadata (pyproject.toml)
 
 - [x] Package name: `northroot`
-- [x] Version: `0.1.0`
+- [x] Version: `0.1.1`
 - [x] Description: Updated with clear value proposition
 - [x] Keywords: Added relevant keywords
 - [x] Classifiers: Updated to match Python 3.10+ requirement
