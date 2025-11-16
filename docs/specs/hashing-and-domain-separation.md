@@ -2,7 +2,7 @@
 
 **Status:** Finalized for v0.1  
 **Date:** 2025-11-15  
-**Harada Task:** P1-T2
+**Goal Grid Task:** P1-T2
 
 This document defines the hashing and domain separation rules used throughout the Northroot engine. These rules ensure deterministic, collision-resistant hashing across all engine components.
 

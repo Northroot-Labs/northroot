@@ -7,7 +7,7 @@ status: accepted
 proposed_at: '2025-11-15T00:00:00Z'
 decided_at: '2025-11-15T00:00:00Z'
 summary: Deliver the minimal record_work / verify_receipt API, local store, adapters,
-  and documentation promised in Harada Pillar 2.
+  and documentation promised in goal grid Pillar 2.
 decision_drivers:
 - SDK must hide engine complexity and expose only the narrow slice.
 - Quickstart + packaging tasks unblock demos and adoption.

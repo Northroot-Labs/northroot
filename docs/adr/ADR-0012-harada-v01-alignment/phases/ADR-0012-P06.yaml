@@ -7,7 +7,7 @@ status: accepted
 proposed_at: '2025-11-15T00:00:00Z'
 decided_at: '2025-11-15T00:00:00Z'
 summary: Finish the product narrative, diagrams, use cases, and enforce the execution
-  operating rules outlined in Harada Pillars 6 & 8.
+  operating rules outlined in goal grid Pillars 6 & 8.
 decision_drivers:
 - Investors/customers need a crisp story that matches the shipped artifacts.
 - Scope discipline is mandatory to hit v0.1 dates.

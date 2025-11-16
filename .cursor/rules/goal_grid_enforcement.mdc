@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+---
+
+# GOAL GRID ENFORCEMENT RULE (ALWAYS APPLY = TRUE)
+
+1. LOAD GOAL GRID FIRST
+   - On session start or before executing any task, ALWAYS load:
+       goals/harada/northroot-active.md
+   - Assume this file is the single source of truth for goals and tasks.
+
+2. NO DEVIATION
+   - All planning, reasoning, code generation, and decisions MUST map to the
+     active goal grid file.
+   - Do NOT invent new goals, tasks, pillars, or directions outside this file.
+   - If work is requested that does not match any goal grid task ID (P*-T*),
+     STOP and request a mapping or revision to the goal grid before proceeding.
+
+3. TASK IDENTIFIERS ARE LAW
+   - Every generated plan, commit, or work artifact MUST reference the correct
+     goal grid task ID(s) such as: P3-T4.
+   - IDs are immutable. Do not rename or reassign them.
+
+4. ADR REQUIREMENTS
+   - If generating an ADR, it MUST contain:
+       Goal_Grid_Version: <value from northroot-active.md>
+       Related_Goal_Grid_Tasks: [P*-T*, ...]
+   - ADRs without goal grid references are INVALID.
+   - ADRs may only elaborate or clarify goal grid tasks — never contradict or
+     expand them without explicit user instruction to update the goal grid.
+
+5. GOAL GRID IS LOADED BEFORE EVERY ACTION
+   - Before producing code, plans, refactors, or architectural decisions, the
+     agent MUST reread the active goal grid file and align its output to the
+     specified pillar and task IDs.
+
+6. STABILITY GUARANTEE
+   - The agent MUST treat `northroot-active.md` as canonical.
+   - Archive versions are NEVER used unless explicitly requested by ID.
+   - Only the user can authorize modifications to the goal grid.
+
+7. DRIFT PREVENTION
+   - If the agent's output deviates from the goal grid, or if requested work has no
+     clear goal grid mapping, STOP and ask the user for clarification before
+     proceeding.
+
+# END OF RULE

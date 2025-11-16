@@ -2,7 +2,7 @@
 
 **Status:** v0.1 - FROZEN  
 **Date:** 2025-11-15  
-**Harada Task:** P1-T3  
+**Goal Grid Task:** P1-T3  
 **Effective:** All v0.1 releases
 
 This document freezes the chunk model (receipt structure and payload types) for v0.1. No breaking changes to these structures are permitted until v0.2.

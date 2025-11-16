@@ -1,8 +1,10 @@
-# Harada v0.1 Progress Tracking
+# Goal Grid v0.1 Progress Tracking
 
 **Last Updated:** 2025-11-15  
-**Harada Version:** 0.1  
+**Goal Grid Version:** 0.1  
 **ADR Reference:** ADR-0012
+
+**About the Goal Grid:** This progress tracking follows the [goal grid](../../planning/goal-grid.md), a planning framework that organizes work into a 64-cell grid (8 pillars × 8 tasks) to maintain focus and prevent scope drift.
 
 **Recent Fixes:**
 - Fixed JSON deserialization errors for `[u8; 32]` byte arrays (pac, chunk_manifest_hash, merkle_root, manifest_root)
@@ -22,7 +24,7 @@
 
 ## Status Summary
 
-This document tracks progress against the Harada 64-cell grid defined in `goals/harada/northroot-active.md`. All work must align with Harada tasks to prevent scope drift.
+This document tracks progress against the goal grid (64-cell structure) defined in `goals/harada/northroot-active.md`. All work must align with goal grid tasks to prevent scope drift.
 
 ## Central Goal (CG-1)
 
@@ -65,9 +67,9 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 | **P2-T5** — Add a clear exception hierarchy | ✅ **COMPLETE** | Error types mapped from Rust ApiError, clear hierarchy documented. |
 | **P2-T6** — Create typed result objects | ✅ **COMPLETE** | `PyReceipt` integrated with new API. Thin client wrapper created. |
 | **P2-T7** — Produce a 10–15 line quickstart example | ✅ **COMPLETE** | Quickstart example created at `sdk/northroot-sdk-python/examples/quickstart.py`. |
-| **P2-T8** — Package and publish a clean PyPI release | 🔄 **IN PROGRESS** | Package structure ready, metadata complete, build tested. Ready for PyPI publishing. |
+| **P2-T8** — Package and publish a clean PyPI release | ✅ **COMPLETE** | Published to PyPI as `northroot` v0.1.0. GitHub Actions workflow configured for automated publishing. |
 
-**Phase 2 Progress:** 7/8 complete, 0/8 partial, 1/8 in progress
+**Phase 2 Progress:** 8/8 complete, 0/8 partial, 0/8 pending
 
 **Recent Completion:** 
 - Python SDK bindings for `record_work` and `verify_receipt` created (P2-T3 ✅)
@@ -122,9 +124,14 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 
 | Task | Status | Notes |
 |------|--------|-------|
-| **P6-T1** through **P6-T8** | ❌ **PENDING** | All tasks pending. |
+| **P6-T1** — Write problem framing around redundant/opaque compute | ✅ **COMPLETE** | Problem framing added to README: redundant compute, opaque decisions, no audit trail, trust gaps. |
+| **P6-T2** — Define a succinct positioning: "verifiable compute plumbing" | ✅ **COMPLETE** | Positioning defined in README: "Verifiable compute plumbing for transparent, reusable computation." |
+| **P6-T3** — Explain why proofs beat logs | ✅ **COMPLETE** | "Why Proofs Beat Logs" section added to README with comparison table (determinism, reuse, auditability, trust). |
+| **P6-T6** — Document 3 concrete use cases | ✅ **COMPLETE** | Three use cases documented in README: FinOps cost attribution, ETL pipeline reuse, Analytics dashboard refresh. |
+| **P6-T8** — Write a clear, minimal README | ✅ **COMPLETE** | README rewritten to align with goal grid narrative: problem framing, positioning, proofs vs logs, use cases, quick start. |
+| **P6-T4**, **P6-T5**, **P6-T7** | ❌ **PENDING** | Before/after cost example, YC-ready explanation, architecture diagrams deferred. |
 
-**Phase 6 Progress:** 0/8 complete
+**Phase 6 Progress:** 5/8 complete, 0/8 in progress, 3/8 pending
 
 ---
 
@@ -134,9 +141,11 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 
 | Task | Status | Notes |
 |------|--------|-------|
-| **P7-T1** through **P7-T8** | ❌ **PENDING** | All tasks pending. |
+| **P7-T1** — Implement a "hello receipts" demo | ✅ **COMPLETE** | Hello receipts demo created at `sdk/python/northroot/examples/hello_receipts.py`. Simplest possible demo: 3 steps → 3 receipts. |
+| **P7-T2** — Write a simple local-only install guide | ✅ **COMPLETE** | Installation guide created at `docs/guides/installation.md`. Covers PyPI install, local dev setup, platform support, and troubleshooting. |
+| **P7-T3** through **P7-T8** | ❌ **PENDING** | Remaining tasks pending. |
 
-**Phase 7 Progress:** 0/8 complete
+**Phase 7 Progress:** 2/8 complete, 0/8 in progress, 6/8 pending
 
 ---
 
@@ -197,7 +206,7 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
    - Status: Complete, removed deprecated `execution/merkle_row_map.rs` (moved to `rowmap.rs`). All modules are clear and well-organized. No dead code found.
    - **Implementation Commit:** (pending commit)
 
-### Critical Next Steps (Aligned with Harada)
+### Critical Next Steps (Aligned with Goal Grid)
 
 1. **P1-T2:** Finalize and document hashing/domain separation rules
    - Document in `docs/` or `crates/northroot-engine/src/commitments.rs`
@@ -208,9 +217,9 @@ This document tracks progress against the Harada 64-cell grid defined in `goals/
 
 ### Drift Prevention
 
-- ✅ All work references Harada task IDs
+- ✅ All work references goal grid task IDs
 - ✅ ADR-0012 is the single source of truth
-- ✅ No work done outside Harada scope
+- ✅ No work done outside goal grid scope
 - ✅ Python SDK bindings created (P2-T3 complete)
 
 ---

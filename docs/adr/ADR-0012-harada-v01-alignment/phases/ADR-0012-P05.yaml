@@ -7,7 +7,7 @@ status: accepted
 proposed_at: '2025-11-15T00:00:00Z'
 decided_at: '2025-11-15T00:00:00Z'
 summary: Bridge OTEL/logs to receipts, ship local demos, installers, templates, and
-  troubleshooting that make adoption trivial (Harada Pillars 5 & 7).
+  troubleshooting that make adoption trivial (goal grid Pillars 5 & 7).
 decision_drivers:
 - Users must map existing traces/logs into proofs with <10 min onboarding.
 - Demos and docs drive early validation.

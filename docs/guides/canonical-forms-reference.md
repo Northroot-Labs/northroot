@@ -2,7 +2,7 @@
 
 **Status:** v0.1 - Finalized  
 **Date:** 2025-11-15  
-**Harada Task:** P1-T7  
+**Goal Grid Task:** P1-T7  
 **Audience:** Developers using Northroot SDK or integrating with the engine
 
 This guide explains the canonical forms used in Northroot and when to use each one. For technical details on hashing and domain separation, see [`docs/specs/hashing-and-domain-separation.md`](../specs/hashing-and-domain-separation.md).

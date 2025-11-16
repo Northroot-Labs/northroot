@@ -7,10 +7,10 @@ status: accepted
 proposed_at: '2025-11-15T00:00:00Z'
 decided_at: '2025-11-15T00:00:00Z'
 summary: Lock down CBOR canonicalization, hashing, chunk model, and test harnesses so
-  the engine semantics match Harada Pillar 1.
+  the engine semantics match goal grid Pillar 1.
 decision_drivers:
-- Harada CG-1 requires deterministic receipts before SDK exposure.
-- Previous ADRs duplicated guidance; this phase consolidates everything into Harada tasks.
+- Goal grid CG-1 requires deterministic receipts before SDK exposure.
+- Previous ADRs duplicated guidance; this phase consolidates everything into goal grid tasks.
 success_criteria:
 - All CBOR + hashing golden tests (P1-T1/T4) pass under CI.
 - Chunk model (P1-T3) and documentation (P1-T7) are frozen for v0.1.

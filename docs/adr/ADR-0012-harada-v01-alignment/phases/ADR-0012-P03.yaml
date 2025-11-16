@@ -7,7 +7,7 @@ status: accepted
 proposed_at: '2025-11-15T00:00:00Z'
 decided_at: '2025-11-15T00:00:00Z'
 summary: Finalize the Proof/Evidence/WorkReceipt/Settlement envelopes, optional
-  fragments, schemas, diagrams, and fixtures for Harada Pillar 3.
+  fragments, schemas, diagrams, and fixtures for goal grid Pillar 3.
 decision_drivers:
 - SDK + engine need the same stable receipt grammar.
 - Schema/test fixtures unblock integrations and docs.

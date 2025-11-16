@@ -7,7 +7,7 @@ status: accepted
 proposed_at: '2025-11-15T00:00:00Z'
 decided_at: '2025-11-15T00:00:00Z'
 summary: Implement the overlap metrics, alpha integration, break-even rule, and worked
-  examples mandated by Harada Pillar 4.
+  examples mandated by goal grid Pillar 4.
 decision_drivers:
 - Reuse claims must be economically defensible before demos.
 - Policy + SDK rely on deterministic reuse classification.

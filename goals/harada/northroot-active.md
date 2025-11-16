@@ -1,12 +1,15 @@
 ---
-Title: Northroot — Harada 64-Cell Grid
+Title: Northroot — Goal Grid v0.1
 Version: 0.1
 Status: active
 Epoch: "v0.1 - Ship minimal verifiable compute layer + Python SDK. 
 Effective: 2025-11-15
+
+Note: This plan uses a goal grid framework that organizes work into a 64-cell
+grid (8 pillars × 8 tasks). See docs/planning/goal-grid.md for more information.
 ---
 
-## Northroot - Harada 64-Cell Grid v0.1
+## Northroot - Goal Grid v0.1
 
 ## Central Goal
 
