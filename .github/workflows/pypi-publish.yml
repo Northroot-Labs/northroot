@@ -93,23 +93,52 @@ jobs:
             echo "   Generate at: https://test.pypi.org/manage/account/token/"
           fi
 
+      - name: Install twine
+        if: ${{ inputs.testpypi == true }}
+        run: |
+          pip install twine
+
       - name: Publish to TestPyPI
         if: ${{ inputs.testpypi == true }}
         working-directory: sdk/python/northroot
         env:
-          MATURIN_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TESTPYPI_API_TOKEN }}
         run: |
           # Strip whitespace/newlines from token (common issue with GitHub secrets)
-          # This handles cases where the token was pasted with trailing newlines
-          CLEAN_TOKEN=$(echo -n "$MATURIN_PASSWORD" | tr -d '\n\r\t ')
-          export MATURIN_PASSWORD="$CLEAN_TOKEN"
+          CLEAN_TOKEN=$(echo -n "$TWINE_PASSWORD" | tr -d '\n\r\t ')
+          export TWINE_PASSWORD="$CLEAN_TOKEN"
 
-          echo "Publishing to TestPyPI..."
+          echo "Publishing to TestPyPI using twine..."
           echo "Repository: testpypi"
           echo "Username: __token__"
           echo "Token length: ${#CLEAN_TOKEN} characters"
+          echo "Token prefix: ${CLEAN_TOKEN:0:10}..."
 
-          maturin publish --repository testpypi --username __token__
+          # Find wheel and source distribution
+          WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
+          if [ -z "$WHEEL_FILE" ]; then
+            WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
+          fi
+
+          SDIST_FILE=$(ls target/wheels/*.tar.gz 2>/dev/null | head -1)
+          if [ -z "$SDIST_FILE" ]; then
+            SDIST_FILE=$(ls dist/*.tar.gz 2>/dev/null | head -1)
+          fi
+
+          if [ -z "$WHEEL_FILE" ] && [ -z "$SDIST_FILE" ]; then
+            echo "❌ No wheel or source distribution found"
+            exit 1
+          fi
+
+          # Upload using twine (more reliable than maturin for authentication)
+          if [ -n "$WHEEL_FILE" ] && [ -n "$SDIST_FILE" ]; then
+            twine upload --repository testpypi "$WHEEL_FILE" "$SDIST_FILE"
+          elif [ -n "$WHEEL_FILE" ]; then
+            twine upload --repository testpypi "$WHEEL_FILE"
+          else
+            twine upload --repository testpypi "$SDIST_FILE"
+          fi
 
       - name: Verify and prepare PyPI token
         if: ${{ inputs.testpypi != true }}
@@ -125,21 +154,51 @@ jobs:
             echo "⚠️  Warning: Token seems too short. Verify it's the full API token from pypi.org"
           fi
 
+      - name: Install twine
+        if: ${{ inputs.testpypi != true }}
+        run: |
+          pip install twine
+
       - name: Publish to PyPI
         if: ${{ inputs.testpypi != true }}
         working-directory: sdk/python/northroot
         env:
-          MATURIN_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           # Strip whitespace/newlines from token (common issue with GitHub secrets)
-          CLEAN_TOKEN=$(echo -n "$MATURIN_PASSWORD" | tr -d '\n\r\t ')
-          export MATURIN_PASSWORD="$CLEAN_TOKEN"
+          CLEAN_TOKEN=$(echo -n "$TWINE_PASSWORD" | tr -d '\n\r\t ')
+          export TWINE_PASSWORD="$CLEAN_TOKEN"
 
-          echo "Publishing to PyPI..."
+          echo "Publishing to PyPI using twine..."
           echo "Username: __token__"
           echo "Token length: ${#CLEAN_TOKEN} characters"
+          echo "Token prefix: ${CLEAN_TOKEN:0:10}..."
 
-          maturin publish --username __token__
+          # Find wheel and source distribution
+          WHEEL_FILE=$(ls target/wheels/*.whl 2>/dev/null | head -1)
+          if [ -z "$WHEEL_FILE" ]; then
+            WHEEL_FILE=$(ls dist/*.whl 2>/dev/null | head -1)
+          fi
+
+          SDIST_FILE=$(ls target/wheels/*.tar.gz 2>/dev/null | head -1)
+          if [ -z "$SDIST_FILE" ]; then
+            SDIST_FILE=$(ls dist/*.tar.gz 2>/dev/null | head -1)
+          fi
+
+          if [ -z "$WHEEL_FILE" ] && [ -z "$SDIST_FILE" ]; then
+            echo "❌ No wheel or source distribution found"
+            exit 1
+          fi
+
+          # Upload using twine (more reliable than maturin for authentication)
+          if [ -n "$WHEEL_FILE" ] && [ -n "$SDIST_FILE" ]; then
+            twine upload "$WHEEL_FILE" "$SDIST_FILE"
+          elif [ -n "$WHEEL_FILE" ]; then
+            twine upload "$WHEEL_FILE"
+          else
+            twine upload "$SDIST_FILE"
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
