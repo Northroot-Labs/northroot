@@ -59,7 +59,7 @@ jobs:
         working-directory: sdk/python/northroot
         shell: bash
         run: |
-          python ../../.github/scripts/record_receipt.py "build-wheel" "build-start" "${{ job.status }}" '{"platform": "${{ matrix.os }}", "python": "${{ matrix.python-version }}"}'
+          python ../../../.github/scripts/record_receipt.py "build-wheel" "build-start" "${{ job.status }}" '{"platform": "${{ matrix.os }}", "python": "${{ matrix.python-version }}"}'
         continue-on-error: true
 
       - name: Build wheel (Linux)
@@ -203,7 +203,7 @@ jobs:
         shell: bash
         run: |
           WHEEL_COUNT=$(find dist target/wheels -name '*.whl' -type f 2>/dev/null | wc -l || echo "0")
-          python ../../.github/scripts/record_receipt.py "build-wheel" "build-complete" "${{ job.status }}" "{\"wheel_count\": \"$WHEEL_COUNT\", \"platform\": \"${{ matrix.os }}\", \"python\": \"${{ matrix.python-version }}\"}"
+          python ../../../.github/scripts/record_receipt.py "build-wheel" "build-complete" "${{ job.status }}" "{\"wheel_count\": \"$WHEEL_COUNT\", \"platform\": \"${{ matrix.os }}\", \"python\": \"${{ matrix.python-version }}\"}"
         continue-on-error: true
 
       - name: Upload wheel artifact
