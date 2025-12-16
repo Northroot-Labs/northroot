@@ -1,0 +1,303 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://northroot.dev/schemas/canonical.json",
+    "title": "Northroot Canonical Types",
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {},
+    "$defs": {
+        "DigitsNoLeadingZeros": {
+            "title": "Base-10 integer string, minimal",
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]*)$"
+        },
+        "SignedDigitsNoLeadingZeros": {
+            "title": "Signed base-10 integer string, minimal (no -0)",
+            "type": "string",
+            "pattern": "^(0|-?[1-9][0-9]*)$"
+        },
+        "Dec": {
+            "title": "Fixed-point decimal quantity",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "t",
+                "m",
+                "s"
+            ],
+            "properties": {
+                "t": {
+                    "const": "dec"
+                },
+                "m": {
+                    "description": "Signed base-10 mantissa string; minimal form; no leading zeros; -0 forbidden.",
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/SignedDigitsNoLeadingZeros"
+                        },
+                        {
+                            "maxLength": 40
+                        }
+                    ]
+                },
+                "s": {
+                    "description": "Non-negative base-10 scale (value = m * 10^-s). Default bound is 0..=18.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 18
+                }
+            }
+        },
+        "Int": {
+            "title": "Integer quantity",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "t",
+                "v"
+            ],
+            "properties": {
+                "t": {
+                    "const": "int"
+                },
+                "v": {
+                    "description": "Signed base-10 integer string; minimal form; -0 forbidden.",
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/SignedDigitsNoLeadingZeros"
+                        },
+                        {
+                            "maxLength": 40
+                        }
+                    ]
+                }
+            }
+        },
+        "Rat": {
+            "title": "Rational quantity (exact fraction)",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "t",
+                "n",
+                "d"
+            ],
+            "properties": {
+                "t": {
+                    "const": "rat"
+                },
+                "n": {
+                    "description": "Signed numerator string; minimal; -0 forbidden.",
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/SignedDigitsNoLeadingZeros"
+                        },
+                        {
+                            "maxLength": 40
+                        }
+                    ]
+                },
+                "d": {
+                    "description": "Positive denominator string; minimal; must be > 0.",
+                    "allOf": [
+                        {
+                            "$ref": "#/$defs/DigitsNoLeadingZeros"
+                        },
+                        {
+                            "maxLength": 40
+                        }
+                    ]
+                }
+            }
+        },
+        "F64": {
+            "title": "Binary float64 quantity (explicit bits, lossy by nature)",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "t",
+                "bits"
+            ],
+            "properties": {
+                "t": {
+                    "const": "f64"
+                },
+                "bits": {
+                    "description": "IEEE-754 f64 bit pattern as lowercase hex (16 hex bytes = 64 bits).",
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{16}$"
+                }
+            }
+        },
+        "Quantity": {
+            "title": "Quantity (tagged union)",
+            "oneOf": [
+                {
+                    "$ref": "#/$defs/Dec"
+                },
+                {
+                    "$ref": "#/$defs/Int"
+                },
+                {
+                    "$ref": "#/$defs/Rat"
+                },
+                {
+                    "$ref": "#/$defs/F64"
+                }
+            ]
+        },
+        "HygieneStatus": {
+            "title": "Hygiene status",
+            "type": "string",
+            "enum": [
+                "Ok",
+                "Lossy",
+                "Ambiguous",
+                "Invalid"
+            ]
+        },
+        "HygieneWarning": {
+            "title": "Hygiene warning code",
+            "type": "string",
+            "pattern": "^[A-Z0-9_]{3,64}$"
+        },
+        "HygieneReport": {
+            "title": "HygieneReport",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "status",
+                "warnings",
+                "metrics",
+                "profile_id"
+            ],
+            "properties": {
+                "status": {
+                    "$ref": "#/$defs/HygieneStatus"
+                },
+                "warnings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/HygieneWarning"
+                    },
+                    "uniqueItems": true
+                },
+                "metrics": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "profile_id": {
+                    "description": "Hash identifier of the canonicalization profile + numeric rules used.",
+                    "type": "string",
+                    "minLength": 16,
+                    "maxLength": 128,
+                    "pattern": "^[a-zA-Z0-9_-]+$"
+                }
+            }
+        },
+        "Base64Url": {
+            "title": "Base64URL (no padding)",
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 4096
+        },
+        "DigestAlg": {
+            "title": "Digest algorithm",
+            "type": "string",
+            "enum": [
+                "sha-256"
+            ]
+        },
+        "Digest": {
+            "title": "Digest",
+            "description": "Algorithm + digest bytes. Bytes are base64url (no padding). For sha-256 this is typically 43 chars (no padding); schema allows 43..44 to tolerate encoder variance.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "alg",
+                "b64"
+            ],
+            "properties": {
+                "alg": {
+                    "$ref": "#/$defs/DigestAlg"
+                },
+                "b64": {
+                    "description": "Digest bytes encoded as base64url (no padding).",
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_-]+$",
+                    "minLength": 43,
+                    "maxLength": 44
+                }
+            }
+        },
+        "ContentRef": {
+            "title": "ContentRef",
+            "description": "Reference to content-addressed external bytes/documents. Prefer this over embedding large blobs in receipts.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+                "digest"
+            ],
+            "properties": {
+                "digest": {
+                    "$ref": "#/$defs/Digest"
+                },
+                "size_bytes": {
+                    "description": "Optional size hint; does not affect hashing.",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "media_type": {
+                    "description": "Optional IANA media type hint (e.g., application/json).",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                }
+            }
+        },
+        "ProfileID": {
+            "title": "ProfileID",
+            "description": "Identifier of the canonicalization profile used (stable, URL-safe).",
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{16,128}$"
+        },
+        "Timestamp": {
+            "title": "Timestamp (UTC RFC 3339)",
+            "description": "UTC timestamp in RFC 3339 / ISO 8601 format with 'Z' suffix. Fractional seconds optional, max 9 digits.",
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,9})?Z$",
+            "minLength": 20,
+            "maxLength": 30
+        },
+        "ToolName": {
+            "title": "ToolName",
+            "description": "Canonical tool identifier: lowercase dot-separated namespace. Example: canon.hash, llm.generate",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9_]*([.][a-z][a-z0-9_]*){0,7}$",
+            "minLength": 1,
+            "maxLength": 64
+        },
+        "PrincipalKind": {
+            "title": "Principal kind",
+            "type": "string",
+            "enum": [
+                "human",
+                "service",
+                "agent",
+                "org"
+            ]
+        },
+        "PrincipalID": {
+            "title": "PrincipalID",
+            "description": "Stable identifier for the acting principal: kind:name. Name is lowercase and URL-safe. Example: human:sebastian, service:billingd, agent:nr-assistant-1",
+            "type": "string",
+            "pattern": "^(human|service|agent|org):[a-z][a-z0-9_-]{0,62}$",
+            "minLength": 3,
+            "maxLength": 72
+        }
+    }
+}
