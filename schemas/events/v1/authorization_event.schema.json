@@ -6,61 +6,77 @@
     "additionalProperties": false,
     "required": [
         "event_id",
-        "v"
+        "event_type",
+        "event_version",
+        "occurred_at",
+        "principal_id",
+        "canonical_profile_id",
+        "intents",
+        "policy_id",
+        "policy_digest",
+        "decision",
+        "decision_code",
+        "authorization"
     ],
     "properties": {
         "event_id": {
-            "description": "sha256('northroot:event:v1\\0' || canonical_bytes(v))",
+            "description": "sha256('northroot:event:v1\\0' || canonical_bytes(self))",
             "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
         },
-        "v": {
-            "$ref": "#/$defs/AuthorizationV"
+        "event_type": {
+            "const": "authorization"
         },
-        "o": {
-            "$ref": "#/$defs/OpsMeta"
+        "event_version": {
+            "const": "1"
+        },
+        "prev_event_id": {
+            "description": "Optional hash-chain pointer to prior event_id for append-only integrity.",
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
+        },
+        "occurred_at": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
+        },
+        "principal_id": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/PrincipalID"
+        },
+        "canonical_profile_id": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ProfileID"
+        },
+        "intents": {
+            "$ref": "#/$defs/IntentAnchors"
+        },
+        "policy_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+        },
+        "policy_digest": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Digest"
+        },
+        "decision": {
+            "$ref": "#/$defs/Decision"
+        },
+        "decision_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Z0-9_]+$"
+        },
+        "checks": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/CheckResult"
+            },
+            "maxItems": 64
+        },
+        "hygiene": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/HygieneReport"
+        },
+        "authorization": {
+            "$ref": "#/$defs/AuthorizationKind"
         }
     },
     "$defs": {
-        "OpsMeta": {
-            "title": "OpsMeta",
-            "description": "Operational metadata (non-normative). MUST NOT be hashed and MUST NOT be used for policy/enforcement decisions.",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "request_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 128,
-                    "pattern": "^[A-Za-z0-9._:-]+$"
-                },
-                "traceparent": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 512
-                },
-                "provider_ref": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                },
-                "retry_count": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 1000000
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 64,
-                        "pattern": "^[A-Za-z0-9._:-]+$"
-                    },
-                    "maxItems": 32,
-                    "uniqueItems": true
-                }
-            }
-        },
         "Decision": {
             "type": "string",
             "enum": [
@@ -274,78 +290,6 @@
                     }
                 }
             ]
-        },
-        "AuthorizationV": {
-            "title": "AuthorizationEvent.V",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "event_type",
-                "event_version",
-                "occurred_at",
-                "principal_id",
-                "canonical_profile_id",
-                "intents",
-                "policy_id",
-                "policy_digest",
-                "decision",
-                "decision_code",
-                "authorization"
-            ],
-            "properties": {
-                "event_type": {
-                    "const": "authorization"
-                },
-                "event_version": {
-                    "const": "1"
-                },
-                "prev_event_id": {
-                    "description": "Optional hash-chain pointer to prior event_id for append-only integrity.",
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
-                },
-                "occurred_at": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
-                },
-                "principal_id": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/PrincipalID"
-                },
-                "canonical_profile_id": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ProfileID"
-                },
-                "intents": {
-                    "$ref": "#/$defs/IntentAnchors"
-                },
-                "policy_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 128
-                },
-                "policy_digest": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Digest"
-                },
-                "decision": {
-                    "$ref": "#/$defs/Decision"
-                },
-                "decision_code": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 64,
-                    "pattern": "^[A-Z0-9_]+$"
-                },
-                "checks": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/$defs/CheckResult"
-                    },
-                    "maxItems": 64
-                },
-                "hygiene": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/HygieneReport"
-                },
-                "authorization": {
-                    "$ref": "#/$defs/AuthorizationKind"
-                }
-            }
         }
     }
 }

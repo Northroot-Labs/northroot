@@ -6,61 +6,47 @@
     "additionalProperties": false,
     "required": [
         "event_id",
-        "v"
+        "event_type",
+        "event_version",
+        "occurred_at",
+        "principal_id",
+        "canonical_profile_id",
+        "checkpoint_event_id",
+        "signature"
     ],
     "properties": {
         "event_id": {
-            "description": "sha256('northroot:event:v1\\0' || canonical_bytes(v))",
+            "description": "sha256('northroot:event:v1\\0' || canonical_bytes(self))",
             "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
         },
-        "v": {
-            "$ref": "#/$defs/AttestationV"
+        "event_type": {
+            "const": "attestation"
         },
-        "o": {
-            "$ref": "#/$defs/OpsMeta"
+        "event_version": {
+            "const": "1"
+        },
+        "prev_event_id": {
+            "description": "Optional pointer for chaining attestations too.",
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
+        },
+        "occurred_at": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
+        },
+        "principal_id": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/PrincipalID"
+        },
+        "canonical_profile_id": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ProfileID"
+        },
+        "checkpoint_event_id": {
+            "description": "event_id of the checkpoint being attested (signature binds to the checkpoint via its id).",
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
+        },
+        "signature": {
+            "$ref": "#/$defs/Signature"
         }
     },
     "$defs": {
-        "OpsMeta": {
-            "title": "OpsMeta",
-            "description": "Operational metadata (non-normative). MUST NOT be hashed and MUST NOT be used for policy/enforcement decisions.",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "request_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 128,
-                    "pattern": "^[A-Za-z0-9._:-]+$"
-                },
-                "traceparent": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 512
-                },
-                "provider_ref": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                },
-                "retry_count": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 1000000
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 64,
-                        "pattern": "^[A-Za-z0-9._:-]+$"
-                    },
-                    "maxItems": 32,
-                    "uniqueItems": true
-                }
-            }
-        },
         "Signature": {
             "title": "Signature",
             "type": "object",
@@ -89,48 +75,6 @@
                     "minLength": 16,
                     "maxLength": 4096,
                     "pattern": "^[A-Za-z0-9_-]+$"
-                }
-            }
-        },
-        "AttestationV": {
-            "title": "AttestationEvent.V",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "event_type",
-                "event_version",
-                "occurred_at",
-                "principal_id",
-                "canonical_profile_id",
-                "checkpoint_event_id",
-                "signature"
-            ],
-            "properties": {
-                "event_type": {
-                    "const": "attestation"
-                },
-                "event_version": {
-                    "const": "1"
-                },
-                "prev_event_id": {
-                    "description": "Optional pointer for chaining attestations too.",
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
-                },
-                "occurred_at": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
-                },
-                "principal_id": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/PrincipalID"
-                },
-                "canonical_profile_id": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ProfileID"
-                },
-                "checkpoint_event_id": {
-                    "description": "event_id of the checkpoint being attested (signature binds to the checkpoint via its id).",
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
-                },
-                "signature": {
-                    "$ref": "#/$defs/Signature"
                 }
             }
         }

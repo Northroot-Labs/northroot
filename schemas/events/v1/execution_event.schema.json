@@ -6,61 +6,88 @@
     "additionalProperties": false,
     "required": [
         "event_id",
-        "v"
+        "event_type",
+        "event_version",
+        "occurred_at",
+        "principal_id",
+        "canonical_profile_id",
+        "intents",
+        "auth_event_id",
+        "tool_name",
+        "meter_used",
+        "outcome"
     ],
     "properties": {
         "event_id": {
-            "description": "sha256('northroot:event:v1\\0' || canonical_bytes(v))",
+            "description": "sha256('northroot:event:v1\\0' || canonical_bytes(self))",
             "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
         },
-        "v": {
-            "$ref": "#/$defs/ExecutionV"
+        "event_type": {
+            "const": "execution"
         },
-        "o": {
-            "$ref": "#/$defs/OpsMeta"
+        "event_version": {
+            "const": "1"
+        },
+        "prev_event_id": {
+            "description": "Optional hash-chain pointer to prior event_id for append-only integrity.",
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
+        },
+        "occurred_at": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
+        },
+        "principal_id": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/PrincipalID"
+        },
+        "canonical_profile_id": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ProfileID"
+        },
+        "intents": {
+            "$ref": "#/$defs/IntentAnchors"
+        },
+        "auth_event_id": {
+            "description": "Authorization event_id that permitted/denied the execution attempt.",
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
+        },
+        "tool_name": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ToolName"
+        },
+        "started_at": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
+        },
+        "ended_at": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
+        },
+        "meter_used": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Meter"
+            },
+            "maxItems": 64
+        },
+        "outcome": {
+            "$ref": "#/$defs/Outcome"
+        },
+        "error_code": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[A-Z0-9_]+$"
+        },
+        "output_digest": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Digest"
+        },
+        "output_ref": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ContentRef"
+        },
+        "resources_touched": {
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/ResourceRef"
+            },
+            "maxItems": 256
         }
     },
     "$defs": {
-        "OpsMeta": {
-            "title": "OpsMeta",
-            "description": "Operational metadata (non-normative). MUST NOT be hashed and MUST NOT be used for policy/enforcement decisions.",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "request_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 128,
-                    "pattern": "^[A-Za-z0-9._:-]+$"
-                },
-                "traceparent": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 512
-                },
-                "provider_ref": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                },
-                "retry_count": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 1000000
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 64,
-                        "pattern": "^[A-Za-z0-9._:-]+$"
-                    },
-                    "maxItems": 32,
-                    "uniqueItems": true
-                }
-            }
-        },
         "Outcome": {
             "type": "string",
             "enum": [
@@ -125,108 +152,25 @@
                     "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Digest"
                 }
             }
-        },
-        "ExecutionV": {
-            "title": "ExecutionEvent.V",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "event_type",
-                "event_version",
-                "occurred_at",
-                "principal_id",
-                "canonical_profile_id",
-                "intents",
-                "auth_event_id",
-                "tool_name",
-                "meter_used",
-                "outcome"
-            ],
-            "properties": {
-                "event_type": {
-                    "const": "execution"
-                },
-                "event_version": {
-                    "const": "1"
-                },
-                "prev_event_id": {
-                    "description": "Optional hash-chain pointer to prior event_id for append-only integrity.",
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
-                },
-                "occurred_at": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
-                },
-                "principal_id": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/PrincipalID"
-                },
-                "canonical_profile_id": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ProfileID"
-                },
-                "intents": {
-                    "$ref": "#/$defs/IntentAnchors"
-                },
-                "auth_event_id": {
-                    "description": "Authorization event_id that permitted/denied the execution attempt.",
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
-                },
-                "tool_name": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ToolName"
-                },
-                "started_at": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
-                },
-                "ended_at": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
-                },
-                "meter_used": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/$defs/Meter"
-                    },
-                    "maxItems": 64
-                },
-                "outcome": {
-                    "$ref": "#/$defs/Outcome"
-                },
-                "error_code": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 64,
-                    "pattern": "^[A-Z0-9_]+$"
-                },
-                "output_digest": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Digest"
-                },
-                "output_ref": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ContentRef"
-                },
-                "resources_touched": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/$defs/ResourceRef"
-                    },
-                    "maxItems": 256
-                }
-            },
-            "allOf": [
-                {
-                    "if": {
-                        "properties": {
-                            "outcome": {
-                                "const": "failure"
-                            }
-                        },
-                        "required": [
-                            "outcome"
-                        ]
-                    },
-                    "then": {
-                        "required": [
-                            "error_code"
-                        ]
-                    }
-                }
-            ]
         }
-    }
+    },
+    "allOf": [
+        {
+            "if": {
+                "properties": {
+                    "outcome": {
+                        "const": "failure"
+                    }
+                },
+                "required": [
+                    "outcome"
+                ]
+            },
+            "then": {
+                "required": [
+                    "error_code"
+                ]
+            }
+        }
+    ]
 }

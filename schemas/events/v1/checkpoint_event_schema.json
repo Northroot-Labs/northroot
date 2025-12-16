@@ -6,137 +6,79 @@
     "additionalProperties": false,
     "required": [
         "event_id",
-        "v"
+        "event_type",
+        "event_version",
+        "occurred_at",
+        "principal_id",
+        "canonical_profile_id",
+        "chain_tip_event_id",
+        "chain_tip_height"
     ],
     "properties": {
         "event_id": {
-            "description": "sha256('northroot:event:v1\\0' || canonical_bytes(v))",
+            "description": "sha256('northroot:event:v1\\0' || canonical_bytes(self))",
             "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
         },
-        "v": {
-            "$ref": "#/$defs/CheckpointV"
+        "event_type": {
+            "const": "checkpoint"
         },
-        "o": {
-            "$ref": "#/$defs/OpsMeta"
-        }
-    },
-    "$defs": {
-        "OpsMeta": {
-            "title": "OpsMeta",
-            "description": "Operational metadata (non-normative). MUST NOT be hashed and MUST NOT be used for policy/enforcement decisions.",
+        "event_version": {
+            "const": "1"
+        },
+        "prev_event_id": {
+            "description": "Optional pointer to prior event in the same file/stream if you’re chaining checkpoints too.",
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
+        },
+        "occurred_at": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
+        },
+        "principal_id": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/PrincipalID"
+        },
+        "canonical_profile_id": {
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ProfileID"
+        },
+        "chain_tip_event_id": {
+            "description": "The latest event_id this checkpoint attests exists in-order in the chain.",
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
+        },
+        "chain_tip_height": {
+            "description": "Monotonic counter for the chain tip (e.g., number of events since genesis).",
+            "type": "integer",
+            "minimum": 0
+        },
+        "merkle_root": {
+            "description": "Optional Merkle root over a window of events for faster partial verification.",
+            "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Digest"
+        },
+        "window": {
+            "description": "Optional window parameters if merkle_root is provided.",
             "type": "object",
             "additionalProperties": false,
             "properties": {
-                "request_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 128,
-                    "pattern": "^[A-Za-z0-9._:-]+$"
-                },
-                "traceparent": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 512
-                },
-                "provider_ref": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 256
-                },
-                "retry_count": {
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 1000000
-                },
-                "tags": {
-                    "type": "array",
-                    "items": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 64,
-                        "pattern": "^[A-Za-z0-9._:-]+$"
-                    },
-                    "maxItems": 32,
-                    "uniqueItems": true
-                }
-            }
-        },
-        "CheckpointV": {
-            "title": "CheckpointEvent.V",
-            "type": "object",
-            "additionalProperties": false,
-            "required": [
-                "event_type",
-                "event_version",
-                "occurred_at",
-                "principal_id",
-                "canonical_profile_id",
-                "chain_tip_event_id",
-                "chain_tip_height"
-            ],
-            "properties": {
-                "event_type": {
-                    "const": "checkpoint"
-                },
-                "event_version": {
-                    "const": "1"
-                },
-                "prev_event_id": {
-                    "description": "Optional pointer to prior event in the same file/stream if you’re chaining checkpoints too.",
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
-                },
-                "occurred_at": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Timestamp"
-                },
-                "principal_id": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/PrincipalID"
-                },
-                "canonical_profile_id": {
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/ProfileID"
-                },
-                "chain_tip_event_id": {
-                    "description": "The latest event_id this checkpoint attests exists in-order in the chain.",
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
-                },
-                "chain_tip_height": {
-                    "description": "Monotonic counter for the chain tip (e.g., number of events since genesis).",
+                "start_height": {
                     "type": "integer",
                     "minimum": 0
                 },
-                "merkle_root": {
-                    "description": "Optional Merkle root over a window of events for faster partial verification.",
-                    "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/Digest"
-                },
-                "window": {
-                    "description": "Optional window parameters if merkle_root is provided.",
-                    "type": "object",
-                    "additionalProperties": false,
-                    "properties": {
-                        "start_height": {
-                            "type": "integer",
-                            "minimum": 0
-                        },
-                        "end_height": {
-                            "type": "integer",
-                            "minimum": 0
-                        }
-                    }
+                "end_height": {
+                    "type": "integer",
+                    "minimum": 0
                 }
-            },
-            "allOf": [
-                {
-                    "if": {
-                        "required": [
-                            "merkle_root"
-                        ]
-                    },
-                    "then": {
-                        "required": [
-                            "window"
-                        ]
-                    }
-                }
-            ]
+            }
         }
-    }
+    },
+    "allOf": [
+        {
+            "if": {
+                "required": [
+                    "merkle_root"
+                ]
+            },
+            "then": {
+                "required": [
+                    "window"
+                ]
+            }
+        }
+    ]
 }
