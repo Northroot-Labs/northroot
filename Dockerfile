@@ -37,9 +37,10 @@ ENV CARGO_HOME=/usr/local/cargo
 ENV PATH="/usr/local/cargo/bin:/usr/local/bin:${PATH}"
 
 # Create non-root user (defaults can be overridden via build args)
+# Ensure defaults are positive integers to avoid groupadd errors.
 ARG USERNAME=dev
 ARG USER_UID=1000
-ARG USER_GID=${USER_UID}
+ARG USER_GID=1000
 RUN groupadd --gid ${USER_GID} ${USERNAME} && \
     useradd --uid ${USER_UID} --gid ${USER_GID} --create-home ${USERNAME} && \
     chown -R ${USERNAME}:${USER_GID} /usr/local/rustup /usr/local/cargo

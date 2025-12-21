@@ -5,8 +5,8 @@
     "context": "..",
     "args": {
       "USERNAME": "dev",
-      "USER_UID": "${localEnv:USER_UID:-1000}",
-      "USER_GID": "${localEnv:USER_GID:-1000}"
+      "USER_UID": "${localEnv:USER_UID:1000}",
+      "USER_GID": "${localEnv:USER_GID:1000}"
     }
   },
   "features": {
