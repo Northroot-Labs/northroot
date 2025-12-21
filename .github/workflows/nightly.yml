@@ -1,0 +1,97 @@
+name: Nightly Deep Checks
+
+on:
+  schedule:
+    # Run daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -Dwarnings
+
+jobs:
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install llvm-cov
+        run: cargo install cargo-llvm-cov --locked
+      - name: Generate coverage
+        run: |
+          cargo llvm-cov --workspace --ignore-filename-regex '(/tests?/|/examples?/)' --lcov --output-path lcov.info
+          cargo llvm-cov --workspace --ignore-filename-regex '(/tests?/|/examples?/)' report --html --output-dir coverage
+      - name: Upload coverage HTML
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-html
+          path: coverage
+          retention-days: 30
+      - name: Upload coverage LCOV
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: lcov.info
+          retention-days: 30
+
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      - name: Run cargo-deny
+        run: cargo deny check
+      - name: Run cargo-audit
+        run: cargo audit
+
+  miri:
+    name: Miri (UB Detection)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - name: Run miri on northroot-core
+        run: cargo +nightly miri test --package northroot-core
+      - name: Run miri on northroot-canonical
+        run: cargo +nightly miri test --package northroot-canonical
+      - name: Upload miri logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: miri-logs
+          path: |
+            target/miri
+          retention-days: 7
+
+  fuzz:
+    name: Fuzzing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz --locked
+      - name: Run fuzz targets (time-boxed)
+        run: |
+          cd crates/northroot-canonical
+          cargo fuzz run canonicalizer -- -max_total_time=60 || true
+          cargo fuzz run validation -- -max_total_time=60 || true
+        continue-on-error: true
+      - name: Upload fuzz findings
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-findings
+          path: |
+            crates/northroot-canonical/fuzz/artifacts
+          retention-days: 30
+

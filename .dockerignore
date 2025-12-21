@@ -1,0 +1,44 @@
+# Rust build artifacts
+target/
+**/*.rs.bk
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Cursor
+.cursor/
+.cursorrules
+.cursorignore
+
+# Environment
+.env*
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Documentation builds
+book/
+*.md.bak
+
+# Test artifacts
+coverage/
+lcov.info
+*.profraw
+
+# Fuzz artifacts
+**/fuzz/artifacts/
+**/fuzz/corpus/
+
+# Notes
+notes/
+

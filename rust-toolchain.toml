@@ -1,0 +1,6 @@
+# Rust toolchain configuration for consistent builds
+[toolchain]
+channel = "1.91.0"
+components = ["clippy", "rustfmt"]
+profile = "minimal"
+

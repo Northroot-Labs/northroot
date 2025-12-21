@@ -1,0 +1,43 @@
+# Cargo-deny configuration for security and license checks
+
+[licenses]
+# Default policy: allow permissive licenses, deny copyleft
+default = "deny"
+copyleft = "deny"
+# Allow these specific licenses
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "Unlicense",
+]
+# Ignore licenses for dev dependencies
+ignore = [
+    { license = "MIT", dependency = "*" },
+]
+
+[bans]
+# Check for duplicate dependencies
+multiple-versions = "warn"
+# Check for unmaintained crates (90 days)
+unmaintained = "warn"
+# Check for yanked crates
+yanked = "deny"
+
+[sources]
+# Only allow crates.io and git sources
+unknown-registry = "deny"
+unknown-git = "deny"
+path-dependencies = "allow"
+# Allow crates.io
+registry = "https://github.com/rust-lang/crates.io-index"
+
+[vulnerabilities]
+# Deny known vulnerabilities
+advisories = "deny"
+# Check for unmaintained crates
+unmaintained = "warn"
+

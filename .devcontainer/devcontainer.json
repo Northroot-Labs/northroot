@@ -1,0 +1,62 @@
+{
+  "name": "Northroot Development",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "args": {
+      "USERNAME": "dev",
+      "USER_UID": "${localEnv:USER_UID:-1000}",
+      "USER_GID": "${localEnv:USER_GID:-1000}"
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "rust-lang.rust-analyzer",
+        "tamasfe.even-better-toml",
+        "serayuzgur.crates",
+        "vadimcn.vscode-lldb",
+        "ms-vscode.vscode-json"
+      ],
+      "settings": {
+        "rust-analyzer.checkOnSave.command": "clippy",
+        "rust-analyzer.checkOnSave.extraArgs": ["--", "-D", "warnings"],
+        "rust-analyzer.cargo.allFeatures": true,
+        "rust-analyzer.cargo.buildScripts.enable": true,
+        "rust-analyzer.inlayHints.typeHints.enable": true,
+        "rust-analyzer.inlayHints.parameterHints.enable": true,
+        "rust-analyzer.inlayHints.chainingHints.enable": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "rust-lang.rust-analyzer",
+        "[rust]": {
+          "editor.defaultFormatter": "rust-lang.rust-analyzer",
+          "editor.formatOnSave": true
+        },
+        "files.exclude": {
+          "**/target": true
+        }
+      }
+    }
+  },
+  "remoteUser": "dev",
+  "workspaceFolder": "/workspace",
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached"
+  ],
+  "runArgs": [
+    "-v",
+    "${env:SSH_AUTH_SOCK}:/ssh-agent:ro",
+    "-e",
+    "SSH_AUTH_SOCK=/ssh-agent"
+  ],
+  "remoteEnv": {
+    "CARGO_TERM_COLOR": "always",
+    "RUSTFLAGS": "-Dwarnings",
+    "SSH_AUTH_SOCK": "/ssh-agent"
+  },
+  "postCreateCommand": "rustup component add clippy rustfmt && cargo fetch && just --version"
+}
+
