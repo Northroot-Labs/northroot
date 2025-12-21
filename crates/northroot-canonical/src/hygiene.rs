@@ -27,6 +27,12 @@ impl HygieneWarning {
     }
 }
 
+impl AsRef<str> for HygieneWarning {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
 /// Hygiene reports produced during canonicalization.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct HygieneReport {
