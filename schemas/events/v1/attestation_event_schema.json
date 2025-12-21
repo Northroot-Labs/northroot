@@ -12,7 +12,7 @@
         "principal_id",
         "canonical_profile_id",
         "checkpoint_event_id",
-        "signature"
+        "signatures"
     ],
     "properties": {
         "event_id": {
@@ -42,8 +42,14 @@
             "description": "event_id of the checkpoint being attested (signature binds to the checkpoint via its id).",
             "$ref": "https://northroot.dev/schemas/canonical.json#/$defs/EventID"
         },
-        "signature": {
-            "$ref": "#/$defs/Signature"
+        "signatures": {
+            "description": "One or more signatures over the attested checkpoint.",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/Signature"
+            },
+            "minItems": 1,
+            "maxItems": 16
         }
     },
     "$defs": {

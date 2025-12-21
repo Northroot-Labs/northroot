@@ -199,7 +199,7 @@
         },
         "EventID": {
             "title": "EventID",
-            "description": "Digest identifying an event (domain-separated hash over canonical bytes of v).",
+            "description": "Digest identifying an event (domain-separated hash over the canonical bytes of the schema-defined event object).",
             "$ref": "#/$defs/Digest"
         },
         "ContentRef": {

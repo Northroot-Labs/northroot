@@ -31,7 +31,7 @@ Boundary / Gate
 A pre-action enforcement point that binds policy, constraints, and evidence before an irreversible action occurs.
 
 Evidence
-Deterministic, structured facts that can be verified offline without semantic interpretation.
+Deterministic, structured facts that can be verified offline without semantic interpretation. Every evidence event is the canonical JSON object defined by its schema; there is no separate envelope layer, and every field that affects verification is part of the schema-defined payload.
 
 Receipt
 An immutable, content-addressed record binding:
@@ -59,6 +59,12 @@ The core MUST NOT judge intent, correctness, desirability, or optimality.
 
 Rationale: Interpretation collapses neutrality.
 Enforcement: No scoring, recommendations, or reasoning in core.
+
+INV-2a — Canonical payloads are schema-defined
+
+All core evidence is the canonical JSON object described by the schema (authorization, execution, checkpoint, attestation, etc.). There is no separate `v` envelope, and every schema field that affects verification must be present in the object hashed as `event_id`.
+
+Operational metadata (request IDs, traces, retries, provider hints, tags, transport headers, etc.) lives outside the canonical event to keep hashes deterministic.
 
 ⸻
 
@@ -127,6 +133,10 @@ INV-9 — Execution links to authorization
 Every ExecutionReceipt MUST reference exactly one AuthorizationReceipt.
 
 Unlinked execution is invalid.
+
+INV-9a — Attestations may carry multiple signatures
+
+Attestation evidence MUST allow multiple independent signatures (1–16 entries) so different trust anchors can co-sign the same checkpoint without altering canonical identity. Each signature is part of the canonical payload and must be verified deterministically.
 
 ⸻
 
