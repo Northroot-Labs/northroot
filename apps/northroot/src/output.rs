@@ -2,11 +2,6 @@
 
 use serde_json::Value;
 
-/// Formats an event as JSON.
-pub fn format_json(event: &Value) -> String {
-    serde_json::to_string_pretty(event).unwrap_or_else(|_| "{}".to_string())
-}
-
 /// Formats an event as a simple table row.
 pub fn format_table_row(event: &Value) -> String {
     let event_id = event

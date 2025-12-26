@@ -80,6 +80,37 @@ For PRs touching Tier B paths, after CODEOWNERS approval:
 
 4. **CI will verify the tag signature and unblock merge**
 
+## Human-Signed Checkpoints (Recommended)
+
+Separately from Tier B PR attestations, Northroot uses **human-signed tags** as "frozen checkpoints" you can point auditors and downstream systems at.
+
+### Release Checkpoints (`v*` tags)
+
+- Create a signed tag like `v1.0.0` on the exact commit you want to freeze.
+- Pushing this tag triggers the release workflow to build and publish binaries.
+
+Example:
+```bash
+VERSION="1.0.0"
+git tag -s "v$VERSION" -m "Release v$VERSION"
+git push origin "v$VERSION"
+```
+
+### Internal Checkpoints (optional)
+
+For non-release checkpoints (e.g. a “frozen” state for staging/prod rollout), use a separate tag namespace such as:
+- `checkpoint/stage/<date>@<shortsha>`
+- `checkpoint/prod/<date>@<shortsha>`
+
+Example:
+```bash
+TAG="checkpoint/stage/2025-12-26@$(git rev-parse --short HEAD)"
+git tag -s "$TAG" -m "Checkpoint: stage"
+git push origin "$TAG"
+```
+
+These tags are explicitly human-signed, low-friction, and don’t require direct pushes to protected branches.
+
 ### Getting Your SSH Key Fingerprint
 
 To add yourself as an allowed human signer, you need your SSH key fingerprint:

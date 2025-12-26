@@ -1,6 +1,6 @@
 # Northroot CLI Release Guide
 
-**Status**: Ready for binary release (read-only operations)  
+**Status**: v1.0.0 - Stable API, ready for production use  
 **Audience**: Release engineers, Python integration developers  
 **Purpose**: Guide for building, testing, and releasing the `northroot` CLI binary for Python integration
 
@@ -8,10 +8,14 @@
 
 ## Current Status
 
-### ✅ Ready for Release
+### ✅ v1.0.0 - Stable Release
+
+**Version**: All crates at `1.0.0` (stable API contract)  
+**API Status**: Stable (see [API Contract](docs/developer/api-contract.md))  
+**Last Tag**: `v0.1.0` (legacy, current codebase is 1.0.0)
 
 - **CLI builds successfully** (`northroot` package in `apps/northroot/`)
-- **All tests pass** (unit + integration)
+- **All tests pass** (unit + integration + golden tests)
 - **Production commands available**:
   - `canonicalize` - Show canonical bytes for input JSON
   - `event-id` - Compute event_id for input JSON
@@ -22,6 +26,7 @@
   - Resource limits (`--max-events`, `--max-size`)
   - Error sanitization
   - Symlink rejection (optional)
+- **Workspace structure**: CLI intentionally **not** in workspace (by design, see [AGENTS.md](AGENTS.md))
 
 ### ⚠️ Future Commands (Not Yet Implemented)
 
@@ -35,18 +40,20 @@ The following commands are planned but not yet implemented:
 
 ## Automated Release Workflow
 
-Northroot uses a **label-driven CD workflow** that automatically versions, builds, and releases binaries when PRs are merged to `main`.
+Northroot uses a **tag-driven release workflow** that builds and publishes binaries when a `v*` tag is pushed.
 
 ### Label Taxonomy
 
 | Label | Semver Bump | Use Case | Release? |
 |-------|-------------|----------|----------|
-| `release:patch` | 0.1.X → 0.1.X+1 | Bug fix, security patch, doc fix | Yes |
-| `release:minor` | 0.X.0 → 0.X+1.0 | New feature, additive API | Yes |
+| `release:patch` | 1.0.X → 1.0.X+1 | Bug fix, security patch, doc fix | Yes |
+| `release:minor` | 1.X.0 → 1.X+1.0 | New feature, additive API | Yes |
 | `release:major` | X.0.0 → X+1.0.0 | Breaking API change, contract change | Yes |
 | `chore` | - | Deps, CI, tooling changes | No |
 | `style` | - | Formatting, naming, whitespace | No |
 | `contract` | flag | API surface changes (review flag) | No (must pair with release label) |
+
+**Note**: Labels are for review/intent and changelog hygiene. **Releases are created from tags**, not directly from labels.
 
 ### Release Flow
 
@@ -54,12 +61,15 @@ Northroot uses a **label-driven CD workflow** that automatically versions, build
 2. **Apply label** (`release:patch`, `release:minor`, `release:major`, or `chore`/`style` for no release)
 3. **CI runs** (formatting, clippy, tests) - gates the PR
 4. **Merge to main**
-5. **If release label present:**
-   - Version bumped in all crate `Cargo.toml` files
-   - Git tag created (`v0.1.0`)
-   - Binaries built for Linux (x86_64) and macOS (ARM64)
-   - GitHub Release created with binaries and SHA256 checksums
-6. **If no release label:** No action (PR merged, no release)
+5. **Bump versions in the same PR** (or a dedicated version PR) as needed:
+   - Workspace crates: `cargo set-version <VERSION> --workspace`
+   - CLI app (not in workspace): `cd apps/northroot && cargo set-version <VERSION>`
+6. **Create a signed release tag** on the merged commit (recommended):
+   - `git tag -s v<VERSION> -m "Release v<VERSION>"`
+   - `git push origin v<VERSION>`
+7. GitHub Actions builds binaries and publishes the GitHub Release for that tag.
+
+**Important**: The CLI app (`apps/northroot`) is **not** in the workspace by design. The release workflow handles this correctly by using `--manifest-path` for builds and explicitly bumping the CLI version separately.
 
 ### Contract Change Handling
 
@@ -76,18 +86,20 @@ The `contract` label flags API surface changes for review. It does **not** trigg
 If you need to release manually or the automated workflow fails:
 
 ```bash
-# 1. Bump versions in all crates
-cargo set-version 0.1.1 --workspace
+# 1. Bump versions (ideally via PR to main)
+VERSION="1.0.1"
+cargo set-version "$VERSION" --workspace
+cd apps/northroot && cargo set-version "$VERSION" && cd ../..
 
-# 2. Commit and tag
-git add crates/*/Cargo.toml
-git commit -m "chore: bump version to 0.1.1"
-git tag -a v0.1.1 -m "Release v0.1.1"
-git push origin main
-git push origin v0.1.1
+# 2. Commit (via PR) and merge to main
+git add crates/*/Cargo.toml apps/northroot/Cargo.toml
+git commit -m "chore: bump version to $VERSION"
 
-# 3. Build binaries (see "Building the Binary" below)
-# 4. Create GitHub Release via UI with binaries attached
+# 3. Create a signed tag on the merge commit and push it
+git tag -s "v$VERSION" -m "Release v$VERSION"
+git push origin "v$VERSION"
+
+# 4. GitHub Actions will build binaries + publish the GitHub Release for v$VERSION
 ```
 
 ---
@@ -141,6 +153,70 @@ cargo test
 
 ---
 
+## Branching Strategy
+
+### Recommended Workflow
+
+**For all changes (major, minor, patch):**
+1. Create feature branch from `main`: `git checkout -b feature/description`
+2. Make changes, commit with conventional commits
+3. Open PR to `main`
+4. Apply appropriate label (`release:major`, `release:minor`, `release:patch`, or `chore`/`style`)
+5. After merge, automated release workflow handles versioning and tagging
+
+**Branch naming conventions:**
+- `feature/description` - New features, enhancements
+- `fix/description` - Bug fixes
+- `docs/description` - Documentation updates
+- `chore/description` - Tooling, CI, dependencies
+
+**No separate release branches needed** - the automated workflow handles releases on merge to `main`.
+
+### Version Bump Guidelines
+
+- **`release:patch`** (1.0.X → 1.0.X+1):
+  - Bug fixes
+  - Security patches
+  - Documentation corrections
+  - Non-breaking dependency updates
+
+- **`release:minor`** (1.X.0 → 1.X+1.0):
+  - New commands or features
+  - Additive API changes (new optional fields, new functions)
+  - New CLI flags (backward compatible)
+  - Performance improvements
+
+- **`release:major`** (X.0.0 → X+1.0.0):
+  - Breaking API changes
+  - Canonicalization rule changes
+  - Schema changes that break compatibility
+  - Removal of public APIs
+  - Breaking CLI command changes
+
+- **`chore`/`style`** (no version bump):
+  - CI/CD changes
+  - Code formatting
+  - Internal refactoring (no API changes)
+  - Dependency updates (non-breaking)
+
+### Workspace Decision: CLI Not in Workspace
+
+The CLI app (`apps/northroot`) is **intentionally not in the workspace** for these reasons:
+
+1. **Separation of concerns**: CLI is an application, not a library crate
+2. **Independent versioning**: CLI may evolve differently than core crates
+3. **Build isolation**: CLI builds don't need workspace-wide features
+4. **Deployment flexibility**: CLI can be built independently for distribution
+
+The release workflow correctly handles this by:
+- Using `--manifest-path apps/northroot/Cargo.toml` for builds
+- Explicitly bumping CLI version separately from workspace crates
+- Staging both workspace and CLI `Cargo.toml` files in git
+
+**Do not add CLI to workspace** - this is by design.
+
+---
+
 ## Release Artifacts
 
 ### Binary Distribution
@@ -179,7 +255,7 @@ cargo build --release --target x86_64-pc-windows-msvc
 ### Release Package Structure
 
 ```
-northroot-v0.1.0/
+northroot-v1.0.0/
 ├── README.md
 ├── LICENSE-APACHE
 ├── LICENSE-MIT
@@ -313,7 +389,7 @@ See "Automated Release Workflow" section above. Simply label your PR and merge.
 
 ```bash
 # Set version
-VERSION="0.1.0"
+VERSION="1.0.0"
 
 # Create release directory
 mkdir -p release/northroot-v${VERSION}
@@ -365,7 +441,7 @@ zip -r northroot-v${VERSION}.zip northroot-v${VERSION}/
 ### 5. Release Notes Template
 
 ```markdown
-# Northroot CLI v0.1.0
+# Northroot CLI v1.0.0
 
 ## Features
 - Canonicalize JSON input (RFC 8785 + Northroot rules)
@@ -382,12 +458,15 @@ Download the binary for your platform and place in PATH.
 See RELEASE_GUIDE.md for Python integration examples.
 
 ## Breaking Changes
-None (initial release)
+None (stable 1.0.0 release)
 
 ## Security
 - Path validation prevents directory traversal
 - Resource limits prevent DoS
 - Error sanitization prevents path leakage
+
+## API Stability
+This release marks the stable 1.0.0 API. See [API Contract](docs/developer/api-contract.md) for stability guarantees.
 ```
 
 ---
@@ -396,8 +475,8 @@ None (initial release)
 
 ### Option 1: GitHub Releases
 
-1. Create release tag: `git tag v0.1.0`
-2. Push tag: `git push origin v0.1.0`
+1. Create release tag: `git tag v1.0.0`
+2. Push tag: `git push origin v1.0.0`
 3. Create GitHub release with binaries attached
 4. Add release notes
 
@@ -409,7 +488,7 @@ None (initial release)
 class Northroot < Formula
   desc "Northroot event storage and verification CLI"
   homepage "https://github.com/yourorg/northroot"
-  url "https://github.com/yourorg/northroot/releases/download/v0.1.0/northroot-v0.1.0.tar.gz"
+  url "https://github.com/yourorg/northroot/releases/download/v1.0.0/northroot-v1.0.0.tar.gz"
   sha256 "..."
   
   def install

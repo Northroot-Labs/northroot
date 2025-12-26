@@ -17,6 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.91.0"
       - name: Check formatting
         run: cargo fmt --all --check
 
@@ -27,6 +29,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
+          toolchain: "1.91.0"
           components: clippy
       - name: Run clippy
         run: cargo clippy --all-targets --all-features -- -D warnings
@@ -37,6 +40,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.91.0"
       - name: Run tests
         run: cargo test --all --all-features
 
@@ -46,6 +51,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.91.0"
       - name: Run golden tests
         run: cargo test --package northroot-canonical --test golden
 
@@ -55,8 +62,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.91.0"
       - name: Build documentation
         run: cargo doc --workspace --no-deps
       - name: Run doctests
         run: cargo test --workspace --doc
+
+  cli:
+    name: CLI Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.91.0"
+      - name: Run CLI tests
+        run: cargo test --manifest-path apps/northroot/Cargo.toml
 

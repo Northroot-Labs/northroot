@@ -1,106 +1,22 @@
 name: Release
 
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to release (e.g. v1.0.0). If omitted, uses the ref that triggered the workflow."
+        required: false
+        type: string
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  check-release:
-    name: Check Release Labels
-    if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
-    outputs:
-      should_release: ${{ steps.check.outputs.should_release }}
-      bump_type: ${{ steps.check.outputs.bump_type }}
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check for release labels
-        id: check
-        run: |
-          LABELS="${{ toJSON(github.event.pull_request.labels.*.name) }}"
-          echo "PR labels: $LABELS"
-          
-          if echo "$LABELS" | grep -q '"release:patch"'; then
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            echo "bump_type=patch" >> $GITHUB_OUTPUT
-          elif echo "$LABELS" | grep -q '"release:minor"'; then
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            echo "bump_type=minor" >> $GITHUB_OUTPUT
-          elif echo "$LABELS" | grep -q '"release:major"'; then
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            echo "bump_type=major" >> $GITHUB_OUTPUT
-          else
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            echo "bump_type=" >> $GITHUB_OUTPUT
-          fi
-
-  version:
-    name: Bump Version
-    needs: check-release
-    if: needs.check-release.outputs.should_release == 'true'
-    runs-on: ubuntu-latest
-    outputs:
-      new_version: ${{ steps.bump.outputs.new_version }}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Install cargo-edit
-        run: cargo install cargo-edit --locked
-      - name: Bump versions
-        id: bump
-        run: |
-          BUMP_TYPE="${{ needs.check-release.outputs.bump_type }}"
-          
-          # Get current version from CLI crate (primary version)
-          CURRENT_VERSION=$(grep '^version = ' crates/northroot-cli/Cargo.toml | cut -d'"' -f2)
-          echo "Current version: $CURRENT_VERSION"
-          
-          # Calculate new version
-          IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
-          case "$BUMP_TYPE" in
-            major)
-              major=$((major + 1))
-              minor=0
-              patch=0
-              ;;
-            minor)
-              minor=$((minor + 1))
-              patch=0
-              ;;
-            patch)
-              patch=$((patch + 1))
-              ;;
-          esac
-          NEW_VERSION="$major.$minor.$patch"
-          echo "New version: $NEW_VERSION"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          
-          # Bump all crate versions
-          for crate in northroot-canonical northroot-core northroot-journal northroot-store northroot-cli; do
-            cd "crates/$crate"
-            cargo set-version "$NEW_VERSION"
-            cd ../..
-          done
-          
-          # Commit and tag
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add crates/*/Cargo.toml
-          git commit -m "chore: bump version to $NEW_VERSION"
-          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
-          git push origin main
-          git push origin "v$NEW_VERSION"
-
   build:
     name: Build Binaries
-    needs: version
     strategy:
       matrix:
         include:
@@ -114,9 +30,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.91.0"
+          targets: ${{ matrix.target }}
       - name: Build binary
         run: |
-          cargo build --release --package northroot-cli --target ${{ matrix.target }}
+          cargo build --release --manifest-path apps/northroot/Cargo.toml --target ${{ matrix.target }}
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
@@ -152,10 +71,12 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [version, build, checksums]
+    needs: [build, checksums]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag != '' && inputs.tag || github.ref_name }}
     steps:
       - uses: actions/download-artifact@v4
         with:
@@ -179,23 +100,22 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: v${{ needs.version.outputs.new_version }}
-          name: Release v${{ needs.version.outputs.new_version }}
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: Release ${{ env.RELEASE_TAG }}
           body: |
-            ## Release v${{ needs.version.outputs.new_version }}
-            
+            ## Release ${{ env.RELEASE_TAG }}
+
             Binaries for Linux (x86_64) and macOS (ARM64).
-            
+
             ### Installation
-            
+
             Download the binary for your platform and place it in your PATH.
-            
+
             ### Checksums
-            
+
             ```
             $(cat release/*.sha256 | sed 's/^/  /')
             ```
           files: release/*
           draft: false
           prerelease: false
-
