@@ -19,12 +19,25 @@ pub fn run(
     } else {
         // For new files, validate the parent directory exists and path is safe
         let path = std::path::Path::new(&journal);
-        let parent = path.parent()
-            .ok_or_else(|| format!("Invalid journal path: {}", journal))?;
         
-        // Resolve parent directory to check it exists
-        let parent_abs = if parent.is_absolute() {
-            parent.to_path_buf()
+        // Extract filename - must exist and be non-empty
+        let filename = path
+            .file_name()
+            .ok_or_else(|| format!("Invalid journal path: no filename: {}", journal))?;
+        
+        // Get parent directory (empty string means current dir)
+        let parent = path.parent().unwrap_or(std::path::Path::new(""));
+        let parent = if parent.as_os_str().is_empty() {
+            std::path::Path::new(".")
+        } else {
+            parent
+        };
+        
+        // Canonicalize parent directory to resolve all traversal sequences
+        let parent_canonical = if parent.is_absolute() {
+            parent
+                .canonicalize()
+                .map_err(|e| format!("Invalid journal path: {}: {}", journal, e))?
         } else {
             std::env::current_dir()?
                 .join(parent)
@@ -32,18 +45,9 @@ pub fn run(
                 .map_err(|e| format!("Invalid journal path: {}: {}", journal, e))?
         };
         
-        // Check for path traversal in the resolved path
-        let path_str = parent_abs.to_string_lossy();
-        if path_str.contains("..") {
-            return Err(format!("Invalid journal path: path contains traversal sequences: {}", journal).into());
-        }
-        
-        // Return the absolute path for the journal file
-        if path.is_absolute() {
-            path.to_path_buf()
-        } else {
-            std::env::current_dir()?.join(path)
-        }
+        // Construct final path from canonicalized parent + filename
+        // This ensures traversal sequences in the original path are eliminated
+        parent_canonical.join(filename)
     };
 
     // Read JSON from file or stdin
@@ -261,6 +265,48 @@ mod tests {
         );
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Event ID mismatch"));
+    }
+
+    #[test]
+    fn test_path_traversal_canonicalized_for_new_files() {
+        // Regression test: ensure path traversal sequences are eliminated
+        // for new journal files, not just validated in parent
+        let temp = TempDir::new().unwrap();
+        let subdir = temp.path().join("subdir");
+        fs::create_dir(&subdir).unwrap();
+        std::env::set_current_dir(&subdir).unwrap();
+
+        let event = json!({
+            "event_type": "test",
+            "event_version": "1",
+            "occurred_at": "2024-01-01T00:00:00Z",
+            "principal_id": "service:test",
+            "canonical_profile_id": "northroot-canonical-v1"
+        });
+
+        let event_file = subdir.join("event.json");
+        fs::write(&event_file, serde_json::to_string(&event).unwrap()).unwrap();
+
+        // Use path with traversal: should resolve to temp/test.nrj, not subdir/../test.nrj
+        let result = run(
+            "../test.nrj".to_string(),
+            Some(event_file.to_str().unwrap().to_string()),
+            false,
+            false,
+        );
+        assert!(result.is_ok(), "Append failed: {:?}", result.err());
+
+        // Verify file was created in parent (temp), not with literal "../" in path
+        let expected_path = temp.path().join("test.nrj");
+        assert!(expected_path.exists(), "Journal should be at canonicalized path");
+
+        // Verify no file with traversal in name exists in subdir
+        let bad_path = subdir.join("..").join("test.nrj");
+        // After canonicalization, bad_path should equal expected_path
+        assert_eq!(
+            bad_path.canonicalize().unwrap(),
+            expected_path.canonicalize().unwrap()
+        );
     }
 }
 
