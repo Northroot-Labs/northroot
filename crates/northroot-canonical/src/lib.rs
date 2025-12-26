@@ -1,7 +1,7 @@
 //! Canonical data model primitives for Northroot events and receipts.
 //!
 //! These types mirror `schemas/canonical/v1/types.schema.json` and the
-//! canonicalization profile described in `docs/canonical/core_canonicalization.md`.
+//! canonicalization profile described in `docs/reference/canonicalization.md`.
 //! Every field that participates in hashing or verification lives in this crate.
 //!
 #![deny(missing_docs)]

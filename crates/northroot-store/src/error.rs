@@ -21,4 +21,3 @@ pub enum StoreError {
     #[error("{0}")]
     Other(String),
 }
-

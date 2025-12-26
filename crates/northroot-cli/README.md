@@ -405,7 +405,7 @@ northroot verify events.nrj --json | jq '.[] | select(.verdict != "Ok")'
 
 ## See Also
 
-- [API Contract](../../docs/API_CONTRACT.md) - Core API documentation
+- [API Contract](../../docs/developer/api-contract.md) - Core API documentation
 - [Store README](../northroot-store/README.md) - Storage abstraction details
-- [Journal Format](../../docs/FORMAT.md) - Journal file format specification
+- [Journal Format](../../docs/reference/format.md) - Journal file format specification
 

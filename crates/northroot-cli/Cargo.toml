@@ -15,9 +15,14 @@ clap = { version = "4", features = ["derive"] }
 serde_json = "1.0"
 sha2 = "0.10"
 base64 = "0.22"
+thiserror = "1.0"
 northroot-store = { path = "../northroot-store" }
 northroot-core = { path = "../northroot-core" }
 northroot-canonical = { path = "../northroot-canonical" }
+
+[features]
+default = []
+dev-tools = []
 
 [dev-dependencies]
 tempfile = "3.8"

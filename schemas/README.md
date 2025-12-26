@@ -5,7 +5,7 @@ This directory contains the normative JSON Schemas for the Northroot protocol.
 The schemas are organized into **three layers**:
 
 1) **Canonical types** (foundational building blocks)  
-2) **Receipts** (protocol messages that are hashed, stored, and verified)  
+2) **Events** (protocol messages that are hashed, stored, and verified)  
 3) **Profiles** (optional constraint overlays for specific deployments or domains)
 
 The key rule:
@@ -35,31 +35,34 @@ Suggested layout:
 
 ---
 
-### `schemas/receipts/`
+### `schemas/events/`
 **Purpose:** The actual protocol messages that Northroot emits and verifies
-(e.g., authorization receipts, execution receipts, verification receipts).
+(e.g., authorization events, execution events, checkpoint events, attestation events).
 
-Receipt schemas `$ref` canonical types instead of redefining primitives.
+Event schemas `$ref` canonical types instead of redefining primitives.
 
 Examples:
-- `AuthorizationReceipt`
-- `ExecutionReceipt`
-- `VerificationReceipt`
+- `AuthorizationEvent`
+- `ExecutionEvent`
+- `CheckpointEvent`
+- `AttestationEvent`
 
 **Audience:** Integrators and application developers.
 
-**Stability:** High. Changes are versioned and typically breaking when receipt
+**Stability:** High. Changes are versioned and typically breaking when event
 semantics change.
 
-Suggested layout:
-- `schemas/receipts/v1/authorization_receipt.schema.json`
-- `schemas/receipts/v1/execution_receipt.schema.json`
+Current layout:
+- `schemas/events/v1/authorization_event.schema.json`
+- `schemas/events/v1/execution_event.schema.json`
+- `schemas/events/v1/checkpoint_event_schema.json`
+- `schemas/events/v1/attestation_event_schema.json`
 
 ---
 
 ### `schemas/profiles/`
 **Purpose:** Optional, deployment- or domain-specific constraints that tighten the
-canonical types and receipt shapes without changing wire encoding.
+canonical types and event shapes without changing wire encoding.
 
 Profiles are used for stricter validation in specific contexts (finance, AI cost
 gating, regulated environments). They often define field-specific aliases such as:
@@ -72,15 +75,26 @@ gating, regulated environments). They often define field-specific aliases such a
 **Audience:** Operators and teams enforcing stricter rules.
 
 **Stability:** Medium-to-high. Profiles may evolve faster than the protocol core,
-but still must be versioned and pinned in receipts/policies if used.
+but still must be versioned and pinned in events/policies if used.
 
-Suggested layout:
+**Note:** Profile schemas are optional and not currently implemented. They are
+reserved for future use when domain-specific constraint overlays are needed.
+
+Suggested layout (when implemented):
 - `schemas/profiles/v1/ai_cost.schema.json`
 - `schemas/profiles/v1/finance.schema.json`
 
 ---
 
 ## How schemas relate to the wire format
+
+### Journal format
+The Northroot journal format (`.nrj`) stores events as JSON objects that must conform
+to the event schemas in `schemas/events/v1/`. The journal format itself is schema-agnostic:
+it stores raw JSON bytes. Schema validation happens during verification, not during
+journal I/O operations.
+
+See [Journal Format](../docs/reference/format.md) for details on the on-disk representation.
 
 ### Canonical bytes and hashing
 Northroot computes digests and identifiers from **canonical bytes**.
@@ -91,7 +105,9 @@ For JSON payloads, canonical bytes are produced by:
 2. Applying the canonicalization profile (RFC 8785 + Northroot constraints)
 3. Serializing to UTF-8 bytes
 
-Only these canonical bytes are used for hashing and verification.
+Only these canonical bytes are used for hashing and verification. The journal format
+stores the original JSON (not canonical bytes); canonicalization is applied during
+verification to recompute `event_id` and validate integrity.
 
 ---
 
@@ -100,7 +116,7 @@ Only these canonical bytes are used for hashing and verification.
 ### Strict mode (default for verification)
 Used for:
 - hashing
-- receipts
+- events
 - offline verification
 - policy evaluation
 
@@ -129,7 +145,7 @@ Any breaking change to:
 - canonical encoding rules
 - numeric encodings
 - bounds / invariants
-- receipt field semantics
+- event field semantics
 
 requires a new schema version.
 
@@ -137,13 +153,31 @@ requires a new schema version.
 
 ## Implementation notes
 
-- Receipt schemas should reference canonical types via `$ref` rather than copying
+- Event schemas should reference canonical types via `$ref` rather than copying
   definitions.
 - Profiles should use `allOf` overlays to constrain canonical types without
   changing representation.
 - The CLI should provide:
   - `northroot validate <file> --schema <...>`
   - `northroot inspect <file>` (digests + hygiene report)
+
+## Schema validation and journal format
+
+The journal format stores events as JSON objects without schema validation during
+write operations. This design allows:
+
+- **Flexibility**: Journal I/O is fast and doesn't require schema parsing
+- **Verification**: Schema validation happens during verification via `northroot-core`
+- **Forward compatibility**: New schema versions can be added without breaking existing journals
+
+When reading from a journal:
+1. Parse the JSON object from the journal frame
+2. Validate structure against the appropriate event schema (`schemas/events/v1/...`)
+3. Canonicalize according to the event's `canonical_profile_id`
+4. Verify `event_id` matches the computed digest
+
+This separation ensures the journal format remains simple and schema-agnostic while
+maintaining strong verification guarantees.
 
 ---
 
@@ -153,9 +187,9 @@ requires a new schema version.
   Canonical primitives (quantities, hygiene report, etc.)
 
 Next:
-- `receipts/v1/*.schema.json`  
-  The protocol’s hashed/verifiable message types
+- `events/v1/*.schema.json`  
+  The protocol's hashed/verifiable message types
 
-Optional:
+Optional (future):
 - `profiles/v1/*.schema.json`  
-  Deployment-specific constraint overlays
+  Deployment-specific constraint overlays (not currently implemented)

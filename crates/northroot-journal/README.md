@@ -4,7 +4,7 @@ Append-only journal format for canonical Northroot events.
 
 ## Overview
 
-The `northroot-journal` crate provides a durable, tamper-evident storage format for canonical Northroot events. It implements the journal format specified in `docs/FORMAT.md`, providing:
+The `northroot-journal` crate provides a durable, tamper-evident storage format for canonical Northroot events. It implements the journal format specified in `docs/reference/format.md`, providing:
 
 - **Append-only framing**: Fixed header with magic bytes and version, followed by a stream of framed records
 - **Event storage**: Canonical event JSON objects stored as `EventJson` frames
@@ -76,7 +76,7 @@ let verdict = verify_event(&event, &verifier)?;
 
 ## Format Specification
 
-The journal format is fully specified in `docs/FORMAT.md`. Key points:
+The journal format is fully specified in `docs/reference/format.md`. Key points:
 
 - **Header**: 16 bytes (`NRJ1` magic, version `0x0001`, flags, reserved)
 - **Frames**: 8-byte header (kind, reserved, length) + payload

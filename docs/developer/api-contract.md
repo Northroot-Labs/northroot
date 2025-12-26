@@ -232,26 +232,27 @@ View provides typed, read-only access to parsed events.
 
 ### 7.1 Event Accessors
 
-```rust
-impl AuthorizationEvent {
-    pub fn event_id(&self) -> &Digest;
-    pub fn event_type(&self) -> &str;
-    pub fn occurred_at(&self) -> &Timestamp;
-    pub fn principal_id(&self) -> &str;
-    pub fn decision(&self) -> Decision;
-    pub fn policy_id(&self) -> &str;
-    pub fn policy_digest(&self) -> &Digest;
-    pub fn authorization(&self) -> &AuthorizationKind;
-}
+Events use public fields for direct access:
 
-impl ExecutionEvent {
-    pub fn event_id(&self) -> &Digest;
-    pub fn auth_event_id(&self) -> &Digest;
-    pub fn outcome(&self) -> Outcome;
-    pub fn tool_name(&self) -> &str;
-    pub fn meter_used(&self) -> &[Meter];
-    // ...
-}
+```rust
+// AuthorizationEvent fields (public)
+event.event_id: Digest
+event.event_type: String
+event.occurred_at: Timestamp
+event.principal_id: PrincipalId
+event.decision: Decision
+event.policy_id: String
+event.policy_digest: Digest
+event.authorization: AuthorizationKind
+// ... other fields (see northroot-core::events::AuthorizationEvent)
+
+// ExecutionEvent fields (public)
+event.event_id: Digest
+event.auth_event_id: Digest
+event.outcome: Outcome
+event.tool_name: ToolName
+event.meter_used: Vec<Meter>
+// ... other fields (see northroot-core::events::ExecutionEvent)
 ```
 
 ### 7.2 Linkage Navigation
@@ -281,6 +282,7 @@ pub enum StoreError {
     Io(std::io::Error),
     Journal(JournalError),
     PayloadTooLarge,
+    Parse(ParseError),
     Other(String),
 }
 ```
@@ -296,10 +298,10 @@ Verification methods return `Result<(Digest, VerificationVerdict), String>`. The
 ### 9.1 Full Replay with Verification
 
 ```rust
-let reader = JournalBackendReader::open(path, ReadMode::Strict)?;
+let mut reader = JournalBackendReader::open(path, ReadMode::Strict)?;
 let verifier = Verifier::new(canonicalizer);
 
-for event in reader {
+while let Some(event) = reader.read_next()? {
     let typed = parse_event(&event)?;
     let verdict = match typed {
         TypedEvent::Authorization(e) => verifier.verify_authorization(&e)?.1,
@@ -319,9 +321,9 @@ for event in reader {
 ```rust
 let reader = JournalBackendReader::open(path, ReadMode::Strict)?;
 let filter = EventTypeFilter { event_type: "execution".into() };
-let filtered = FilteredReader::new(reader, filter);
+let mut filtered = FilteredReader::new(reader, filter);
 
-for event in filtered {
+while let Some(event) = filtered.read_next()? {
     // Only execution events
 }
 ```
@@ -367,4 +369,5 @@ The Northroot API provides:
 4. **View**: Typed event access and linkage navigation
 
 All operations are composable, sync, and offline-capable.
+
 

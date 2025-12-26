@@ -8,9 +8,7 @@ use northroot_core::{
         ExecutionEvent, GrantBounds, MerkleWindow, Outcome, Signature,
     },
     shared::{IntentAnchors, Meter},
-    verification::{
-        ConversionContext, PriceIndexSnapshot, TokenPrice, TokenType, Verifier,
-    },
+    verification::{ConversionContext, PriceIndexSnapshot, TokenPrice, TokenType, Verifier},
     VerificationVerdict,
 };
 
@@ -156,7 +154,9 @@ fn test_same_unit_comparison_within_bounds() {
     };
     exec_event.event_id = compute_event_id_for_test(&exec_event);
 
-    let (_, verdict) = verifier.verify_execution(&exec_event, &auth_event, None).unwrap();
+    let (_, verdict) = verifier
+        .verify_execution(&exec_event, &auth_event, None)
+        .unwrap();
     assert_eq!(verdict, VerificationVerdict::Ok);
 }
 
@@ -226,7 +226,9 @@ fn test_same_unit_comparison_exceeds_bounds() {
     };
     exec_event.event_id = compute_event_id_for_test(&exec_event);
 
-    let (_, verdict) = verifier.verify_execution(&exec_event, &auth_event, None).unwrap();
+    let (_, verdict) = verifier
+        .verify_execution(&exec_event, &auth_event, None)
+        .unwrap();
     assert_eq!(verdict, VerificationVerdict::Violation);
 }
 
@@ -296,7 +298,9 @@ fn test_same_unit_dec_comparison() {
     };
     exec_event.event_id = compute_event_id_for_test(&exec_event);
 
-    let (_, verdict) = verifier.verify_execution(&exec_event, &auth_event, None).unwrap();
+    let (_, verdict) = verifier
+        .verify_execution(&exec_event, &auth_event, None)
+        .unwrap();
     assert_eq!(verdict, VerificationVerdict::Ok);
 }
 
@@ -366,7 +370,9 @@ fn test_mixed_type_quantities_invalid() {
     };
     exec_event.event_id = compute_event_id_for_test(&exec_event);
 
-    let (_, verdict) = verifier.verify_execution(&exec_event, &auth_event, None).unwrap();
+    let (_, verdict) = verifier
+        .verify_execution(&exec_event, &auth_event, None)
+        .unwrap();
     // Mixed types should result in Invalid (no implicit coercion)
     assert_eq!(verdict, VerificationVerdict::Invalid);
 }
@@ -437,7 +443,9 @@ fn test_usd_cap_without_conversion_context() {
     };
     exec_event.event_id = compute_event_id_for_test(&exec_event);
 
-    let (_, verdict) = verifier.verify_execution(&exec_event, &auth_event, None).unwrap();
+    let (_, verdict) = verifier
+        .verify_execution(&exec_event, &auth_event, None)
+        .unwrap();
     // USD cap exists but no conversion context -> Invalid (missing evidence)
     assert_eq!(verdict, VerificationVerdict::Invalid);
 }
@@ -508,7 +516,9 @@ fn test_missing_cap_for_used_unit() {
     };
     exec_event.event_id = compute_event_id_for_test(&exec_event);
 
-    let (_, verdict) = verifier.verify_execution(&exec_event, &auth_event, None).unwrap();
+    let (_, verdict) = verifier
+        .verify_execution(&exec_event, &auth_event, None)
+        .unwrap();
     // No USD cap, no direct match -> Ok (optional check skipped)
     assert_eq!(verdict, VerificationVerdict::Ok);
 }

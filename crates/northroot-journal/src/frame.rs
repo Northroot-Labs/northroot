@@ -207,7 +207,11 @@ impl RecordFrame {
             });
         }
 
-        Ok(Self { kind, reserved, len })
+        Ok(Self {
+            kind,
+            reserved,
+            len,
+        })
     }
 }
 
@@ -235,7 +239,11 @@ mod tests {
         let mut bytes = JournalHeader::new().to_bytes();
         bytes[4] = 0x02;
         bytes[5] = 0x00;
-        assert!(JournalError::InvalidHeader(JournalHeader::from_bytes(&bytes).unwrap_err().to_string()).to_string().contains("version"));
+        assert!(JournalError::InvalidHeader(
+            JournalHeader::from_bytes(&bytes).unwrap_err().to_string()
+        )
+        .to_string()
+        .contains("version"));
     }
 
     #[test]
@@ -268,7 +276,9 @@ mod tests {
 
     #[test]
     fn frame_rejects_non_zero_reserved() {
-        let mut bytes = RecordFrame::new(FrameKind::EventJson, 100).unwrap().to_bytes();
+        let mut bytes = RecordFrame::new(FrameKind::EventJson, 100)
+            .unwrap()
+            .to_bytes();
         bytes[1] = 0x01;
         assert!(RecordFrame::from_bytes(&bytes).is_err());
     }
@@ -279,4 +289,3 @@ mod tests {
         assert_eq!(kind.to_byte(), 0xFF);
     }
 }
-

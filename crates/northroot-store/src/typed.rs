@@ -1,9 +1,7 @@
 //! Typed event parsing from JSON.
 
 use crate::EventJson;
-use northroot_core::{
-    AttestationEvent, AuthorizationEvent, CheckpointEvent, ExecutionEvent,
-};
+use northroot_core::{AttestationEvent, AuthorizationEvent, CheckpointEvent, ExecutionEvent};
 use thiserror::Error;
 
 /// Error that can occur when parsing an event.
@@ -66,4 +64,3 @@ pub fn parse_event(json: &EventJson) -> Result<TypedEvent, ParseError> {
         }
     }
 }
-

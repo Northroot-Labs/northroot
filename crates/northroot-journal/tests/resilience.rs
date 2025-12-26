@@ -1,5 +1,5 @@
-use northroot_journal::{EventJson, JournalReader, JournalWriter, ReadMode, WriteOptions};
 use northroot_journal::frame::MAX_PAYLOAD_SIZE;
+use northroot_journal::{EventJson, JournalReader, JournalWriter, ReadMode, WriteOptions};
 use serde_json::json;
 use std::fs;
 use std::io::{Seek, Write};
@@ -34,13 +34,10 @@ fn test_payload_size_limit() {
 
     // Try to write a payload that exceeds the limit
     let oversized_payload = vec![0u8; MAX_PAYLOAD_SIZE as usize + 1];
-    
+
     let mut writer = JournalWriter::open(&journal_path, WriteOptions::default()).unwrap();
-    let result = writer.append_raw(
-        northroot_journal::FrameKind::EventJson,
-        &oversized_payload,
-    );
-    
+    let result = writer.append_raw(northroot_journal::FrameKind::EventJson, &oversized_payload);
+
     assert!(result.is_err());
     match result.unwrap_err() {
         northroot_journal::JournalError::PayloadTooLarge { size, max } => {
@@ -58,7 +55,7 @@ fn test_max_payload_size_allowed() {
 
     // Write a payload at the maximum size
     let max_payload = vec![0u8; MAX_PAYLOAD_SIZE as usize];
-    
+
     let mut writer = JournalWriter::open(&journal_path, WriteOptions::default()).unwrap();
     writer
         .append_raw(northroot_journal::FrameKind::EventJson, &max_payload)
@@ -91,7 +88,7 @@ fn test_reserved_bytes_must_be_zero() {
         .write(true)
         .open(&journal_path)
         .unwrap();
-    
+
     // Seek to frame header (after journal header = 16 bytes)
     file.seek(std::io::SeekFrom::Start(16 + 1)).unwrap(); // kind byte + 1 = first reserved byte
     file.write_all(&[0x01]).unwrap(); // Write non-zero
@@ -120,9 +117,10 @@ fn test_header_reserved_bytes_must_be_zero() {
         .write(true)
         .open(&journal_path)
         .unwrap();
-    
+
     file.seek(std::io::SeekFrom::Start(8)).unwrap(); // Start of reserved bytes
-    file.write_all(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]).unwrap();
+    file.write_all(&[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08])
+        .unwrap();
     drop(file);
 
     // Reader should reject it
@@ -143,16 +141,16 @@ fn test_partial_write_handling() {
     }
 
     // Get file size and truncate in the middle of the second frame
-    let file_size = fs::metadata(&journal_path).unwrap().len();
+    let _file_size = fs::metadata(&journal_path).unwrap().len();
     // Find where first event ends by reading it
     let mut reader = JournalReader::open(&journal_path, ReadMode::Strict).unwrap();
     let event1 = reader.read_event().unwrap().unwrap();
     assert_eq!(event1["event_id"]["b64"], "event1");
     let first_event_end = reader.position(); // Position after first event
-    
+
     // Truncate 10 bytes into the second frame
     let truncate_at = first_event_end + 10;
-    
+
     let file = fs::OpenOptions::new()
         .write(true)
         .open(&journal_path)
@@ -198,7 +196,7 @@ fn test_unknown_frame_kind_skipped() {
         .append(true)
         .open(&journal_path)
         .unwrap();
-    
+
     // Write frame header with unknown kind (0xFF)
     let mut frame_header = [0u8; 8];
     frame_header[0] = 0xFF; // Unknown kind
@@ -213,10 +211,9 @@ fn test_unknown_frame_kind_skipped() {
         let event = reader.read_event().unwrap();
         assert!(event.is_some());
         assert_eq!(event.unwrap()["event_id"]["b64"], "event1");
-        
+
         // Next read should be None (only one event)
         let event2 = reader.read_event().unwrap();
         assert!(event2.is_none());
     }
 }
-

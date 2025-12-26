@@ -119,8 +119,8 @@ impl JournalReader {
                     // Validate UTF-8
                     let utf8_str = std::str::from_utf8(&payload)?;
                     // Parse JSON
-                    let json: EventJson = serde_json::from_str(utf8_str)
-                        .map_err(|e| JournalError::JsonParse(e))?;
+                    let json: EventJson =
+                        serde_json::from_str(utf8_str).map_err(JournalError::JsonParse)?;
                     return Ok(Some(json));
                 }
                 Some((FrameKind::Unknown(_), _)) => {
@@ -131,4 +131,3 @@ impl JournalReader {
         }
     }
 }
-

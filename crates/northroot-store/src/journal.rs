@@ -61,4 +61,3 @@ impl StoreReader for JournalBackendReader {
         self.reader.read_event().map_err(StoreError::from)
     }
 }
-

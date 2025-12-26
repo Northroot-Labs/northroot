@@ -1,0 +1,468 @@
+{
+  "version": "1.0",
+  "scope": "Early version security assessment for sandboxed sub-process execution",
+  "focus": "Journal operations with audit-grade guarantees",
+  "date": "2024",
+  
+  "executive_summary": {
+    "objective": "Stable CLI contract for sandboxed container execution with verifiable, replayable, offline journal operations",
+    "core_principle": "Journal is the primary artifact; agent features deferred",
+    "security_posture": "Memory-safe (Rust), no unsafe code, minimal attack surface, deterministic verification"
+  },
+
+  "threat_model": {
+    "adversary_capabilities": [
+      "Control journal file content (malformed, truncated, oversized)",
+      "Provide malicious CLI arguments (path traversal, resource exhaustion)",
+      "Control environment (sandboxed container with restricted filesystem)",
+      "Observe outputs (stdout/stderr, exit codes)"
+    ],
+    "adversary_goals": [
+      "Corrupt journal integrity",
+      "Exhaust resources (memory, disk, CPU)",
+      "Escape sandbox via file system access",
+      "Extract sensitive data from journal contents",
+      "Cause denial of service"
+    ],
+    "trust_boundaries": [
+      "Journal file format (must be validated)",
+      "CLI arguments (must be sanitized)",
+      "File system access (must be restricted to journal files)",
+      "Memory allocations (must be bounded)",
+      "Network access (none - offline verification only)"
+    ]
+  },
+
+  "attack_surface": {
+    "cli_interface": {
+      "commands": {
+        "list": {
+          "risk_level": "low",
+          "attack_vectors": [
+            "Path traversal via journal path argument",
+            "Memory exhaustion via large journal files",
+            "DoS via malformed journal files"
+          ],
+          "mitigations": [
+            "Path validation (not currently implemented - HIGH PRIORITY)",
+            "Streaming reads (already implemented)",
+            "Strict read mode for malformed files (already implemented)"
+          ]
+        },
+        "get": {
+          "risk_level": "low",
+          "attack_vectors": [
+            "Path traversal via journal path",
+            "Invalid event_id format causing crashes"
+          ],
+          "mitigations": [
+            "Path validation needed",
+            "Event ID validation (already implemented via Digest::new)"
+          ]
+        },
+        "verify": {
+          "risk_level": "medium",
+          "attack_vectors": [
+            "Path traversal",
+            "Memory exhaustion (loads entire journal into memory - CRITICAL)",
+            "DoS via malformed events"
+          ],
+          "mitigations": [
+            "Path validation needed",
+            "STREAMING VERIFICATION REQUIRED (currently loads all events - HIGH PRIORITY)",
+            "Strict mode already handles malformed events"
+          ],
+          "critical_issue": "verify command loads entire journal into memory (lines 23-34 in verify.rs)"
+        },
+        "inspect": {
+          "risk_level": "low",
+          "attack_vectors": [
+            "Path traversal",
+            "Memory exhaustion (reads journal twice)"
+          ],
+          "mitigations": [
+            "Path validation needed",
+            "Streaming approach (already implemented but reads twice)"
+          ]
+        },
+        "gen": {
+          "risk_level": "high",
+          "attack_vectors": [
+            "File overwrite (--force flag)",
+            "Path traversal via output path",
+            "Resource exhaustion via large event counts"
+          ],
+          "mitigations": [
+            "REMOVE FROM PRODUCTION CLI (test utility only)",
+            "Should be separate tool or hidden behind feature flag"
+          ],
+          "recommendation": "REMOVE for early version"
+        }
+      },
+      "common_vulnerabilities": [
+        {
+          "issue": "No path validation",
+          "severity": "high",
+          "location": "All commands accepting file paths",
+          "impact": "Path traversal attacks, access to files outside sandbox",
+          "fix_priority": "critical"
+        },
+        {
+          "issue": "Memory exhaustion in verify command",
+          "severity": "critical",
+          "location": "crates/northroot-cli/src/commands/verify.rs:23-34",
+          "impact": "DoS via large journals, violates sandbox resource limits",
+          "fix_priority": "critical"
+        },
+        {
+          "issue": "Unbounded event counts in gen command",
+          "severity": "medium",
+          "location": "crates/northroot-cli/src/commands/gen.rs",
+          "impact": "Resource exhaustion",
+          "fix_priority": "low (remove command)"
+        }
+      ]
+    },
+    "journal_format": {
+      "security_properties": {
+        "append_only": "Enforced by writer (no seek/rewrite)",
+        "tamper_evident": "Event IDs are content-derived hashes",
+        "framed_records": "Prevents delimiter ambiguity",
+        "size_limits": "16 MiB per payload (enforced)",
+        "header_validation": "Magic bytes, version, flags checked"
+      },
+      "attack_vectors": [
+        {
+          "vector": "Malformed frame headers",
+          "mitigation": "Strict validation in RecordFrame::from_bytes",
+          "status": "mitigated"
+        },
+        {
+          "vector": "Oversized payloads",
+          "mitigation": "MAX_PAYLOAD_SIZE check (16 MiB)",
+          "status": "mitigated"
+        },
+        {
+          "vector": "Invalid UTF-8 in JSON",
+          "mitigation": "UTF-8 validation in reader",
+          "status": "mitigated"
+        },
+        {
+          "vector": "Invalid JSON structure",
+          "mitigation": "serde_json parsing with error handling",
+          "status": "mitigated"
+        },
+        {
+          "vector": "Truncated files",
+          "mitigation": "ReadMode::Strict vs Permissive",
+          "status": "mitigated"
+        }
+      ]
+    },
+    "memory_safety": {
+      "status": "excellent",
+      "findings": [
+        "No unsafe code blocks found",
+        "Rust memory safety guarantees",
+        "Bounded allocations (16 MiB max payload)",
+        "Exception: verify command loads entire journal (needs fix)"
+      ]
+    },
+    "input_validation": {
+      "event_ids": {
+        "status": "good",
+        "validation": "Digest::new validates base64url format and algorithm"
+      },
+      "timestamps": {
+        "status": "good",
+        "validation": "Timestamp::parse validates RFC3339 format"
+      },
+      "file_paths": {
+        "status": "poor",
+        "validation": "None - accepts any string",
+        "risk": "Path traversal, symlink attacks",
+        "fix_required": true
+      },
+      "json_payloads": {
+        "status": "good",
+        "validation": "serde_json parsing with error handling, schema validation in core"
+      }
+    }
+  },
+
+  "what_can_stay": {
+    "core_journal_operations": {
+      "rationale": "Essential for audit-grade guarantees",
+      "components": [
+        {
+          "component": "Journal format (northroot-journal)",
+          "status": "keep",
+          "reason": "Stable, tamper-evident, append-only format",
+          "security": "Well-validated, bounded, deterministic"
+        },
+        {
+          "component": "CLI read operations (list, get, verify, inspect)",
+          "status": "keep_with_fixes",
+          "reason": "Core audit operations",
+          "required_fixes": [
+            "Add path validation",
+            "Fix memory exhaustion in verify (streaming)",
+            "Add resource limits"
+          ]
+        },
+        {
+          "component": "Verification logic (northroot-core)",
+          "status": "keep",
+          "reason": "Offline, deterministic verification",
+          "security": "No network, no mutable state, pure functions"
+        },
+        {
+          "component": "Canonicalization (northroot-canonical)",
+          "status": "keep",
+          "reason": "Deterministic event identity",
+          "security": "No side effects, bounded operations"
+        },
+        {
+          "component": "Store abstraction (northroot-store)",
+          "status": "keep",
+          "reason": "Pluggable backends, journal is default",
+          "security": "Trait-based, no unsafe operations"
+        }
+      ]
+    },
+    "cli_contract": {
+      "stable_commands": [
+        {
+          "command": "list",
+          "purpose": "Enumerate events with filters",
+          "output": "JSON lines or table",
+          "sandbox_safe": "yes (after path validation fix)"
+        },
+        {
+          "command": "get",
+          "purpose": "Retrieve single event by ID",
+          "output": "JSON object",
+          "sandbox_safe": "yes (after path validation fix)"
+        },
+        {
+          "command": "verify",
+          "purpose": "Verify all events in journal",
+          "output": "Verification results (JSON or table)",
+          "sandbox_safe": "yes (after streaming fix + path validation)"
+        },
+        {
+          "command": "inspect",
+          "purpose": "Show authorization and linked executions",
+          "output": "Structured JSON",
+          "sandbox_safe": "yes (after path validation fix)"
+        }
+      ],
+      "contract_guarantees": [
+        "Deterministic output for same input",
+        "Offline operation (no network)",
+        "Bounded resource usage (after fixes)",
+        "Stable exit codes (0 = success, 1 = error)",
+        "JSON output when --json flag used",
+        "No side effects (read-only operations)"
+      ]
+    }
+  },
+
+  "what_can_go": {
+    "deferred_features": [
+      {
+        "component": "gen command",
+        "status": "remove",
+        "reason": "Test utility, not needed for production",
+        "risk": "File overwrite, resource exhaustion",
+        "action": "Move to separate test tool or feature flag"
+      },
+      {
+        "component": "Agent-related schema fields",
+        "status": "defer",
+        "reason": "Agent execution not in scope for early version",
+        "note": "PrincipalId pattern allows 'agent:' prefix but no agent execution code exists",
+        "action": "Keep schema but document as deferred"
+      },
+      {
+        "component": "Write operations via CLI",
+        "status": "defer",
+        "reason": "Journal writes should be library API, not CLI",
+        "note": "gen command is only write operation, should be removed",
+        "action": "CLI becomes read-only for early version"
+      },
+      {
+        "component": "Network operations",
+        "status": "none",
+        "reason": "No network code exists (good)",
+        "action": "Maintain offline-only design"
+      },
+      {
+        "component": "Async I/O",
+        "status": "defer",
+        "reason": "Sync I/O sufficient for early version",
+        "note": "Documented in API contract as v2 feature",
+        "action": "Keep sync, add async later if needed"
+      }
+    ]
+  },
+
+  "security_hardening_required": {
+    "critical": [
+      {
+        "issue": "Path validation",
+        "description": "All file path arguments must be validated to prevent path traversal",
+        "location": "All CLI commands",
+        "fix": "Add path normalization and validation, restrict to absolute paths or relative to working directory",
+        "priority": "P0"
+      },
+      {
+        "issue": "Memory exhaustion in verify",
+        "description": "verify command loads entire journal into memory",
+        "location": "crates/northroot-cli/src/commands/verify.rs:23-34",
+        "fix": "Implement streaming verification, process events one at a time",
+        "priority": "P0"
+      }
+    ],
+    "high": [
+      {
+        "issue": "Resource limits",
+        "description": "Add configurable limits for journal size, event count, memory usage",
+        "location": "CLI commands",
+        "fix": "Add --max-events, --max-size flags with safe defaults",
+        "priority": "P1"
+      },
+      {
+        "issue": "Symlink handling",
+        "description": "Resolve symlinks before opening files",
+        "location": "JournalReader::open, JournalWriter::open",
+        "fix": "Use std::fs::canonicalize or similar, validate result",
+        "priority": "P1"
+      }
+    ],
+    "medium": [
+      {
+        "issue": "Error message information leakage",
+        "description": "Ensure error messages don't leak sensitive paths or data",
+        "location": "All error handling",
+        "fix": "Sanitize paths in error messages, use generic messages for file access errors",
+        "priority": "P2"
+      },
+      {
+        "issue": "Input size limits",
+        "description": "Validate CLI argument sizes",
+        "location": "Argument parsing",
+        "fix": "Add max length checks for string arguments",
+        "priority": "P2"
+      }
+    ]
+  },
+
+  "sandbox_requirements": {
+    "filesystem": {
+      "read_access": "Journal file only (via validated path)",
+      "write_access": "None (read-only CLI for early version)",
+      "restrictions": [
+        "No access to parent directories",
+        "No symlink following (or explicit resolution)",
+        "No access to /proc, /sys, /dev (except stdin/stdout/stderr)"
+      ]
+    },
+    "network": {
+      "access": "None required (offline verification)",
+      "restriction": "Block all network access in sandbox"
+    },
+    "memory": {
+      "limits": "Configurable (default: 512MB recommended)",
+      "enforcement": "OS-level limits (ulimit, cgroups)",
+      "note": "After streaming fix, memory usage should be O(1) per event"
+    },
+    "cpu": {
+      "limits": "Configurable (default: reasonable timeout)",
+      "enforcement": "OS-level limits",
+      "note": "Verification is CPU-bound but deterministic"
+    },
+    "capabilities": {
+      "required": "None (drop all capabilities)",
+      "user": "Non-root (UID > 0)",
+      "seccomp": "Restrict syscalls to read/write/exit only"
+    }
+  },
+
+  "audit_guarantees": {
+    "journal_integrity": {
+      "property": "Tamper-evident",
+      "mechanism": "Content-derived event IDs (SHA-256)",
+      "verification": "Offline, deterministic",
+      "status": "implemented"
+    },
+    "replayability": {
+      "property": "Deterministic replay",
+      "mechanism": "Append-only format, canonical JSON",
+      "verification": "Same input → same output",
+      "status": "implemented"
+    },
+    "durability": {
+      "property": "Persistent storage",
+      "mechanism": "File-based journal, optional fsync",
+      "verification": "Journal survives process termination",
+      "status": "implemented"
+    },
+    "offline_verification": {
+      "property": "No network required",
+      "mechanism": "All verification logic is pure",
+      "verification": "Works in air-gapped environments",
+      "status": "implemented"
+    },
+    "primitive_operations": {
+      "operations": [
+        "read_next() - stream events",
+        "verify_event() - verify single event",
+        "verify_event_id() - verify event ID matches content",
+        "read_frame() - low-level frame access"
+      ],
+      "status": "implemented",
+      "note": "These provide audit-grade building blocks"
+    }
+  },
+
+  "recommendations": {
+    "immediate": [
+      "Remove gen command from production CLI",
+      "Add path validation to all file operations",
+      "Implement streaming verification (fix memory exhaustion)",
+      "Add resource limit flags with safe defaults",
+      "Document CLI contract for sandbox execution"
+    ],
+    "short_term": [
+      "Add integration tests for path traversal prevention",
+      "Add fuzzing for journal format parsing",
+      "Add memory limit tests",
+      "Create sandbox execution guide",
+      "Add structured logging for audit trails"
+    ],
+    "long_term": [
+      "Consider journal checksums per frame (optional)",
+      "Consider journal compression (optional, v2)",
+      "Consider journal encryption at rest (external to core)",
+      "Consider journal replication/backup tooling (external)"
+    ]
+  },
+
+  "compliance_notes": {
+    "audit_requirements": [
+      "Journal format supports audit trails",
+      "Event IDs enable content integrity verification",
+      "Offline verification enables air-gapped audits",
+      "Deterministic replay enables forensic analysis"
+    ],
+    "gaps": [
+      "No built-in journal signing (external tooling needed)",
+      "No built-in journal encryption (external tooling needed)",
+      "No built-in access logging (OS-level needed)",
+      "No built-in retention policies (external tooling needed)"
+    ],
+    "mitigation": "Core provides primitives; higher layers add policy"
+  }
+}
+

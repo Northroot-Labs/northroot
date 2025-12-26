@@ -9,7 +9,7 @@ The `northroot-store` crate provides a storage abstraction layer for canonical N
 Key features:
 
 - **Pluggable backends**: Implement `StoreWriter` and `StoreReader` to add new storage backends
-- **Journal backend**: Default implementation using the append-only journal format (see `docs/FORMAT.md`)
+- **Journal backend**: Default implementation using the append-only journal format (see `docs/reference/format.md`)
 - **Simple API**: Unified interface for writing and reading events regardless of backend
 - **Error handling**: `StoreError` wraps backend-specific errors for consistent handling
 
@@ -168,9 +168,9 @@ See the `tests/` directory for comprehensive examples:
 
 ## Reference Implementation
 
-The journal backend is the reference implementation and follows the format specified in `docs/FORMAT.md`. For details on the journal format, see:
+The journal backend is the reference implementation and follows the format specified in `docs/reference/format.md`. For details on the journal format, see:
 
-- `docs/FORMAT.md`: Journal format specification
+- `docs/reference/format.md`: Journal format specification
 - `crates/northroot-journal/README.md`: Journal crate documentation
 
 ## License

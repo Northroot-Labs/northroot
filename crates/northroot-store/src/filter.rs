@@ -106,9 +106,7 @@ impl EventFilter for EventIdFilter {
                 let b64 = obj.get("b64").and_then(|v| v.as_str());
 
                 match (alg, b64) {
-                    (Some(a), Some(b)) => {
-                        a == self.event_id.alg && b == self.event_id.b64
-                    }
+                    (Some(a), Some(b)) => a == self.event_id.alg && b == self.event_id.b64,
                     _ => false,
                 }
             }
@@ -168,4 +166,3 @@ impl<R: StoreReader, F: EventFilter> StoreReader for FilteredReader<R, F> {
         }
     }
 }
-

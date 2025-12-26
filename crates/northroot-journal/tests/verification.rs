@@ -1,7 +1,7 @@
 use northroot_canonical::{Canonicalizer, Digest, DigestAlg, ProfileId};
+use northroot_core::VerificationVerdict;
 use northroot_core::Verifier;
 use northroot_journal::{verify_event, verify_event_id};
-use northroot_core::VerificationVerdict;
 use serde_json::json;
 
 fn make_canonicalizer() -> Canonicalizer {
@@ -157,4 +157,3 @@ fn test_verify_event_attestation() {
     let verdict = verify_event(&event, &verifier).unwrap();
     assert_eq!(verdict, VerificationVerdict::Ok);
 }
-

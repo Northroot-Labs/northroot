@@ -20,14 +20,12 @@ pub fn resolve_auth<R: StoreReader>(
     loop {
         match reader.read_next()? {
             None => return Ok(None),
-            Some(event_json) => {
-                match parse_event(&event_json)? {
-                    TypedEvent::Authorization(auth) if auth.event_id == *auth_event_id => {
-                        return Ok(Some(auth));
-                    }
-                    _ => continue,
+            Some(event_json) => match parse_event(&event_json)? {
+                TypedEvent::Authorization(auth) if auth.event_id == *auth_event_id => {
+                    return Ok(Some(auth));
                 }
-            }
+                _ => continue,
+            },
         }
     }
 }
@@ -47,17 +45,14 @@ pub fn executions_for_auth<R: StoreReader>(
     loop {
         match reader.read_next()? {
             None => break,
-            Some(event_json) => {
-                match parse_event(&event_json)? {
-                    TypedEvent::Execution(exec) if exec.auth_event_id == *auth_event_id => {
-                        executions.push(exec);
-                    }
-                    _ => continue,
+            Some(event_json) => match parse_event(&event_json)? {
+                TypedEvent::Execution(exec) if exec.auth_event_id == *auth_event_id => {
+                    executions.push(exec);
                 }
-            }
+                _ => continue,
+            },
         }
     }
 
     Ok(executions)
 }
-

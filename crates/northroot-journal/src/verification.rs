@@ -43,36 +43,33 @@ pub fn verify_event(
     match event_type {
         "authorization" => {
             let auth_event: northroot_core::AuthorizationEvent =
-                serde_json::from_value(event.clone())
-                    .map_err(|e| JournalError::JsonParse(e))?;
+                serde_json::from_value(event.clone()).map_err(JournalError::JsonParse)?;
             let (_, verdict) = verifier
                 .verify_authorization(&auth_event)
-                .map_err(|e| JournalError::InvalidJson(e))?;
+                .map_err(JournalError::InvalidJson)?;
             Ok(verdict)
         }
         "checkpoint" => {
             let checkpoint_event: northroot_core::CheckpointEvent =
-                serde_json::from_value(event.clone())
-                    .map_err(|e| JournalError::JsonParse(e))?;
+                serde_json::from_value(event.clone()).map_err(JournalError::JsonParse)?;
             let (_, verdict) = verifier
                 .verify_checkpoint(&checkpoint_event)
-                .map_err(|e| JournalError::InvalidJson(e))?;
+                .map_err(JournalError::InvalidJson)?;
             Ok(verdict)
         }
         "attestation" => {
             let attestation_event: northroot_core::AttestationEvent =
-                serde_json::from_value(event.clone())
-                    .map_err(|e| JournalError::JsonParse(e))?;
+                serde_json::from_value(event.clone()).map_err(JournalError::JsonParse)?;
             let (_, verdict) = verifier
                 .verify_attestation(&attestation_event)
-                .map_err(|e| JournalError::InvalidJson(e))?;
+                .map_err(JournalError::InvalidJson)?;
             Ok(verdict)
         }
         "execution" => {
             // Execution events require the authorization event for verification
-            return Err(JournalError::InvalidJson(
+            Err(JournalError::InvalidJson(
                 "execution events require authorization event for verification; use verify_execution directly".to_string(),
-            ));
+            ))
         }
         _ => Err(JournalError::InvalidJson(format!(
             "unknown event type: {}",
@@ -80,4 +77,3 @@ pub fn verify_event(
         ))),
     }
 }
-

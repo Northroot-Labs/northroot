@@ -80,9 +80,12 @@ fn create_test_journal() -> (TempDir, String) {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
-        writer.append(&make_execution_event("exec1", "auth1")).unwrap();
+        writer
+            .append(&make_execution_event("exec1", "auth1"))
+            .unwrap();
         writer.append(&make_test_event("auth2")).unwrap();
         writer.finish().unwrap();
     }
@@ -91,11 +94,17 @@ fn create_test_journal() -> (TempDir, String) {
 }
 
 fn run_cli(args: &[&str]) -> (bool, String, String) {
-    let output = Command::new("cargo")
-        .args(&["run", "--bin", "northroot", "--"])
-        .args(args)
-        .output()
-        .expect("Failed to execute CLI");
+    run_cli_with_features(args, &[])
+}
+
+fn run_cli_with_features(args: &[&str], features: &[&str]) -> (bool, String, String) {
+    let mut cmd = Command::new("cargo");
+    cmd.args(["run", "--bin", "northroot"]);
+    if !features.is_empty() {
+        cmd.arg("--features").arg(features.join(","));
+    }
+    cmd.arg("--").args(args);
+    let output = cmd.output().expect("Failed to execute CLI");
 
     let stdout = String::from_utf8(output.stdout).unwrap();
     let stderr = String::from_utf8(output.stderr).unwrap();
@@ -196,32 +205,39 @@ fn test_inspect_command() {
 }
 
 #[test]
+#[cfg(feature = "dev-tools")]
 fn test_gen_command_creates_valid_journal() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("gen_test.nrj");
     let journal_str = journal_path.to_string_lossy().to_string();
 
     // Generate journal with gen command
-    let (success, stdout, _) = run_cli(&[
-        "gen",
-        "--output",
-        &journal_str,
-        "--count-auth",
-        "3",
-        "--count-exec-ok",
-        "3",
-    ]);
+    let (success, stdout, _) = run_cli_with_features(
+        &[
+            "gen",
+            "--output",
+            &journal_str,
+            "--count-auth",
+            "3",
+            "--count-exec-ok",
+            "3",
+        ],
+        &["dev-tools"],
+    );
     assert!(success, "gen command should succeed");
     assert!(stdout.contains("Generated"));
 
     // Verify we can list the generated events
     let (success, stdout, _) = run_cli(&["list", &journal_str, "--json"]);
     assert!(success, "list should work on generated journal");
-    
+
     // Count events in JSON output
     let lines: Vec<&str> = stdout.lines().filter(|l| !l.is_empty()).collect();
-    assert!(lines.len() >= 6, "Should have at least 6 events (3 auth + 3 exec)");
-    
+    assert!(
+        lines.len() >= 6,
+        "Should have at least 6 events (3 auth + 3 exec)"
+    );
+
     // Verify all lines are valid JSON
     for line in lines {
         let parsed: serde_json::Value = serde_json::from_str(line).expect("Invalid JSON");
@@ -233,24 +249,28 @@ fn test_gen_command_creates_valid_journal() {
 }
 
 #[test]
+#[cfg(feature = "dev-tools")]
 fn test_verify_with_bad_exec() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("gen_bad_exec.nrj");
     let journal_str = journal_path.to_string_lossy().to_string();
 
     // Generate journal with one bad execution (orphan reference)
-    let (success, _, _) = run_cli(&[
-        "gen",
-        "--output",
-        &journal_str,
-        "--count-auth",
-        "1",
-        "--count-exec-ok",
-        "0",
-        "--count-exec-bad",
-        "1",
-        "--force",
-    ]);
+    let (success, _, _) = run_cli_with_features(
+        &[
+            "gen",
+            "--output",
+            &journal_str,
+            "--count-auth",
+            "1",
+            "--count-exec-ok",
+            "0",
+            "--count-exec-bad",
+            "1",
+            "--force",
+        ],
+        &["dev-tools"],
+    );
     assert!(success, "gen should succeed");
 
     // Verify should fail with --strict when there's a bad exec
@@ -263,23 +283,27 @@ fn test_verify_with_bad_exec() {
 }
 
 #[test]
+#[cfg(feature = "dev-tools")]
 fn test_verify_with_malformed() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("gen_malformed.nrj");
     let journal_str = journal_path.to_string_lossy().to_string();
 
     // Generate journal with malformed event
-    let (success, _, _) = run_cli(&[
-        "gen",
-        "--output",
-        &journal_str,
-        "--count-auth",
-        "1",
-        "--count-exec-ok",
-        "0",
-        "--with-bad",
-        "--force",
-    ]);
+    let (success, _, _) = run_cli_with_features(
+        &[
+            "gen",
+            "--output",
+            &journal_str,
+            "--count-auth",
+            "1",
+            "--count-exec-ok",
+            "0",
+            "--with-bad",
+            "--force",
+        ],
+        &["dev-tools"],
+    );
     assert!(success, "gen should succeed even with --with-bad");
 
     // Verify should surface error for malformed event
@@ -292,4 +316,3 @@ fn test_verify_with_malformed() {
         "Should report malformed event error"
     );
 }
-

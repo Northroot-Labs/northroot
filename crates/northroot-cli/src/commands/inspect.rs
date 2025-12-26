@@ -1,12 +1,19 @@
 //! Inspect command implementation.
 
+use crate::path;
 use northroot_canonical::{Digest, DigestAlg};
 use northroot_store::{executions_for_auth, resolve_auth, JournalBackendReader, ReadMode};
 use serde_json::json;
 
 pub fn run(journal: String, auth_id: String) -> Result<(), Box<dyn std::error::Error>> {
-    let mut reader = JournalBackendReader::open(&journal, ReadMode::Strict)
-        .map_err(|e| format!("Failed to open journal: {}", e))?;
+    // Validate and normalize journal path
+    let journal_path = path::validate_journal_path(&journal, false)
+        .map_err(|e| format!("Invalid journal path: {}", e))?;
+
+    let mut reader = JournalBackendReader::open(&journal_path, ReadMode::Strict).map_err(|_e| {
+        let sanitized = path::sanitize_path_for_error(&journal_path);
+        format!("Failed to open journal file: {}", sanitized)
+    })?;
 
     // Parse auth event ID
     let digest = Digest::new(DigestAlg::Sha256, auth_id)
@@ -22,8 +29,11 @@ pub fn run(journal: String, auth_id: String) -> Result<(), Box<dyn std::error::E
     };
 
     // Get linked executions
-    let mut reader2 = JournalBackendReader::open(&journal, ReadMode::Strict)
-        .map_err(|e| format!("Failed to open journal: {}", e))?;
+    let mut reader2 =
+        JournalBackendReader::open(&journal_path, ReadMode::Strict).map_err(|_e| {
+            let sanitized = path::sanitize_path_for_error(&journal_path);
+            format!("Failed to open journal file: {}", sanitized)
+        })?;
     let executions = executions_for_auth(&mut reader2, &digest)?;
 
     // Output structured view
@@ -54,4 +64,3 @@ pub fn run(journal: String, auth_id: String) -> Result<(), Box<dyn std::error::E
 
     Ok(())
 }
-

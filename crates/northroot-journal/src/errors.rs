@@ -44,4 +44,3 @@ pub enum JournalError {
         offset: u64,
     },
 }
-

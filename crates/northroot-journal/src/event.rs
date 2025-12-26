@@ -25,4 +25,3 @@ pub fn is_valid_event_structure(value: &EventJson) -> bool {
         && obj.contains_key("principal_id")
         && obj.contains_key("canonical_profile_id")
 }
-

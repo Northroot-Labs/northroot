@@ -36,8 +36,7 @@ fn compute_price_index_digest(
 
     use base64::Engine;
     let b64 = base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(hash_bytes);
-    Digest::new(DigestAlg::Sha256, b64)
-        .map_err(|e| format!("digest construction failed: {}", e))
+    Digest::new(DigestAlg::Sha256, b64).map_err(|e| format!("digest construction failed: {}", e))
 }
 
 /// Verification verdict: explicit outcome of verification.
@@ -121,10 +120,7 @@ impl ConversionContext {
     ///
     /// Uses domain separator `b"northroot:price-index:v1\0"` to distinguish
     /// from event IDs.
-    pub fn compute_snapshot_digest(
-        &self,
-        canonicalizer: &Canonicalizer,
-    ) -> Result<Digest, String> {
+    pub fn compute_snapshot_digest(&self, canonicalizer: &Canonicalizer) -> Result<Digest, String> {
         compute_price_index_digest(&self.snapshot, canonicalizer)
     }
 }
@@ -503,7 +499,8 @@ impl Verifier {
         }
 
         // Validate pricing snapshot digest if both are present
-        if let (Some(event_digest), Some(ctx)) = (exec.pricing_snapshot_digest.as_ref(), conversion) {
+        if let (Some(event_digest), Some(ctx)) = (exec.pricing_snapshot_digest.as_ref(), conversion)
+        {
             let computed_digest = ctx
                 .compute_snapshot_digest(&self.canonicalizer)
                 .map_err(|e| format!("failed to compute snapshot digest: {}", e))?;

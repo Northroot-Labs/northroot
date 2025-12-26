@@ -88,8 +88,10 @@ fn test_sync_option() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
 
-    let mut options = WriteOptions::default();
-    options.sync = true;
+    let options = WriteOptions {
+        sync: true,
+        ..Default::default()
+    };
 
     let mut writer = JournalWriter::open(&journal_path, options).unwrap();
     writer.append_event(&make_test_event("event1")).unwrap();
@@ -171,4 +173,3 @@ fn test_empty_file_creates_header() {
     let event = reader.read_event().unwrap().unwrap();
     assert_eq!(event["event_id"]["b64"], "event1");
 }
-

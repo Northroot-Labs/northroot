@@ -4,6 +4,8 @@ Version: 0.2
 Status: Stable core (additive changes only)
 Scope: Verifiable events, canonical identities, journal storage
 
+**Note**: This document defines the protocol specification (invariants, identity computation, verification model). For detailed event type definitions and Rust API surface, see [Event Model](events.md). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md).
+
 ---
 
 ## 1. Purpose

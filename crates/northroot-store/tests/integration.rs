@@ -1,9 +1,9 @@
-use northroot_store::{
-    parse_event, resolve_auth, executions_for_auth, EventFilter, EventIdFilter, EventTypeFilter,
-    FilteredReader, PrincipalFilter, TimeRangeFilter, TypedEvent, EventJson, JournalBackendReader,
-    JournalBackendWriter, ReadMode, StoreReader, StoreWriter, WriteOptions,
-};
 use northroot_canonical::{Digest, DigestAlg, Timestamp};
+use northroot_store::{
+    executions_for_auth, parse_event, resolve_auth, EventIdFilter, EventJson,
+    EventTypeFilter, FilteredReader, JournalBackendReader, JournalBackendWriter, PrincipalFilter,
+    ReadMode, StoreReader, StoreWriter, TimeRangeFilter, TypedEvent, WriteOptions,
+};
 use serde_json::json;
 use std::fs;
 use tempfile::TempDir;
@@ -65,7 +65,8 @@ fn test_write_read_round_trip() {
 
     // Write events
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("event1")).unwrap();
         writer.append(&make_test_event("event2")).unwrap();
         writer.finish().unwrap();
@@ -78,8 +79,14 @@ fn test_write_read_round_trip() {
         let event2 = reader.read_next().unwrap().unwrap();
         let event3 = reader.read_next().unwrap();
 
-        assert!(event1["event_id"]["b64"].as_str().unwrap().starts_with("event1"));
-        assert!(event2["event_id"]["b64"].as_str().unwrap().starts_with("event2"));
+        assert!(event1["event_id"]["b64"]
+            .as_str()
+            .unwrap()
+            .starts_with("event1"));
+        assert!(event2["event_id"]["b64"]
+            .as_str()
+            .unwrap()
+            .starts_with("event2"));
         assert!(event3.is_none());
     }
 }
@@ -124,7 +131,10 @@ fn test_payload_too_large() {
     let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
     let result = writer.append(&large_payload);
     assert!(result.is_err());
-    assert!(matches!(result.unwrap_err(), northroot_store::StoreError::PayloadTooLarge));
+    assert!(matches!(
+        result.unwrap_err(),
+        northroot_store::StoreError::PayloadTooLarge
+    ));
 }
 
 #[test]
@@ -134,7 +144,8 @@ fn test_strict_mode_truncation() {
 
     // Write a complete event
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("event1")).unwrap();
         writer.finish().unwrap();
     }
@@ -162,7 +173,8 @@ fn test_permissive_mode_truncation() {
 
     // Write a complete event
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("event1")).unwrap();
         writer.finish().unwrap();
     }
@@ -192,14 +204,16 @@ fn test_append_to_existing() {
 
     // Write first event
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("event1")).unwrap();
         writer.finish().unwrap();
     }
 
     // Append second event
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("event2")).unwrap();
         writer.finish().unwrap();
     }
@@ -211,8 +225,14 @@ fn test_append_to_existing() {
         let event2 = reader.read_next().unwrap().unwrap();
         let event3 = reader.read_next().unwrap();
 
-        assert!(event1["event_id"]["b64"].as_str().unwrap().starts_with("event1"));
-        assert!(event2["event_id"]["b64"].as_str().unwrap().starts_with("event2"));
+        assert!(event1["event_id"]["b64"]
+            .as_str()
+            .unwrap()
+            .starts_with("event1"));
+        assert!(event2["event_id"]["b64"]
+            .as_str()
+            .unwrap()
+            .starts_with("event2"));
         assert!(event3.is_none());
     }
 }
@@ -230,7 +250,10 @@ fn test_flush() {
 
     let mut reader = JournalBackendReader::open(&journal_path, ReadMode::Strict).unwrap();
     let event = reader.read_next().unwrap().unwrap();
-    assert!(event["event_id"]["b64"].as_str().unwrap().starts_with("event1"));
+    assert!(event["event_id"]["b64"]
+        .as_str()
+        .unwrap()
+        .starts_with("event1"));
 }
 
 fn make_execution_event(id: &str, auth_id: &str) -> EventJson {
@@ -353,9 +376,12 @@ fn test_event_type_filter() {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
-        writer.append(&make_execution_event("exec1", "auth1")).unwrap();
+        writer
+            .append(&make_execution_event("exec1", "auth1"))
+            .unwrap();
         writer.append(&make_test_event("auth2")).unwrap();
         writer.finish().unwrap();
     }
@@ -367,9 +393,15 @@ fn test_event_type_filter() {
     let mut filtered = FilteredReader::new(reader, filter);
 
     let event1 = filtered.read_next().unwrap().unwrap();
-    assert!(event1["event_id"]["b64"].as_str().unwrap().starts_with("auth1"));
+    assert!(event1["event_id"]["b64"]
+        .as_str()
+        .unwrap()
+        .starts_with("auth1"));
     let event2 = filtered.read_next().unwrap().unwrap();
-    assert!(event2["event_id"]["b64"].as_str().unwrap().starts_with("auth2"));
+    assert!(event2["event_id"]["b64"]
+        .as_str()
+        .unwrap()
+        .starts_with("auth2"));
     assert!(filtered.read_next().unwrap().is_none());
 }
 
@@ -379,13 +411,14 @@ fn test_principal_filter() {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
         let mut event2 = make_test_event("auth2");
-        event2.as_object_mut().unwrap().insert(
-            "principal_id".to_string(),
-            json!("service:other"),
-        );
+        event2
+            .as_object_mut()
+            .unwrap()
+            .insert("principal_id".to_string(), json!("service:other"));
         writer.append(&event2).unwrap();
         writer.finish().unwrap();
     }
@@ -397,7 +430,10 @@ fn test_principal_filter() {
     let mut filtered = FilteredReader::new(reader, filter);
 
     let event = filtered.read_next().unwrap().unwrap();
-    assert!(event["event_id"]["b64"].as_str().unwrap().starts_with("auth1"));
+    assert!(event["event_id"]["b64"]
+        .as_str()
+        .unwrap()
+        .starts_with("auth1"));
     assert!(filtered.read_next().unwrap().is_none());
 }
 
@@ -407,13 +443,14 @@ fn test_time_range_filter() {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
         let mut event2 = make_test_event("auth2");
-        event2.as_object_mut().unwrap().insert(
-            "occurred_at".to_string(),
-            json!("2024-01-01T12:00:00Z"),
-        );
+        event2
+            .as_object_mut()
+            .unwrap()
+            .insert("occurred_at".to_string(), json!("2024-01-01T12:00:00Z"));
         writer.append(&event2).unwrap();
         writer.finish().unwrap();
     }
@@ -426,7 +463,10 @@ fn test_time_range_filter() {
     let mut filtered = FilteredReader::new(reader, filter);
 
     let event = filtered.read_next().unwrap().unwrap();
-    assert!(event["event_id"]["b64"].as_str().unwrap().starts_with("auth2"));
+    assert!(event["event_id"]["b64"]
+        .as_str()
+        .unwrap()
+        .starts_with("auth2"));
     assert!(filtered.read_next().unwrap().is_none());
 }
 
@@ -436,7 +476,8 @@ fn test_event_id_filter() {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
         writer.append(&make_test_event("auth2")).unwrap();
         writer.finish().unwrap();
@@ -449,7 +490,10 @@ fn test_event_id_filter() {
     let mut filtered = FilteredReader::new(reader, filter);
 
     let event = filtered.read_next().unwrap().unwrap();
-    assert!(event["event_id"]["b64"].as_str().unwrap().starts_with("auth2"));
+    assert!(event["event_id"]["b64"]
+        .as_str()
+        .unwrap()
+        .starts_with("auth2"));
     assert!(filtered.read_next().unwrap().is_none());
 }
 
@@ -459,11 +503,16 @@ fn test_filtered_reader_mixed_events() {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
-        writer.append(&make_execution_event("exec1", "auth1")).unwrap();
+        writer
+            .append(&make_execution_event("exec1", "auth1"))
+            .unwrap();
         writer.append(&make_checkpoint_event("check1")).unwrap();
-        writer.append(&make_execution_event("exec2", "auth1")).unwrap();
+        writer
+            .append(&make_execution_event("exec2", "auth1"))
+            .unwrap();
         writer.finish().unwrap();
     }
 
@@ -474,9 +523,15 @@ fn test_filtered_reader_mixed_events() {
     let mut filtered = FilteredReader::new(reader, filter);
 
     let event1 = filtered.read_next().unwrap().unwrap();
-    assert!(event1["event_id"]["b64"].as_str().unwrap().starts_with("exec1"));
+    assert!(event1["event_id"]["b64"]
+        .as_str()
+        .unwrap()
+        .starts_with("exec1"));
     let event2 = filtered.read_next().unwrap().unwrap();
-    assert!(event2["event_id"]["b64"].as_str().unwrap().starts_with("exec2"));
+    assert!(event2["event_id"]["b64"]
+        .as_str()
+        .unwrap()
+        .starts_with("exec2"));
     assert!(filtered.read_next().unwrap().is_none());
 }
 
@@ -486,9 +541,12 @@ fn test_resolve_auth() {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
-        writer.append(&make_execution_event("exec1", "auth1")).unwrap();
+        writer
+            .append(&make_execution_event("exec1", "auth1"))
+            .unwrap();
         writer.append(&make_test_event("auth2")).unwrap();
         writer.finish().unwrap();
     }
@@ -505,7 +563,8 @@ fn test_resolve_auth_not_found() {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
         writer.finish().unwrap();
     }
@@ -522,12 +581,19 @@ fn test_executions_for_auth() {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
-        writer.append(&make_execution_event("exec1", "auth1")).unwrap();
+        writer
+            .append(&make_execution_event("exec1", "auth1"))
+            .unwrap();
         writer.append(&make_test_event("auth2")).unwrap();
-        writer.append(&make_execution_event("exec2", "auth1")).unwrap();
-        writer.append(&make_execution_event("exec3", "auth2")).unwrap();
+        writer
+            .append(&make_execution_event("exec2", "auth1"))
+            .unwrap();
+        writer
+            .append(&make_execution_event("exec3", "auth2"))
+            .unwrap();
         writer.finish().unwrap();
     }
 
@@ -548,7 +614,8 @@ fn test_executions_for_auth_none() {
     let journal_path = temp_dir.path().join("test.nrj");
 
     {
-        let mut writer = JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        let mut writer =
+            JournalBackendWriter::open(&journal_path, WriteOptions::default()).unwrap();
         writer.append(&make_test_event("auth1")).unwrap();
         writer.finish().unwrap();
     }
@@ -558,4 +625,3 @@ fn test_executions_for_auth_none() {
     let executions = executions_for_auth(&mut reader, &auth_id).unwrap();
     assert_eq!(executions.len(), 0);
 }
-

@@ -4,8 +4,11 @@ use clap::{Parser, Subcommand};
 
 mod commands;
 mod output;
+mod path;
 
-use commands::{gen, get, inspect, list, verify};
+#[cfg(feature = "dev-tools")]
+use commands::gen;
+use commands::{append, get, inspect, list, verify};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
@@ -36,6 +39,12 @@ enum Commands {
         /// Output as JSON
         #[arg(long)]
         json: bool,
+        /// Stop after reading N events (default: unlimited)
+        #[arg(long)]
+        max_events: Option<u64>,
+        /// Reject journals larger than SIZE bytes (default: unlimited)
+        #[arg(long)]
+        max_size: Option<u64>,
     },
     /// Get a single event by ID
     Get {
@@ -54,6 +63,12 @@ enum Commands {
         /// Output as JSON
         #[arg(long)]
         json: bool,
+        /// Stop after reading N events (default: unlimited)
+        #[arg(long)]
+        max_events: Option<u64>,
+        /// Reject journals larger than SIZE bytes (default: unlimited)
+        #[arg(long)]
+        max_size: Option<u64>,
     },
     /// Inspect authorization and linked executions
     Inspect {
@@ -63,7 +78,19 @@ enum Commands {
         #[arg(long)]
         auth: String,
     },
-    /// Generate a test journal with deterministic events
+    /// Append an event to a journal
+    Append {
+        /// Path to journal file
+        journal: String,
+        /// Event JSON (from argument)
+        #[arg(long)]
+        event: Option<String>,
+        /// Read event from stdin
+        #[arg(long)]
+        stdin: bool,
+    },
+    /// Generate a test journal with deterministic events (dev-tools feature only)
+    #[cfg(feature = "dev-tools")]
     Gen {
         /// Output journal path
         #[arg(long, short)]
@@ -106,14 +133,26 @@ fn main() {
             after,
             before,
             json,
-        } => list::run(journal, r#type, principal, after, before, json),
+            max_events,
+            max_size,
+        } => list::run(
+            journal, r#type, principal, after, before, json, max_events, max_size,
+        ),
         Commands::Get { journal, event_id } => get::run(journal, event_id),
         Commands::Verify {
             journal,
             strict,
             json,
-        } => verify::run(journal, strict, json),
+            max_events,
+            max_size,
+        } => verify::run(journal, strict, json, max_events, max_size),
         Commands::Inspect { journal, auth } => inspect::run(journal, auth),
+        Commands::Append {
+            journal,
+            event,
+            stdin,
+        } => append::run(journal, event, stdin),
+        #[cfg(feature = "dev-tools")]
         Commands::Gen {
             output,
             seed,
@@ -125,8 +164,15 @@ fn main() {
             with_bad,
             force,
         } => gen::run(
-            output, seed, count_auth, count_exec_ok, count_exec_bad, start_ts, ts_step_ms,
-            with_bad, force,
+            output,
+            seed,
+            count_auth,
+            count_exec_ok,
+            count_exec_bad,
+            start_ts,
+            ts_step_ms,
+            with_bad,
+            force,
         ),
     };
 
@@ -135,4 +181,3 @@ fn main() {
         std::process::exit(1);
     }
 }
-

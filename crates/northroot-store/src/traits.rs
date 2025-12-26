@@ -18,4 +18,3 @@ pub trait StoreReader {
     /// Read next event, None at EOF.
     fn read_next(&mut self) -> Result<Option<EventJson>, StoreError>;
 }
-

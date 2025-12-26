@@ -8,7 +8,7 @@
 //! - Extensible design for future backends (S3, in-memory, etc.)
 //!
 //! The journal backend is the reference implementation and follows the
-//! format specified in `docs/FORMAT.md`.
+//! format specified in `docs/reference/format.md`.
 
 #![deny(missing_docs)]
 
@@ -35,4 +35,3 @@ pub use northroot_journal::{EventJson, ReadMode, WriteOptions};
 pub use traits::{StoreReader, StoreWriter};
 pub use typed::{parse_event, ParseError, TypedEvent};
 pub use view::{executions_for_auth, resolve_auth};
-

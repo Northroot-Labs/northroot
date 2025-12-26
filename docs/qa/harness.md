@@ -1,6 +1,8 @@
-_# Quality & Testing Harness
+# Quality & Testing Harness
 
 This document describes the QA harness for maintaining code quality and catching regressions. The harness is designed to be runnable by both humans and agents, with fast pre-push checks and scheduled deep checks.
+
+For guidance on **writing tests**, see [Testing Guide](../developer/testing.md). This document focuses on **running tests** and the QA infrastructure.
 
 ## Quick Start
 
@@ -124,6 +126,25 @@ rustup component add miri --toolchain nightly
 # Command runner
 curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 ```
+
+## Test Coverage
+
+Generate coverage reports:
+
+```bash
+just coverage
+```
+
+Coverage HTML is generated in `coverage/html/`.
+
+## Continuous Integration
+
+- **Fast checks** run on every push (format, lint, tests, golden)
+- **Deep checks** run nightly (coverage, security, fuzzing)
+
+See `.github/workflows/` for CI configuration.
+
+For guidance on writing tests, see [Testing Guide](../developer/testing.md).
 
 ## Troubleshooting
 

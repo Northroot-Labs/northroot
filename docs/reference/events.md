@@ -1,4 +1,6 @@
-# CORE_EVENTS.md
+# Event Model
+
+**Note**: This document provides detailed event type definitions and Rust API surface. For the protocol specification (invariants, identity computation, verification model), see [Core Specification](spec.md). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md).
 
 ## 0. Purpose
 

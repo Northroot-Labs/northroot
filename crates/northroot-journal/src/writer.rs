@@ -1,8 +1,8 @@
 //! Journal writer implementation.
 
 use crate::errors::JournalError;
-use crate::frame::{FrameKind, JournalHeader, RecordFrame};
 use crate::event::EventJson;
+use crate::frame::{FrameKind, JournalHeader, RecordFrame};
 use std::fs::{File, OpenOptions};
 use std::io::{self, Read, Seek, Write};
 use std::path::Path;
@@ -69,7 +69,9 @@ impl JournalWriter {
             } else {
                 writer.file.seek(io::SeekFrom::Start(0))?;
                 writer.file.set_len(JournalHeader::HEADER_SIZE as u64)?;
-                writer.file.seek(io::SeekFrom::Start(JournalHeader::HEADER_SIZE as u64))?;
+                writer
+                    .file
+                    .seek(io::SeekFrom::Start(JournalHeader::HEADER_SIZE as u64))?;
             }
         }
 
@@ -136,4 +138,3 @@ impl Drop for JournalWriter {
         }
     }
 }
-

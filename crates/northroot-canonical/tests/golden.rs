@@ -1,9 +1,8 @@
 use std::collections::BTreeMap;
 
 use northroot_canonical::{
-    canonicalizer::Canonicalizer,
-    ContentRef, Digest, DigestAlg, HygieneReport, HygieneStatus, HygieneWarning, ProfileId,
-    Quantity,
+    canonicalizer::Canonicalizer, ContentRef, Digest, DigestAlg, HygieneReport, HygieneStatus,
+    HygieneWarning, ProfileId, Quantity,
 };
 use serde_json::json;
 

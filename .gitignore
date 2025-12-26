@@ -82,5 +82,13 @@ config.json
 # notes
 notes/
 
+# security
+# (threat model is now in docs/security/ and should be version controlled)
+
+# release
+release/
+
+
+
 
 
