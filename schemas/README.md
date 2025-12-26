@@ -36,27 +36,16 @@ Suggested layout:
 ---
 
 ### `schemas/events/`
-**Purpose:** The actual protocol messages that Northroot emits and verifies
-(e.g., authorization events, execution events, checkpoint events, attestation events).
+**Purpose:** Reserved for future domain-agnostic event schemas.
 
-Event schemas `$ref` canonical types instead of redefining primitives.
-
-Examples:
-- `AuthorizationEvent`
-- `ExecutionEvent`
-- `CheckpointEvent`
-- `AttestationEvent`
+**Note:** As of Northroot 1.0, governance event schemas (checkpoint, attestation) are maintained in the `northroot-schemas` crate at `crates/northroot-schemas/schemas/`. Domain-specific event schemas (authorization, execution, etc.) are not part of the core trust kernel and should be defined by consuming applications.
 
 **Audience:** Integrators and application developers.
 
 **Stability:** High. Changes are versioned and typically breaking when event
 semantics change.
 
-Current layout:
-- `schemas/events/v1/authorization_event.schema.json`
-- `schemas/events/v1/execution_event.schema.json`
-- `schemas/events/v1/checkpoint_event_schema.json`
-- `schemas/events/v1/attestation_event_schema.json`
+**Current state:** This directory is empty. Governance event schemas are in `crates/northroot-schemas/schemas/`.
 
 ---
 
@@ -89,10 +78,12 @@ Suggested layout (when implemented):
 ## How schemas relate to the wire format
 
 ### Journal format
-The Northroot journal format (`.nrj`) stores events as JSON objects that must conform
-to the event schemas in `schemas/events/v1/`. The journal format itself is schema-agnostic:
+The Northroot journal format (`.nrj`) stores events as JSON objects. The journal format itself is schema-agnostic:
 it stores raw JSON bytes. Schema validation happens during verification, not during
 journal I/O operations.
+
+Governance event schemas (checkpoint, attestation) are available in `crates/northroot-schemas/schemas/`.
+Domain-specific event schemas should be defined by consuming applications.
 
 See [Journal Format](../docs/reference/format.md) for details on the on-disk representation.
 
@@ -167,12 +158,12 @@ The journal format stores events as JSON objects without schema validation durin
 write operations. This design allows:
 
 - **Flexibility**: Journal I/O is fast and doesn't require schema parsing
-- **Verification**: Schema validation happens during verification via `northroot-core`
+- **Verification**: Schema validation happens during verification via `northroot-canonical` and domain-specific verifiers
 - **Forward compatibility**: New schema versions can be added without breaking existing journals
 
 When reading from a journal:
 1. Parse the JSON object from the journal frame
-2. Validate structure against the appropriate event schema (`schemas/events/v1/...`)
+2. Validate structure against the appropriate event schema (governance schemas in `crates/northroot-schemas/schemas/`, domain schemas as defined by application)
 3. Canonicalize according to the event's `canonical_profile_id`
 4. Verify `event_id` matches the computed digest
 
@@ -181,14 +172,16 @@ maintaining strong verification guarantees.
 
 ---
 
-## Files to start with
+## Schema locations
 
 - `canonical/v1/types.schema.json`  
   Canonical primitives (quantities, hygiene report, etc.)
 
-Next:
-- `events/v1/*.schema.json`  
-  The protocol's hashed/verifiable message types
+- `crates/northroot-schemas/schemas/`  
+  Governance event schemas (checkpoint, attestation) - canonical location for Northroot 1.0
+
+- Domain-specific event schemas  
+  Should be defined by consuming applications. The trust kernel provides canonicalization and event identity primitives but does not prescribe domain semantics.
 
 Optional (future):
 - `profiles/v1/*.schema.json`  

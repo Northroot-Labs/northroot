@@ -2,15 +2,23 @@ CORE_INVARIANTS.md
 
 Status: Binding
 Audience: Core maintainers, reviewers, auditors
-Scope: Core semantics only
+Scope: Trust kernel semantics only (canonicalization, event identity, journal format)
 Change Control: Any violation of these invariants is a breaking change
 
 ⸻
 
 0. Purpose
 
-This document defines the non-negotiable invariants of the Northroot core.
+This document defines the non-negotiable invariants of the Northroot trust kernel.
 They exist to ensure neutrality, auditability, survivability, and correctness under scale, automation, and unknown future intelligence.
+
+The trust kernel provides:
+- Deterministic canonicalization (RFC 8785 + Northroot rules)
+- Content-derived event identity
+- Append-only journal format (.nrj)
+- Offline verification primitives
+
+Domain-specific concerns (authorization, execution, policy evaluation) are defined in DOMAIN_INVARIANTS.md as guidance for domain implementations.
 
 If a proposed change weakens any invariant herein, it must not be merged into core.
 
@@ -18,27 +26,17 @@ If a proposed change weakens any invariant herein, it must not be merged into co
 
 1. Definitions
 
-Irreversible action
-Any action that materially changes external state or creates non-trivial cost, risk, or liability, including but not limited to:
-	•	financial spend
-	•	data mutation
-	•	infrastructure changes
-	•	privileged access
-	•	automated communications
-	•	LLM calls with non-trivial cost or side effects
-
-Boundary / Gate
-A pre-action enforcement point that binds policy, constraints, and evidence before an irreversible action occurs.
-
 Evidence
 Deterministic, structured facts that can be verified offline without semantic interpretation. Every evidence event is the canonical JSON object defined by its schema; there is no separate envelope layer, and every field that affects verification is part of the schema-defined payload.
 
-Receipt
-An immutable, content-addressed record binding:
-	•	proposal / intent
-	•	authorization constraints
-	•	execution measurements
-	•	verification context
+Event Identity
+A content-derived identifier computed as:
+`event_id = H(domain_separator || canonical_json(event))`
+
+Where `H` is a versioned hash function (SHA-256 for v1) and `canonical_json` follows the Northroot canonicalization profile.
+
+Journal
+An append-only, framed binary format (.nrj) for storing canonical event JSON. The format is self-describing, portable, and suitable for offline verification.
 
 ⸻
 
@@ -49,7 +47,7 @@ INV-1 — Core does not execute
 The core MUST NOT perform irreversible actions.
 
 Rationale: An auditor cannot audit itself.
-Enforcement: Core APIs are authorization, receipt emission, and verification only.
+Enforcement: Core APIs are canonicalization, event identity computation, journal I/O, and verification only.
 
 ⸻
 
@@ -62,7 +60,7 @@ Enforcement: No scoring, recommendations, or reasoning in core.
 
 INV-2a — Canonical payloads are schema-defined
 
-All core evidence is the canonical JSON object described by the schema (authorization, execution, checkpoint, attestation, etc.). There is no separate `v` envelope, and every schema field that affects verification must be present in the object hashed as `event_id`.
+All core evidence is the canonical JSON object described by the schema (checkpoint, attestation, or domain-specific events). There is no separate `v` envelope, and every schema field that affects verification must be present in the object hashed as `event_id`.
 
 Operational metadata (request IDs, traces, retries, provider hints, tags, transport headers, etc.) lives outside the canonical event to keep hashes deterministic.
 
@@ -74,15 +72,17 @@ INV-3 — Canonical encoding is deterministic
 
 For any core type T, canonical_encode(T) MUST produce identical bytes for the same semantic value across platforms and time.
 
+The canonicalization profile (RFC 8785 + Northroot numeric rules) must be strictly applied. No platform-specific variations are permitted.
+
 ⸻
 
 INV-4 — Identity is content-derived
 
 All core identifiers MUST be derived from canonical bytes:
 
-id = HASH(canonical_bytes)
+id = HASH(domain_separator || canonical_bytes)
 
-(Hash function is versioned and fixed per major version.)
+(Hash function is versioned and fixed per major version. Current: SHA-256 with base64url-no-pad encoding.)
 
 ⸻
 
@@ -94,152 +94,120 @@ Forbidden dependencies: live APIs, clocks (except recorded timestamps), mutable 
 
 ⸻
 
-4. Authorization Invariants
+4. Journal Format Invariants
 
-INV-6 — No irreversible action without pre-authorization
+INV-6 — Journal is append-only
 
-Every irreversible action MUST be preceded by an AuthorizationReceipt.
+Once written, journal records MUST NOT be modified or deleted.
 
-No bypasses. No fast paths.
-
-⸻
-
-INV-7 — Authorization binds intent and policy by hash
-
-An AuthorizationReceipt MUST bind:
-	•	intent_hash
-	•	policy_hash
-	•	explicit constraints (budgets, limits, scope)
-
-Human-readable policy names are metadata only.
+Corrections are represented as new events. The journal format enforces append-only semantics at the framing level.
 
 ⸻
 
-INV-8 — Authorization is time- and scope-bounded
+INV-7 — Journal is self-describing
 
-Authorization MUST include:
-	•	issuance time
-	•	optional expiry
-	•	explicit scope (org / principal / environment)
+The journal format MUST include:
+- Explicit version markers
+- Frame boundaries that enable partial reads
+- Forward-compatible extension points
 
-Expired or out-of-scope authorization is invalid.
-
-⸻
-
-5. Execution & Attestation Invariants
-
-INV-9 — Execution links to authorization
-
-Every ExecutionReceipt MUST reference exactly one AuthorizationReceipt.
-
-Unlinked execution is invalid.
-
-INV-9a — Attestations may carry multiple signatures
-
-Attestation evidence MUST allow multiple independent signatures (1–16 entries) so different trust anchors can co-sign the same checkpoint without altering canonical identity. Each signature is part of the canonical payload and must be verified deterministically.
+Readers must be able to skip unknown frame types without breaking verification.
 
 ⸻
 
-INV-10 — Execution is attestable, not explainable
+INV-8 — Journal events are verifiable offline
 
-Execution evidence MUST be factual and measured:
-	•	resource usage
-	•	observed provider / model (if applicable)
-	•	outcome classification
-	•	artifact hashes
+Every event stored in a journal MUST be verifiable by:
+1. Parsing the JSON object
+2. Canonicalizing according to the event's `canonical_profile_id`
+3. Recomputing `event_id` and comparing to stored value
 
-Explanations are NOT evidence.
-
-⸻
-
-INV-11 — Execution reports are hash-bound
-
-If an ExecutionReport is supplied, its hash MUST be bound in the ExecutionReceipt.
+No external dependencies required.
 
 ⸻
 
-6. Violation & Failure Invariants
+5. Violation & Failure Invariants
 
-INV-12 — Outcome states are explicit
+INV-9 — Outcome states are explicit
 
 Verification MUST return one of:
-	•	Ok
-	•	Denied
-	•	Violation
-	•	Invalid
+- Ok (event_id matches, canonicalization valid)
+- Invalid (event_id mismatch, malformed JSON, canonicalization failure)
 
 No implicit success.
 
 ⸻
 
-INV-13 — Fail closed on missing evidence
+INV-10 — Fail closed on missing evidence
 
-If evidence required to verify a constraint is missing, the result MUST be Invalid.
-
-⸻
-
-INV-14 — Violations reduce power
-
-The design MUST support downstream enforcement where violations reduce future capability (budgets, quotas, revocation).
-
-Core emits signals; enforcement is external.
+If evidence required to verify an event is missing or malformed, the result MUST be Invalid.
 
 ⸻
 
-7. Tamper-Evidence & Survivability Invariants
+6. Tamper-Evidence & Survivability Invariants
 
-INV-15 — Receipts are immutable and append-only
+INV-11 — Events are immutable and append-only
 
-Once emitted, receipts MUST NOT be modified or deleted.
+Once emitted, events MUST NOT be modified or deleted.
 
-⸻
-
-INV-16 — Evidence is exportable and replayable
-
-Receipts and artifacts MUST be exportable in a self-contained bundle sufficient for offline verification.
+The journal format enforces this at the storage layer.
 
 ⸻
 
-INV-17 — Continuity proofs are supported (optional)
+INV-12 — Evidence is exportable and replayable
+
+Events and journals MUST be exportable in a self-contained bundle sufficient for offline verification.
+
+The .nrj format is designed for portability across systems, regimes, and storage backends.
+
+⸻
+
+INV-13 — Continuity proofs are supported (optional)
 
 The design SHOULD support hash chaining or checkpoints to detect deletion/reordering.
 
+Checkpoint and attestation events provide optional governance mechanisms for chain integrity.
+
 ⸻
 
-8. Neutrality Invariants
+7. Neutrality Invariants
 
-INV-18 — Vendor and framework agnostic
+INV-14 — Vendor and framework agnostic
 
 Core semantics MUST NOT depend on:
-	•	specific AI providers
-	•	agent frameworks
-	•	orchestration systems
-	•	cloud vendors
+- specific AI providers
+- agent frameworks
+- orchestration systems
+- cloud vendors
+- storage backends (beyond the .nrj format itself)
 
 ⸻
 
-INV-19 — Policy semantics remain external
+INV-15 — Schema semantics remain external
 
-Core references policy by hash and decision result only.
-Policy engines remain replaceable.
+Core provides canonicalization and identity computation for any JSON object conforming to a schema.
+
+Schema validation and domain-specific verification remain external concerns.
 
 ⸻
 
-9. Non-Goals (Core)
+8. Non-Goals (Core)
 
 The following are explicitly out of scope:
-	•	orchestration
-	•	agent planning
-	•	execution engines
-	•	optimization logic
-	•	dashboards
-	•	distributed consensus
+- orchestration
+- agent planning
+- execution engines
+- optimization logic
+- dashboards
+- distributed consensus
+- policy evaluation
+- authorization/execution lifecycle management
 
 ⸻
 
-10. Amendment Rule
+9. Amendment Rule
 
-Any change weakening invariants 1–7 is a breaking change and must be rejected or moved outside core.
+Any change weakening invariants 1–15 is a breaking change and must be rejected or moved outside core.
 
 ⸻
 
@@ -251,26 +219,29 @@ This is how you lock correctness early and permanently.
 
 A. Canonical Encoding Vectors
 
-Create fixtures for each core type:
+Create fixtures for core canonicalization:
 
 tests/golden/canonical/
-  intent.json
-  policy.json
-  authorization.json
-  execution.json
+  simple_object.json
+  nested_object.json
+  with_array.json
+  with_quantities.json
+  unicode.json
+  empty_values.json
+  complex.json
 
 Each test must assert:
-	•	byte-for-byte canonical output
-	•	stable across runs
-	•	stable across platforms
+- byte-for-byte canonical output
+- stable across runs
+- stable across platforms
 
 ⸻
 
 B. Hash Identity Vectors
 
 For each canonical fixture:
-	•	compute expected hash
-	•	store as literal
+- compute expected hash
+- store as literal
 
 tests/golden/hashes.toml
 
@@ -278,66 +249,44 @@ Changing a hash requires an explicit, reviewed breaking change.
 
 ⸻
 
-C. Authorization Receipt Vectors
+C. Event ID Vectors
 
 Test cases:
-	1.	Valid authorization
-	2.	Expired authorization
-	3.	Policy hash mismatch
-	4.	Constraint mismatch
+1. Valid event with correct event_id
+2. Event with tampered event_id
+3. Event with missing event_id
+4. Event with malformed canonical JSON
 
 Expected verdicts are fixed.
 
 ⸻
 
-D. Execution Receipt Vectors
+D. Journal Format Vectors
 
 Test cases:
-	1.	Valid execution under limits
-	2.	Execution exceeding cost ceiling
-	3.	Execution missing report
-	4.	Execution with mismatched report hash
+1. Valid journal with single event
+2. Valid journal with multiple events
+3. Journal with truncated frame
+4. Journal with unknown frame type (must skip)
+5. Journal with malformed JSON in event
 
 ⸻
 
-E. Verification Verdict Matrix
-
-Create a table-driven test:
-
-Auth	Exec	Evidence	Expected
-✓	✓	complete	Ok
-✓	✓	missing	Invalid
-✓	✗	complete	Violation
-✗	✓	complete	Invalid
-✗	✗	—	Invalid
-
-No ambiguity allowed.
+E. Offline Verification Test
+- Serialize events + journal to a bundle
+- Delete network access
+- Re-run verifier
+- Assert identical verdicts
 
 ⸻
 
-F. Offline Verification Test
-	•	Serialize receipts + artifacts to a bundle
-	•	Delete network access
-	•	Re-run verifier
-	•	Assert identical verdicts
-
-⸻
-
-G. Tamper Detection Tests
+F. Tamper Detection Tests
 
 Modify:
-	•	one byte of a receipt
-	•	reorder receipts
-	•	remove one artifact
+- one byte of an event JSON
+- reorder events in journal
+- remove one event frame
 
 All MUST result in Invalid.
-
-⸻
-
-H. Halt-Mode Readiness (future-proof)
-
-Even if not enforced in v0:
-	•	ensure severity classification is emitted
-	•	ensure PANIC-level signals are testable
 
 ⸻

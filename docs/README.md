@@ -37,7 +37,8 @@ This directory contains documentation organized by audience.
 - [Project README](../README.md) - Project overview
 - [Contributing Guide](../CONTRIBUTING.md) - Development guidelines
 - [Governance](../GOVERNANCE.md) - Project principles
-- [Core Invariants](../CORE_INVARIANTS.md) - Non-negotiable constraints
+- [Core Invariants](../CORE_INVARIANTS.md) - Non-negotiable kernel constraints
+- [Domain Invariants](../DOMAIN_INVARIANTS.md) - Advisory guidance for domain implementations
 
 ## Documentation Principles
 

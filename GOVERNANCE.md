@@ -10,10 +10,11 @@ Status: Binding
 This project exists to build neutral, verifiable infrastructure for automated systems.
 
 Specifically, it provides:
-	•	Deterministic schemas
-	•	Evidence and receipt generation
-	•	Policy-bound authorization and execution verification
-	•	Offline, replayable verification
+	•	Deterministic canonicalization (RFC 8785 + Northroot rules)
+	•	Event identity computation
+	•	Append-only journal format (.nrj)
+	•	Offline, replayable verification primitives
+	•	Governance event schemas (checkpoint, attestation)
 
 It does not exist to:
 	•	Make decisions
@@ -99,20 +100,25 @@ The system may ingest logs, but it only commits receipts.
 
 5. Policy as Law (Not Product)
 
-Policy evaluation is treated as law, not business logic.
+Policy evaluation is treated as law, not business logic. However, policy evaluation is **not** part of the core trust kernel.
 
-Therefore:
-	•	Policy semantics must be inspectable
-	•	Policy evaluation must be deterministic
+The core provides:
+	•	Canonicalization primitives
+	•	Event identity computation
+	•	Journal format for storing verifiable events
+
+Domain layers (built on top of the core) should ensure:
+	•	Policy semantics are inspectable
+	•	Policy evaluation is deterministic
 	•	Policy versions are referenced by hash
 	•	Policy engines are replaceable
 
-We explicitly prohibit:
+We explicitly prohibit in the core:
 	•	Proprietary policy languages
 	•	Paywalled policy semantics
 	•	Hidden or heuristic policy behavior
 
-We may build tools around policy, but we do not own the law.
+We may build tools around policy, but we do not own the law, and policy evaluation is not a core concern.
 
 ⸻
 
@@ -170,11 +176,13 @@ Vendor capture is a violation of neutrality.
 9. Open Core Boundaries
 
 The following must remain open and inspectable:
-	•	Receipt schemas
+	•	Event schemas (governance events)
 	•	Canonicalization rules
 	•	Hashing rules
-	•	Verification logic
-	•	Authorization → execution lifecycle
+	•	Event identity computation
+	•	Journal format specification
+
+Domain-specific concerns (authorization → execution lifecycle, policy evaluation) are external to the core trust kernel.
 
 Commercialization is allowed only in:
 	•	Hosting
