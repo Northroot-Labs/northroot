@@ -1,0 +1,1 @@
+{"checksum":{"alg":"sha-256","b64":"n4bQgYhMfWWaL-qgxVrQHuO5UxN2af8j4V3x8p5Z6Y7"},"data":{"items":[{"id":"1","value":{"t":"int","v":"100"}},{"id":"2","value":{"t":"int","v":"200"}}]},"metadata":{"timestamp":"2024-01-01T00:00:00Z","version":"1"}}

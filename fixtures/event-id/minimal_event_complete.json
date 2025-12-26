@@ -1,0 +1,11 @@
+{
+  "canonical_profile_id": "northroot-canonical-v1",
+  "event_id": {
+    "alg": "sha-256",
+    "b64": "e73v5Avk41k6XeSnrK2dzyoVRX0u3Kk28phOIP2zr7w"
+  },
+  "event_type": "test",
+  "event_version": "1",
+  "occurred_at": "2024-01-01T00:00:00Z",
+  "principal_id": "service:test"
+}

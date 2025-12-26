@@ -1,0 +1,1 @@
+{"chinese":"\u4e2d\u6587","emoji":"\ud83c\udf89","escaped":"line1\nline2\ttab"}

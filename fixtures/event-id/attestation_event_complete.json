@@ -1,0 +1,22 @@
+{
+  "canonical_profile_id": "northroot-canonical-v1",
+  "checkpoint_event_id": {
+    "alg": "sha-256",
+    "b64": "Xk9Z8oRmKxNvYwJ3LqPnHgTsUdIfAaZc5VbCyW7M0e1"
+  },
+  "event_id": {
+    "alg": "sha-256",
+    "b64": "S2UnmncPUVpxnatg7lLKJm_7ItZbmVjdgiIier60-wY"
+  },
+  "event_type": "attestation",
+  "event_version": "1",
+  "occurred_at": "2024-01-01T12:01:00Z",
+  "principal_id": "service:attester",
+  "signatures": [
+    {
+      "alg": "ed25519",
+      "key_id": "did:example:key1",
+      "sig": "dGVzdF9zaWduYXR1cmVfYnl0ZXNfaGVyZQ"
+    }
+  ]
+}

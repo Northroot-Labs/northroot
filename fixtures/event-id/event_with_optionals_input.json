@@ -1,0 +1,15 @@
+{
+  "canonical_profile_id": "northroot-canonical-v1",
+  "event_type": "test",
+  "event_version": "1",
+  "metadata": {
+    "source": "integration_test",
+    "version": "1.0.0"
+  },
+  "occurred_at": "2024-06-15T08:30:00Z",
+  "prev_event_id": {
+    "alg": "sha-256",
+    "b64": "AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcdef"
+  },
+  "principal_id": "service:processor"
+}

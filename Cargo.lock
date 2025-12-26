@@ -358,6 +358,7 @@ version = "1.0.0"
 dependencies = [
  "base64",
  "canonical_json",
+ "hex",
  "regex",
  "serde",
  "serde_json",

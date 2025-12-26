@@ -1,0 +1,12 @@
+{
+  "canonical_profile_id": "northroot-canonical-v1",
+  "chain_tip_event_id": {
+    "alg": "sha-256",
+    "b64": "n4bQgYhMfWWaL-qgxVrQHuO5UxN2af8j4V3x8p5Z6Y7"
+  },
+  "chain_tip_height": 100,
+  "event_type": "checkpoint",
+  "event_version": "1",
+  "occurred_at": "2024-01-01T12:00:00Z",
+  "principal_id": "service:reconciler"
+}
