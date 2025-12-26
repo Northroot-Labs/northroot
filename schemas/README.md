@@ -38,14 +38,14 @@ Suggested layout:
 ### `schemas/events/`
 **Purpose:** Reserved for future domain-agnostic event schemas.
 
-**Note:** As of Northroot 1.0, governance event schemas (checkpoint, attestation) are maintained in the `northroot-schemas` crate at `crates/northroot-schemas/schemas/`. Domain-specific event schemas (authorization, execution, etc.) are not part of the core trust kernel and should be defined by consuming applications.
+**Note:** As of Northroot 1.0, the trust kernel does not include event schemas. Governance event schemas (checkpoint, attestation) are maintained in `wip/governance/schemas/`. Domain-specific event schemas (authorization, execution, etc.) should be defined by consuming applications or extension layers.
 
 **Audience:** Integrators and application developers.
 
 **Stability:** High. Changes are versioned and typically breaking when event
 semantics change.
 
-**Current state:** This directory is empty. Governance event schemas are in `crates/northroot-schemas/schemas/`.
+**Current state:** This directory is empty. Example schemas are in `wip/governance/` and `wip/agent-domain/`.
 
 ---
 
@@ -175,13 +175,13 @@ maintaining strong verification guarantees.
 ## Schema locations
 
 - `canonical/v1/types.schema.json`  
-  Canonical primitives (quantities, hygiene report, etc.)
+  Canonical primitives (quantities, hygiene report, etc.) - part of trust kernel
 
-- `crates/northroot-schemas/schemas/`  
-  Governance event schemas (checkpoint, attestation) - canonical location for Northroot 1.0
+- `wip/governance/schemas/`  
+  Example governance event schemas (checkpoint, attestation) - not part of core
 
 - Domain-specific event schemas  
-  Should be defined by consuming applications. The trust kernel provides canonicalization and event identity primitives but does not prescribe domain semantics.
+  Should be defined by consuming applications or extension layers. The trust kernel provides canonicalization and event identity primitives but does not prescribe domain semantics.
 
 Optional (future):
 - `profiles/v1/*.schema.json`  

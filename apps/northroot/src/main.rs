@@ -1,4 +1,4 @@
-//! Northroot CLI - Command-line interface for event verification and journal operations.
+//! Northroot CLI - Command-line interface for trust kernel operations.
 
 use clap::{Parser, Subcommand};
 
@@ -6,11 +6,11 @@ mod commands;
 mod output;
 mod path;
 
-use commands::{canonicalize, checkpoint, list, verify};
+use commands::{canonicalize, event_id, list, verify};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
-#[command(about = "Northroot event verification and journal operations CLI")]
+#[command(about = "Northroot trust kernel CLI")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -18,6 +18,16 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Show canonical bytes for input JSON
+    Canonicalize {
+        /// Input JSON file (or stdin if not provided)
+        input: Option<String>,
+    },
+    /// Compute event_id for input JSON
+    EventId {
+        /// Input JSON file (or stdin if not provided)
+        input: Option<String>,
+    },
     /// List events in a journal
     List {
         /// Path to journal file
@@ -49,28 +59,14 @@ enum Commands {
         #[arg(long)]
         max_size: Option<u64>,
     },
-    /// Show canonical bytes for input JSON
-    Canonicalize {
-        /// Input JSON file (or stdin if not provided)
-        input: Option<String>,
-    },
-    /// Create a checkpoint event for a journal
-    Checkpoint {
-        /// Path to journal file
-        journal: String,
-        /// Principal ID
-        #[arg(long)]
-        principal: String,
-        /// Output checkpoint event as JSON
-        #[arg(long)]
-        json: bool,
-    },
 }
 
 fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
+        Commands::Canonicalize { input } => canonicalize::run(input),
+        Commands::EventId { input } => event_id::run(input),
         Commands::List {
             journal,
             json,
@@ -84,12 +80,6 @@ fn main() {
             max_events,
             max_size,
         } => verify::run(journal, strict, json, max_events, max_size),
-        Commands::Canonicalize { input } => canonicalize::run(input),
-        Commands::Checkpoint {
-            journal,
-            principal,
-            json,
-        } => checkpoint::run(journal, principal, json),
     };
 
     if let Err(e) = result {
@@ -97,3 +87,4 @@ fn main() {
         std::process::exit(1);
     }
 }
+

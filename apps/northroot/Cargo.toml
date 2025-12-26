@@ -1,0 +1,24 @@
+[package]
+name = "northroot"
+version = "1.0.0"
+edition = "2021"
+authors = ["Northroot Contributors"]
+license = "Apache-2.0 OR MIT"
+description = "Command-line interface for Northroot trust kernel"
+
+[workspace]
+
+[[bin]]
+name = "northroot"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+serde_json = "1.0"
+thiserror = "1.0"
+northroot-canonical = { path = "../../crates/northroot-canonical" }
+northroot-journal = { path = "../../crates/northroot-journal" }
+
+[dev-dependencies]
+tempfile = "3.8"
+

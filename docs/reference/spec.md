@@ -4,7 +4,7 @@ Version: 1.0
 Status: Stable core (additive changes only)
 Scope: Verifiable events, canonical identities, journal storage
 
-**Note**: This document defines the protocol specification (invariants, identity computation, verification model). For detailed event type definitions, see [Event Model](events.md). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md).
+**Note**: This document defines the protocol specification (invariants, identity computation, verification model). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md). For extension patterns, see [Extensions](extensions.md).
 
 ---
 
@@ -16,9 +16,8 @@ The trust kernel provides:
 - Canonicalization primitives (RFC 8785 + Northroot rules)
 - Event identity computation
 - Journal format (.nrj)
-- Governance event schemas (checkpoint, attestation)
 
-Domain-specific event types (authorization, execution, etc.) are defined by consuming applications.
+Domain-specific event types (authorization, execution, checkpoint, attestation, etc.) are defined by consuming applications or extension layers.
 
 ---
 
@@ -26,15 +25,15 @@ Domain-specific event types (authorization, execution, etc.) are defined by cons
 
 ### 2.1 Canonical identity
 
-Every event is the canonical JSON object produced by its schema. Identity is computed as:  
+Every event is a canonical JSON object. Identity is computed as:  
 `event_id = H(domain_separator || canonical_json(event))`  
-`canonical_json` follows the Northroot canonicalization profile, and `event` is the entire schema-defined object (type, version, principals, payload fields, signatures, etc.).
+`canonical_json` follows the Northroot canonicalization profile, and `event` is the entire JSON object (type, version, principals, payload fields, etc.).
 
 The domain separator for event identity is: `b"northroot:event:v1\0"`
 
 ### 2.2 Determinism and versioning
 
-`event_version` captures schema evolution so readers know which canonicalization rules to apply. There is no separate `v` envelope: the event object itself is canonical, and every field listed in the schema contributes to the hash.
+`event_version` captures schema evolution so readers know which canonicalization rules to apply. There is no separate `v` envelope: the event object itself is canonical, and every field contributes to the hash.
 
 ### 2.3 Append-only
 
@@ -48,26 +47,18 @@ Operational metadata (request IDs, traces, retries, provider hints, tags, transp
 
 ## 3. Event structure
 
-Each event type exposes:
+All events share a common envelope structure:
 
-- `event_id`, `event_type`, `event_version`
-- `occurred_at`, `principal_id`, `canonical_profile_id`
-- Optional `prev_event_id`
-- Type-specific payload fields (checkpoint metadata, signatures, etc.)
+- `event_id`: Digest (computed from canonical bytes)
+- `event_type`: string (e.g., "test", "checkpoint", "authorization", etc.)
+- `event_version`: string (e.g., "1")
+- `occurred_at`: Timestamp
+- `principal_id`: PrincipalID
+- `canonical_profile_id`: ProfileID
+- Optional `prev_event_id`: Digest (for hash-chain ordering)
+- Type-specific payload fields (defined by domain schemas)
 
-Every field in the schema is part of the canonical payload; the schema enumerates required and optional properties so verifiers know what to expect.
-
-### 3.1 Governance events
-
-Northroot 1.0 defines two governance event types:
-
-**CheckpointEvent**: Attests to a chain tip, providing continuity proofs and optional Merkle roots.
-
-**AttestationEvent**: Attests to a checkpoint's `event_id` with one or more cryptographic signatures (1–16 entries), allowing multiple trust anchors to co-sign the same checkpoint.
-
-### 3.2 Domain-specific events
-
-Domain-specific event types (authorization, execution, reconciliation, etc.) are not part of the core trust kernel. Applications define their own event schemas and use the core primitives for canonicalization and event identity.
+Every field in the event is part of the canonical payload; the kernel operates on untyped `EventJson = serde_json::Value`. Domain layers add typed schemas and validation.
 
 ---
 
@@ -78,12 +69,10 @@ Verifiers must:
 1. Parse the journal record into the canonical JSON event object.
 2. Apply the canonicalization profile associated with `canonical_profile_id`.
 3. Recompute `event_id` from the canonical bytes and ensure it matches the stored digest.
-4. Validate any referenced digests (`chain_tip_event_id`, `checkpoint_event_id`, etc.).
-5. For attestations, verify each entry in `signatures`.
 
-Optional: use `prev_event_id` for hash-chain checks or combine checkpoints with attestations for additional trust.
+Optional: use `prev_event_id` for hash-chain checks.
 
-Domain-specific verification (policy checks, constraint validation, etc.) is external to the core.
+Domain-specific verification (policy checks, constraint validation, signature verification, etc.) is external to the core.
 
 ---
 

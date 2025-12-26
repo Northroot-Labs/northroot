@@ -60,7 +60,7 @@ Enforcement: No scoring, recommendations, or reasoning in core.
 
 INV-2a — Canonical payloads are schema-defined
 
-All core evidence is the canonical JSON object described by the schema (checkpoint, attestation, or domain-specific events). There is no separate `v` envelope, and every schema field that affects verification must be present in the object hashed as `event_id`.
+All core evidence is the canonical JSON object. There is no separate `v` envelope, and every field that affects verification must be present in the object hashed as `event_id`. The kernel operates on untyped `EventJson = serde_json::Value`; domain layers add typed schemas.
 
 Operational metadata (request IDs, traces, retries, provider hints, tags, transport headers, etc.) lives outside the canonical event to keep hashes deterministic.
 
@@ -164,9 +164,9 @@ The .nrj format is designed for portability across systems, regimes, and storage
 
 INV-13 — Continuity proofs are supported (optional)
 
-The design SHOULD support hash chaining or checkpoints to detect deletion/reordering.
+The design SHOULD support hash chaining via optional `prev_event_id` fields to detect deletion/reordering.
 
-Checkpoint and attestation events provide optional governance mechanisms for chain integrity.
+Domain layers may implement checkpoint/attestation mechanisms for chain integrity, but these are not core primitives.
 
 ⸻
 

@@ -43,23 +43,22 @@ The Northroot Journal (.nrj) stores verifiable events in an append-only, tamper-
 EventJson payloads MUST:
 
 1. Be valid UTF-8 JSON.
-2. Be a single JSON object structured exactly like the schema in `schemas/events/v1/...` (flat, no `v` envelope).
-3. Include required fields such as `event_id`, `event_type`, `event_version`, `occurred_at`, `principal_id`, `canonical_profile_id`, and any schema-specific properties.
+2. Be a single JSON object (flat, no `v` envelope).
+3. Include required fields such as `event_id`, `event_type`, `event_version`, `occurred_at`, `principal_id`, `canonical_profile_id`, and any domain-specific properties.
+
+The journal format is schema-agnostic - it stores any valid JSON event. Domain layers define event schemas.
 
 Example:
 
 ```json
 {
   "event_id": { "alg": "sha-256", "b64": "..." },
-  "event_type": "attestation",
+  "event_type": "test",
   "event_version": "1",
-  "occurred_at": "...",
-  "principal_id": "...",
-  "canonical_profile_id": "...",
-  "checkpoint_event_id": { "...": "Digest" },
-  "signatures": [
-    { "alg": "ed25519", "key_id": "did:example:123", "sig": "..." }
-  ]
+  "occurred_at": "2024-01-01T00:00:00Z",
+  "principal_id": "service:example",
+  "canonical_profile_id": "northroot-canonical-v1",
+  "data": "example event payload"
 }
 ```
 
@@ -88,8 +87,8 @@ Readers must validate:
 1. File header correctness.
 2. Record framing (kind/reserved/len structure).
 3. Valid UTF-8 JSON for every EventJson record.
-4. Event identity (`event_id`) per the canonical schema.
-5. Optional hash-chain references (`prev_event_id`, checkpoints, attestations).
+4. Event identity (`event_id`) via canonicalization and hash computation.
+5. Optional hash-chain references (`prev_event_id`).
 
 
 ## 9. What the format does NOT guarantee

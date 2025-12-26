@@ -4,31 +4,26 @@ High-level system design and component relationships.
 
 ## Overview
 
-Northroot 1.0 is organized into focused crates, each with a clear responsibility:
+Northroot is organized as a minimal trust kernel with two core crates:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   northroot-cli                          │
-│              (Command-line interface)                    │
+│                   apps/northroot                        │
+│              (CLI application)                          │
 └────────────────────┬────────────────────────────────────┘
                      │
         ┌────────────┴────────────┐
         │                          │
 ┌───────▼────────┐      ┌─────────▼──────────┐
 │ northroot-     │      │  northroot-        │
-│ journal        │      │  schemas           │
-│ (Journal       │      │  (Governance       │
-│  format)       │      │   events)         │
-└───────┬────────┘      └─────────┬─────────┘
-        │                          │
-        └────────────┬─────────────┘
-                     │
-              ┌──────▼────────┐
-              │ northroot-    │
-              │ canonical     │
-              │ (Canonicalization│
-              │  & event_id)  │
-              └───────────────┘
+│ journal        │      │  canonical        │
+│ (Journal       │      │  (Canonicalization│
+│  format)       │      │   & event_id)     │
+└───────┬────────┘      └────────────────────┘
+        │
+        └───────────────┐
+                        │
+                  (depends on)
 ```
 
 ## Core Components
@@ -70,41 +65,26 @@ Northroot 1.0 is organized into focused crates, each with a clear responsibility
 - `JournalReader` - Reads journal files
 - `JournalHeader` - File header structure
 - `RecordFrame` - Frame encoding
+- `EventJson` - Alias for `serde_json::Value` (untyped events)
 
 **Dependencies**: `northroot-canonical`
 
 ---
 
-### `northroot-schemas`
+## Applications
 
-**Purpose**: Domain-agnostic governance event schemas.
+### `apps/northroot/`
 
-**Responsibilities**:
-- Checkpoint event schema and types
-- Attestation event schema and types
-- Signature types
-- JSON Schema definitions
-
-**Key Types**:
-- `CheckpointEvent` - Chain checkpoint event
-- `AttestationEvent` - Checkpoint attestation event
-- `Signature` - Cryptographic signature
-
-**Dependencies**: `northroot-canonical`
-
----
-
-### `northroot-cli`
-
-**Purpose**: Command-line interface for users.
+**Purpose**: Command-line interface for trust kernel operations.
 
 **Responsibilities**:
-- User-facing commands (`list`, `verify`, `canonicalize`, `checkpoint`)
+- User-facing commands (`canonicalize`, `event-id`, `verify`, `list`)
 - Output formatting
 - Error reporting
-- Journal manipulation
 
-**Dependencies**: `northroot-canonical`, `northroot-journal`, `northroot-schemas`
+**Dependencies**: `northroot-canonical`, `northroot-journal`
+
+**Note**: This is a standalone application (not a workspace crate), built with path dependencies to the kernel crates.
 
 ---
 
@@ -123,7 +103,7 @@ Northroot 1.0 is organized into focused crates, each with a clear responsibility
 
 ```
 1. northroot-journal reads frame from disk
-2. Parse event JSON object
+2. Parse event JSON object (untyped)
 3. northroot-canonical verifies event_id matches canonical bytes
 4. Optional: domain-specific verification (external to core)
 ```
@@ -137,6 +117,7 @@ Northroot 1.0 is organized into focused crates, each with a clear responsibility
 3. **Determinism**: All core operations are deterministic and offline-capable
 4. **Neutrality**: Core does not execute actions or make decisions
 5. **Verifiability**: All events can be verified offline using canonicalization and event identity
+6. **Untyped Core**: Kernel operates on `EventJson = serde_json::Value`; domain layers add types
 
 ---
 
@@ -146,7 +127,7 @@ Northroot 1.0 is organized into focused crates, each with a clear responsibility
 - **Custom Verification**: Domain layers add semantic verification on top of core event identity checks
 - **Custom Storage**: Journal format is portable; applications can implement custom storage backends
 
-See [Extending Northroot](extending.md) for details.
+See [Extensions](../reference/extensions.md) for details.
 
 ---
 
@@ -154,12 +135,11 @@ See [Extending Northroot](extending.md) for details.
 
 - `northroot-canonical` - No dependencies on other Northroot crates
 - `northroot-journal` - Depends on `northroot-canonical`
-- `northroot-schemas` - Depends on `northroot-canonical`
-- `northroot-cli` - Depends on `northroot-canonical`, `northroot-journal`, and `northroot-schemas`
+- `apps/northroot/` - Depends on `northroot-canonical`, `northroot-journal`
 
 This dependency structure ensures:
 - Lower-level crates remain independent
-- Higher-level crates compose functionality
+- Higher-level components compose functionality
 - No circular dependencies
 - Domain-specific concerns are external to the trust kernel
 
@@ -167,13 +147,15 @@ This dependency structure ensures:
 
 ## Domain-Specific Layers
 
-Domain-specific event types (authorization, execution, etc.) and verification logic are **not** part of the core trust kernel. They should be implemented as separate crates or application code that consume the core primitives:
+Domain-specific event types (authorization, execution, checkpoint, attestation, etc.) and verification logic are **not** part of the core trust kernel. They should be implemented as separate repositories or crates that consume the core primitives:
 
 - `northroot-canonical` for canonicalization and event identity
 - `northroot-journal` for storage
-- `northroot-schemas` for governance events (optional)
 
-See `wip/agent-domain/` for an example of domain-specific code that was moved out of core.
+See `wip/` for examples:
+- `wip/governance/` - Checkpoint and attestation schemas
+- `wip/agent-domain/` - Authorization and execution schemas
+- `wip/store/` - Storage abstraction layer
 
 ---
 
@@ -181,5 +163,5 @@ See `wip/agent-domain/` for an example of domain-specific code that was moved ou
 
 - [API Contract](api-contract.md) - Public API surface
 - [Core Specification](../reference/spec.md) - Protocol details
-- [Extending Northroot](extending.md) - How to extend the system
+- [Extensions](../reference/extensions.md) - How to extend the system
 - [Core Invariants](../../CORE_INVARIANTS.md) - Non-negotiable kernel constraints

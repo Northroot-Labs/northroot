@@ -1,33 +1,33 @@
 # Event Model
 
-**Note**: This document provides event structure and governance event definitions. For the protocol specification (invariants, identity computation, verification model), see [Core Specification](spec.md). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md).
+**Note**: This document describes the generic event structure. For the protocol specification (invariants, identity computation, verification model), see [Core Specification](spec.md). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md). For extension patterns, see [Extensions](extensions.md).
 
 ## 0. Purpose
 
 Northroot emits **Verifiable Events**: append-only, audit-grade evidence records
-that are canonicalized, hash-identifiable, and optionally attested.
+that are canonicalized, hash-identifiable, and optionally linked.
 
 Northroot is intentionally **neutral**:
 - It standardizes the **evidence format** and **verification rules**.
 - It does NOT mandate any specific policy language, enforcement engine, agent framework,
   orchestration model, or runtime semantics.
-- Domain-specific event types (authorization, execution, etc.) are defined by consuming applications.
+- Domain-specific event types (authorization, execution, checkpoint, attestation, etc.) are defined by consuming applications or extension layers.
 
-The trust kernel provides canonicalization and event identity primitives. Domain layers add semantic verification.
+The trust kernel provides canonicalization and event identity primitives. Domain layers add typed schemas and semantic verification.
 
 ---
 
 ## 1. Definitions
 
 ### 1.1 Event
-An immutable record in an append-only log.
+An immutable record in an append-only log, represented as a JSON object.
 
 ### 1.2 Verifiable Event
 An event with:
 - canonical JSON payload bytes (per canonicalization profile)
 - `event_id` derived from a digest of canonical bytes
-- explicit linkage to prior events (optional)
-- schema-defined structure
+- explicit linkage to prior events (optional via `prev_event_id`)
+- schema-defined structure (defined by domain layers)
 
 ### 1.3 Principal
 The responsible actor for an action. Can be a human, service, agent, or org.
@@ -65,7 +65,7 @@ without network calls.
 
 All events share a common envelope:
 
-- `event_type`: string (e.g., "checkpoint", "attestation", or domain-specific types)
+- `event_type`: string (e.g., "test", "checkpoint", "attestation", "authorization", etc.)
 - `event_version`: string (e.g., "1")
 - `event_id`: Digest
 - `occurred_at`: Timestamp
@@ -79,50 +79,9 @@ in transport-specific envelopes that are excluded from canonicalization and hash
 
 ---
 
-## 4. Governance event types
+## 4. Domain-specific events
 
-Northroot 1.0 defines two governance event types that are part of the trust kernel:
-
-### 4.1 CheckpointEvent
-
-A checkpoint event attests to a chain tip, providing continuity proofs.
-
-**Required fields**:
-- `chain_tip_event_id`: Digest (the latest event_id this checkpoint attests exists)
-- `chain_tip_height`: u64 (monotonic counter for the chain tip)
-
-**Optional fields**:
-- `merkle_root`: Digest (optional Merkle root over a window of events)
-- `window`: Object with `start_height` and `end_height` (required if `merkle_root` is present)
-
-**Purpose**: Enables efficient partial verification and detects deletion/reordering.
-
-**Schema location**: `crates/northroot-schemas/schemas/checkpoint.schema.json`
-
----
-
-### 4.2 AttestationEvent
-
-An attestation event attests to a checkpoint's `event_id` with cryptographic signatures.
-
-**Required fields**:
-- `checkpoint_event_id`: Digest (the checkpoint being attested)
-- `signatures`: Array of 1–16 signature objects
-
-**Signature object**:
-- `alg`: string (e.g., "ed25519")
-- `key_id`: string (identifier for the signing key)
-- `sig`: string (base64url-no-pad encoded signature)
-
-**Purpose**: Allows multiple trust anchors to co-sign the same checkpoint without altering canonical identity.
-
-**Schema location**: `crates/northroot-schemas/schemas/attestation.schema.json`
-
----
-
-## 5. Domain-specific events
-
-Domain-specific event types (authorization, execution, reconciliation, etc.) are **not** part of the core trust kernel. Applications should:
+Domain-specific event types (authorization, execution, checkpoint, attestation, reconciliation, etc.) are **not** part of the core trust kernel. Applications should:
 
 1. Define their own event schemas following the canonicalization rules
 2. Use `northroot-canonical` for canonicalization and event identity computation
@@ -135,11 +94,16 @@ Domain-specific event types (authorization, execution, reconciliation, etc.) are
 - `intent_digest`
 - Domain-specific bounds and constraints
 
-But these fields are application-defined, not core primitives.
+**Example**: A checkpoint event might include:
+- `chain_tip_event_id`: Digest
+- `chain_tip_height`: u64
+- Optional `merkle_root` and `window`
+
+But these fields are application-defined, not core primitives. See `wip/governance/` for example checkpoint/attestation schemas.
 
 ---
 
-## 6. Event identity computation
+## 5. Event identity computation
 
 Event identity is computed as:
 
@@ -157,7 +121,7 @@ See `northroot-canonical::compute_event_id` for the reference implementation.
 
 ---
 
-## 7. Verification
+## 6. Verification
 
 Verification of an event involves:
 
@@ -168,16 +132,15 @@ Verification of an event involves:
 5. Compute `event_id` using the domain separator and canonical bytes
 6. Compare computed `event_id` to stored `event_id`
 
-If they match, the event is valid. Domain-specific verification (policy checks, constraint validation, etc.) is external to this core process.
+If they match, the event is valid. Domain-specific verification (policy checks, constraint validation, signature verification, etc.) is external to this core process.
 
 ---
 
-## 8. Summary
+## 7. Summary
 
 The Northroot event model provides:
 - A common envelope structure
 - Deterministic event identity
-- Governance events (checkpoint, attestation)
 - Primitives for domain-specific event types
 
-Everything else—policy interpretation, enforcement, domain semantics—layers on top of the verified history.
+Everything else—policy interpretation, enforcement, domain semantics, typed schemas—layers on top of the verified history.

@@ -8,7 +8,7 @@ The `northroot-journal` crate provides a durable, tamper-evident storage format 
 
 - **Append-only framing**: Fixed header with magic bytes and version, followed by a stream of framed records
 - **Event storage**: Canonical event JSON objects stored as `EventJson` frames
-- **Verification hooks**: Integration with `northroot-core` for event identity validation
+- **Verification hooks**: Integration with `northroot-canonical` for event identity validation
 - **Resilience**: Strict and permissive read modes for handling truncation and corruption
 
 ## Usage
@@ -100,7 +100,6 @@ See the `tests/` directory for comprehensive examples:
 
 ## Dependencies
 
-- `northroot-core`: Event types and verification
 - `northroot-canonical`: Canonicalization and digest types
 - `serde_json`: JSON serialization
 - `thiserror`: Error types
