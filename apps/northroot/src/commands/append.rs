@@ -133,8 +133,23 @@ mod tests {
 
     #[test]
     fn test_append_event_to_new_journal() {
+        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
         std::env::set_current_dir(temp.path()).unwrap();
+
+        // Restore directory at end
+        struct DirGuard {
+            original: std::path::PathBuf,
+        }
+        impl Drop for DirGuard {
+            fn drop(&mut self) {
+                let _ = std::env::set_current_dir(&self.original);
+            }
+        }
+        let _guard = DirGuard {
+            original: original_dir,
+        };
+
         let journal_path = temp.path().join("test.nrj");
         let journal_str = journal_path.to_str().unwrap(); // Use absolute path
 
@@ -167,8 +182,23 @@ mod tests {
 
     #[test]
     fn test_append_multiple_events() {
+        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
         std::env::set_current_dir(temp.path()).unwrap();
+
+        // Restore directory at end
+        struct DirGuard {
+            original: std::path::PathBuf,
+        }
+        impl Drop for DirGuard {
+            fn drop(&mut self) {
+                let _ = std::env::set_current_dir(&self.original);
+            }
+        }
+        let _guard = DirGuard {
+            original: original_dir,
+        };
+
         let journal_path = temp.path().join("test.nrj");
         let journal_str = journal_path.to_str().unwrap(); // Use absolute path
 
@@ -219,8 +249,23 @@ mod tests {
 
     #[test]
     fn test_append_invalid_json() {
+        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
         std::env::set_current_dir(temp.path()).unwrap();
+
+        // Restore directory at end
+        struct DirGuard {
+            original: std::path::PathBuf,
+        }
+        impl Drop for DirGuard {
+            fn drop(&mut self) {
+                let _ = std::env::set_current_dir(&self.original);
+            }
+        }
+        let _guard = DirGuard {
+            original: original_dir,
+        };
+
         let journal_path = temp.path().join("test.nrj");
         let journal_str = journal_path.to_str().unwrap(); // Use absolute path
 
@@ -239,8 +284,23 @@ mod tests {
 
     #[test]
     fn test_append_strict_mode_with_mismatched_event_id() {
+        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
         std::env::set_current_dir(temp.path()).unwrap();
+
+        // Restore directory at end
+        struct DirGuard {
+            original: std::path::PathBuf,
+        }
+        impl Drop for DirGuard {
+            fn drop(&mut self) {
+                let _ = std::env::set_current_dir(&self.original);
+            }
+        }
+        let _guard = DirGuard {
+            original: original_dir,
+        };
+
         let journal_path = temp.path().join("test.nrj");
         let journal_str = journal_path.to_str().unwrap(); // Use absolute path
 
@@ -271,26 +331,9 @@ mod tests {
     fn test_path_traversal_canonicalized_for_new_files() {
         // Regression test: ensure path traversal sequences are eliminated
         // for new journal files, not just validated in parent
-        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
         let subdir = temp.path().join("subdir");
         fs::create_dir(&subdir).unwrap();
-        
-        // Change to subdir for the test
-        std::env::set_current_dir(&subdir).unwrap();
-        
-        // Use defer-like pattern: restore directory at end
-        struct DirGuard {
-            original: std::path::PathBuf,
-        }
-        impl Drop for DirGuard {
-            fn drop(&mut self) {
-                let _ = std::env::set_current_dir(&self.original);
-            }
-        }
-        let _guard = DirGuard {
-            original: original_dir.clone(),
-        };
 
         let event = json!({
             "event_type": "test",
@@ -300,14 +343,14 @@ mod tests {
             "canonical_profile_id": "northroot-canonical-v1"
         });
 
+        // Create event file in subdir
         let event_file = subdir.join("event.json");
         fs::write(&event_file, serde_json::to_string(&event).unwrap()).unwrap();
 
-        // Use path with traversal: should resolve to temp/test.nrj, not subdir/../test.nrj
-        // Since we're in subdir, use relative path for event_file
+        // Use path with traversal from subdir: should resolve to temp/test.nrj, not subdir/../test.nrj
         let result = run(
-            "../test.nrj".to_string(),
-            Some("event.json".to_string()),
+            subdir.join("../test.nrj").to_str().unwrap().to_string(),
+            Some(event_file.to_str().unwrap().to_string()),
             false,
             false,
         );
@@ -317,9 +360,8 @@ mod tests {
         let expected_path = temp.path().join("test.nrj");
         assert!(
             expected_path.exists(),
-            "Journal should be at canonicalized path: {} (current dir: {})",
-            expected_path.display(),
-            std::env::current_dir().unwrap().display()
+            "Journal should be at canonicalized path: {}",
+            expected_path.display()
         );
 
         // Verify no file with traversal in name exists in subdir

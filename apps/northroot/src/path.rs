@@ -111,12 +111,26 @@ mod tests {
 
     #[test]
     fn test_relative_path() {
+        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
         let journal_path = temp.path().join("test.nrj");
         fs::File::create(&journal_path).unwrap();
 
         // Change to temp directory
         std::env::set_current_dir(temp.path()).unwrap();
+
+        // Restore directory at end
+        struct DirGuard {
+            original: std::path::PathBuf,
+        }
+        impl Drop for DirGuard {
+            fn drop(&mut self) {
+                let _ = std::env::set_current_dir(&self.original);
+            }
+        }
+        let _guard = DirGuard {
+            original: original_dir,
+        };
 
         let result = validate_journal_path("test.nrj", false);
         assert!(result.is_ok());
@@ -125,12 +139,27 @@ mod tests {
 
     #[test]
     fn test_path_traversal_rejected() {
+        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
         let journal_path = temp.path().join("test.nrj");
         fs::File::create(&journal_path).unwrap();
 
         // Try to access parent directory
         std::env::set_current_dir(temp.path()).unwrap();
+
+        // Restore directory at end
+        struct DirGuard {
+            original: std::path::PathBuf,
+        }
+        impl Drop for DirGuard {
+            fn drop(&mut self) {
+                let _ = std::env::set_current_dir(&self.original);
+            }
+        }
+        let _guard = DirGuard {
+            original: original_dir,
+        };
+
         let result = validate_journal_path("../test.nrj", false);
         // This should either resolve to a different path or fail
         // The exact behavior depends on whether the parent has test.nrj
