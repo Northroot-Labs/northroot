@@ -1,3 +1,7 @@
+// Note: All tests in this file use file I/O via TempDir.
+// Miri's filesystem emulation is slow and doesn't provide additional UB detection
+// beyond normal test runs. Skip under Miri; core frame logic is tested in frame.rs.
+
 use northroot_journal::{EventJson, JournalReader, JournalWriter, ReadMode, WriteOptions};
 use serde_json::json;
 use std::fs;
@@ -26,6 +30,7 @@ fn make_test_event(id: &str) -> EventJson {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_write_read_round_trip() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -52,6 +57,7 @@ fn test_write_read_round_trip() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_append_to_existing() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -84,6 +90,7 @@ fn test_append_to_existing() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_sync_option() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -103,6 +110,7 @@ fn test_sync_option() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_permissive_mode_truncation() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -139,6 +147,7 @@ fn test_permissive_mode_truncation() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_invalid_header_rejected() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -150,6 +159,7 @@ fn test_invalid_header_rejected() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_empty_file_creates_header() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");

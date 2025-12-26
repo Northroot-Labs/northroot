@@ -1,3 +1,7 @@
+// Note: Tests here use file I/O and/or large allocations (16 MiB).
+// Skip under Miri: file I/O emulation is slow, large allocations are extremely slow.
+// Core frame logic tested in frame.rs provides Miri UB coverage.
+
 use northroot_journal::frame::MAX_PAYLOAD_SIZE;
 use northroot_journal::{EventJson, JournalReader, JournalWriter, ReadMode, WriteOptions};
 use serde_json::json;
@@ -28,6 +32,7 @@ fn make_test_event(id: &str) -> EventJson {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // 16 MiB allocation + file I/O
 fn test_payload_size_limit() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -49,6 +54,7 @@ fn test_payload_size_limit() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)] // 16 MiB allocation + file I/O: ~30-60min under Miri
 fn test_max_payload_size_allowed() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -71,6 +77,7 @@ fn test_max_payload_size_allowed() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_reserved_bytes_must_be_zero() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -100,6 +107,7 @@ fn test_reserved_bytes_must_be_zero() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_header_reserved_bytes_must_be_zero() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -128,6 +136,7 @@ fn test_header_reserved_bytes_must_be_zero() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_partial_write_handling() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
@@ -180,6 +189,7 @@ fn test_partial_write_handling() {
 }
 
 #[test]
+#[cfg_attr(miri, ignore)]
 fn test_unknown_frame_kind_skipped() {
     let temp_dir = TempDir::new().unwrap();
     let journal_path = temp_dir.path().join("test.nrj");
