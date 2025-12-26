@@ -59,6 +59,7 @@ This runs:
 3. Ensure all tests pass and QA checks succeed
 4. Open a pull request with a clear description
 5. Address review feedback
+6. For Tier B changes (high-risk paths), see [Signing Policy](docs/security/signing-policy.md) for human attestation requirements
 
 ## Project Principles
 

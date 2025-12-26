@@ -1,0 +1,162 @@
+name: Signature Policy Check
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches: [main]
+
+jobs:
+  check:
+    name: Verify Signature Policy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for tag verification
+
+      - name: Install Python dependencies
+        run: |
+          python3 -m pip install --user pyyaml
+
+      - name: Parse policy config
+        id: policy
+        run: |
+          python3 << 'EOF'
+          import yaml
+          import json
+          import sys
+          
+          with open('.github/signature-policy.yml', 'r') as f:
+              config = yaml.safe_load(f)
+          
+          tier_b_paths = config.get('tier_b_paths', [])
+          signers = config.get('allowed_human_signers', [])
+          
+          # Output paths as JSON array for reliable parsing
+          print(f"tier_b_paths={json.dumps(tier_b_paths)}")
+          
+          # Output signer fingerprints
+          fingerprints = [s['fingerprint'] for s in signers if 'fingerprint' in s]
+          print(f"allowed_fingerprints={' '.join(fingerprints)}")
+          EOF
+
+      - name: Get changed files
+        id: changed_files
+        run: |
+          # Get list of changed files in PR
+          if [ "${{ github.event.pull_request.base.sha }}" != "" ]; then
+            git diff --name-only "${{ github.event.pull_request.base.sha }}" "${{ github.event.pull_request.head.sha }}" > changed_files.txt
+          else
+            # Fallback: compare against base branch
+            git fetch origin "${{ github.event.pull_request.base.ref }}"
+            git diff --name-only "origin/${{ github.event.pull_request.base.ref }}" "${{ github.event.pull_request.head.sha }}" > changed_files.txt
+          fi
+          echo "Changed files:"
+          cat changed_files.txt
+
+      - name: Check if Tier B paths are touched
+        id: tier_check
+        run: |
+          # Check if any changed file matches Tier B patterns
+          TOUCHED_TIER_B=false
+          
+          # Parse JSON array of paths from policy output
+          python3 << 'EOF'
+          import json
+          import sys
+          import re
+          
+          # Read policy paths as JSON
+          tier_b_paths_json = "${{ steps.policy.outputs.tier_b_paths }}"
+          tier_b_paths = json.loads(tier_b_paths_json)
+          
+          # Read changed files
+          with open('changed_files.txt', 'r') as f:
+              changed_files = [line.strip() for line in f if line.strip()]
+          
+          # Check each changed file against each pattern
+          for file in changed_files:
+              for pattern in tier_b_paths:
+                  # Convert glob to regex
+                  # ** matches any path (including /)
+                  # * matches any chars except /
+                  regex = pattern.replace('**', '.*').replace('*', '[^/]*')
+                  if re.match(f'^{regex}$', file):
+                      print(f"Tier B path touched: {file} (matches {pattern})")
+                      sys.exit(0)  # Found match
+          
+          sys.exit(1)  # No match
+          EOF
+          
+          if [ $? -eq 0 ]; then
+            echo "tier_b_touched=true" >> $GITHUB_OUTPUT
+          else
+            echo "tier_b_touched=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Verify human attestation for Tier B
+        if: steps.tier_check.outputs.tier_b_touched == 'true'
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          TAG_NAME="approved/pr-${PR_NUMBER}@${HEAD_SHA}"
+          
+          echo "Checking for human attestation tag: $TAG_NAME"
+          
+          # Fetch all tags
+          git fetch origin --tags
+          
+          # Check if tag exists
+          if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "::error::Tier B changes require human attestation tag: $TAG_NAME"
+            echo "::error::See docs/security/signing-policy.md for instructions"
+            exit 1
+          fi
+          
+          # Verify tag signature and extract fingerprint
+          # For SSH signatures, git verify-tag --raw outputs the key fingerprint
+          VERIFY_OUTPUT=$(git verify-tag "$TAG_NAME" --raw 2>&1) || {
+            echo "::error::Tag signature verification failed for $TAG_NAME"
+            echo "$VERIFY_OUTPUT"
+            exit 1
+          }
+          
+          # Extract SSH key fingerprint from verify output
+          # Format: "key SHA256:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+          SIGNER_FP=$(echo "$VERIFY_OUTPUT" | grep -oE "SHA256:[A-Za-z0-9+/=]{43}" | head -1)
+          
+          if [ -z "$SIGNER_FP" ]; then
+            echo "::error::Could not extract signer fingerprint from tag signature"
+            echo "Verify output: $VERIFY_OUTPUT"
+            exit 1
+          fi
+          
+          echo "Found signer fingerprint: $SIGNER_FP"
+          
+          # Check if signer fingerprint is in allowlist
+          ALLOWED_FPS="${{ steps.policy.outputs.allowed_fingerprints }}"
+          FOUND=false
+          
+          for allowed_fp in $ALLOWED_FPS; do
+            if [ "$SIGNER_FP" = "$allowed_fp" ]; then
+              FOUND=true
+              break
+            fi
+          done
+          
+          if [ "$FOUND" = "false" ]; then
+            echo "::error::Signer fingerprint $SIGNER_FP is not in the allowed list"
+            echo "::error::Allowed fingerprints: $ALLOWED_FPS"
+            echo "::error::Update .github/signature-policy.yml to add this signer"
+            exit 1
+          fi
+          
+          echo "✓ Human attestation tag verified: $TAG_NAME"
+          echo "✓ Signer fingerprint authorized: $SIGNER_FP"
+
+      - name: Pass check (Tier A)
+        if: steps.tier_check.outputs.tier_b_touched == 'false'
+        run: |
+          echo "No Tier B paths touched - signature policy check passes"
+          echo "This PR can be merged with CI/GitHub signing"
+

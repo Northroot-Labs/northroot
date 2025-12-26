@@ -1,0 +1,12 @@
+# Tier B: High-risk paths requiring designated reviewer approval
+# Changes to these paths require CODEOWNERS approval AND a human-signed attestation tag
+# See docs/security/signing-policy.md for details
+
+schemas/**                                      @sebastianteacutter
+crates/northroot-canonical/**                   @sebastianteacutter
+crates/northroot-core/src/verification.rs       @sebastianteacutter
+crates/northroot-journal/src/verification.rs    @sebastianteacutter
+.github/workflows/**                            @sebastianteacutter
+Cargo.lock                                      @sebastianteacutter
+deny.toml                                       @sebastianteacutter
+

@@ -31,6 +31,7 @@ The threat model documents:
 
 ## Related Documentation
 
+- **[Git Signing & Merge Policy](signing-policy.md)** - Two-tier signing policy for audit-grade provenance
 - [Kubernetes Security](../operator/k8s-security.md) - K8s-specific security practices
 - [Secrets Management](../operator/secrets.md) - Secret handling
 - [Deployment Guide](../operator/deployment.md) - Production deployment security

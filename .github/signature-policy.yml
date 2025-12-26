@@ -1,0 +1,22 @@
+version: 1
+
+# Tier B paths: High-risk changes requiring human cryptographic attestation
+# These paths affect security, proof validity, invariants, or supply chain
+tier_b_paths:
+  - "schemas/**"
+  - "crates/northroot-canonical/**"
+  - "crates/northroot-core/src/verification.rs"
+  - "crates/northroot-journal/src/verification.rs"
+  - ".github/workflows/**"
+  - "Cargo.lock"
+  - "deny.toml"
+
+# Allowed human signers: SSH key fingerprints (SHA256 format)
+# To get your SSH key fingerprint:
+#   ssh-keygen -lf ~/.ssh/id_ed25519.pub
+# Or for existing key:
+#   ssh-keygen -lf <(ssh-add -L | grep "your-key-name")
+allowed_human_signers:
+  - name: "Sebastian"
+    fingerprint: "SHA256:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX" # TODO: replace with actual fingerprint
+
