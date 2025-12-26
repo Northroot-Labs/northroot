@@ -53,6 +53,8 @@ jobs:
           pattern: northroot-*
           merge-multiple: false
           path: binaries
+      - name: Ensure binaries directory exists
+        run: mkdir -p binaries
       - name: Generate SHA256 checksums
         run: |
           cd binaries
@@ -87,16 +89,24 @@ jobs:
         with:
           name: checksums
           path: checksums
+      - name: Ensure directories exist
+        run: |
+          mkdir -p binaries
+          mkdir -p checksums
+          mkdir -p release
       - name: Prepare release files
         run: |
-          mkdir -p release
           # Copy binaries with proper names
           for dir in binaries/*/; do
             binary_name=$(basename "$dir")
-            cp "$dir/northroot" "release/$binary_name"
+            if [ -f "$dir/northroot" ]; then
+              cp "$dir/northroot" "release/$binary_name"
+            fi
           done
           # Copy checksums
-          cp checksums/*.sha256 release/
+          if [ -d checksums ] && [ -n "$(ls -A checksums/*.sha256 2>/dev/null)" ]; then
+            cp checksums/*.sha256 release/
+          fi
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
