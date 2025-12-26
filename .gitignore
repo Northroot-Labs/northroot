@@ -88,6 +88,8 @@ notes/
 # release
 release/
 
+*.nrj
+
 
 
 
