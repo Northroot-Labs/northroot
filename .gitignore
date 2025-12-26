@@ -88,6 +88,12 @@ notes/
 # release
 release/
 
+# fixtures
+fixtures/
+fixtures/canonical/
+fixtures/event-id/
+fixtures/nrj/
 
+!fixtures/nrj/*.nrj
 
 
