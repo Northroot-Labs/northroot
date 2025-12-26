@@ -36,7 +36,8 @@ const EVENT_DOMAIN_SEPARATOR: &[u8] = b"northroot:event:v1\0";
 /// });
 ///
 /// let event_id = compute_event_id(&event, &canonicalizer)?;
-/// println!("Event ID: {}", event_id);
+/// // event_id is a Digest that can be serialized or compared
+/// assert_eq!(event_id.alg, northroot_canonical::DigestAlg::Sha256);
 /// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 ///
@@ -151,4 +152,3 @@ pub fn verify_event_id<T: Serialize>(
     let computed_id = compute_event_id(event, canonicalizer)?;
     Ok(claimed_id == &computed_id)
 }
-

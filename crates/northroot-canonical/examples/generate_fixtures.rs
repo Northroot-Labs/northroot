@@ -32,7 +32,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Generate canonical JSON fixtures
-fn generate_canonical_fixtures(canonicalizer: &Canonicalizer) -> Result<(), Box<dyn std::error::Error>> {
+fn generate_canonical_fixtures(
+    canonicalizer: &Canonicalizer,
+) -> Result<(), Box<dyn std::error::Error>> {
     let dir = Path::new(FIXTURES_DIR).join("canonical");
     fs::create_dir_all(&dir)?;
 
@@ -145,7 +147,9 @@ fn write_canonical_fixture(
 }
 
 /// Generate event ID fixtures
-fn generate_event_id_fixtures(canonicalizer: &Canonicalizer) -> Result<(), Box<dyn std::error::Error>> {
+fn generate_event_id_fixtures(
+    canonicalizer: &Canonicalizer,
+) -> Result<(), Box<dyn std::error::Error>> {
     let dir = Path::new(FIXTURES_DIR).join("event-id");
     fs::create_dir_all(&dir)?;
 
@@ -213,7 +217,12 @@ fn generate_event_id_fixtures(canonicalizer: &Canonicalizer) -> Result<(), Box<d
             "version": "1.0.0"
         }
     });
-    write_event_id_fixture(&dir, "event_with_optionals", &event_with_optionals, canonicalizer)?;
+    write_event_id_fixture(
+        &dir,
+        "event_with_optionals",
+        &event_with_optionals,
+        canonicalizer,
+    )?;
 
     println!("  ✓ Generated 4 event ID fixtures");
     Ok(())
@@ -259,14 +268,14 @@ fn generate_nrj_fixtures(canonicalizer: &Canonicalizer) -> Result<(), Box<dyn st
 
     // We need to use the journal writer, but it's in a different crate
     // For now, generate the header manually and document the format
-    
+
     // NRJ Header: "NRJ1" (4 bytes) + version (2 bytes) + flags (2 bytes) + reserved (8 bytes) = 16 bytes
     let header: [u8; 16] = [
-        b'N', b'R', b'J', b'1',  // Magic
-        0x00, 0x01,              // Version 1
-        0x00, 0x00,              // Flags (reserved)
-        0x00, 0x00, 0x00, 0x00,  // Reserved
-        0x00, 0x00, 0x00, 0x00,  // Reserved
+        b'N', b'R', b'J', b'1', // Magic
+        0x00, 0x01, // Version 1
+        0x00, 0x00, // Flags (reserved)
+        0x00, 0x00, 0x00, 0x00, // Reserved
+        0x00, 0x00, 0x00, 0x00, // Reserved
     ];
 
     // Create a sample event
@@ -290,8 +299,8 @@ fn generate_nrj_fixtures(canonicalizer: &Canonicalizer) -> Result<(), Box<dyn st
 
     // Create frame: kind (1 byte) + reserved (1 byte) + length (4 bytes) + payload
     let mut frame = Vec::new();
-    frame.push(0x01);  // FrameKind::EventJson
-    frame.push(0x00);  // Reserved
+    frame.push(0x01); // FrameKind::EventJson
+    frame.push(0x00); // Reserved
     frame.extend_from_slice(&event_len.to_le_bytes());
     frame.extend_from_slice(&event_bytes);
 
@@ -306,7 +315,10 @@ fn generate_nrj_fixtures(canonicalizer: &Canonicalizer) -> Result<(), Box<dyn st
     let mut readme = File::create(&readme_path)?;
     writeln!(readme, "# NRJ Journal Fixtures")?;
     writeln!(readme)?;
-    writeln!(readme, "These fixtures demonstrate the `.nrj` journal format for cross-language testing.")?;
+    writeln!(
+        readme,
+        "These fixtures demonstrate the `.nrj` journal format for cross-language testing."
+    )?;
     writeln!(readme)?;
     writeln!(readme, "## Format")?;
     writeln!(readme)?;
@@ -330,7 +342,10 @@ fn generate_nrj_fixtures(canonicalizer: &Canonicalizer) -> Result<(), Box<dyn st
     writeln!(readme)?;
     writeln!(readme, "To verify a journal:")?;
     writeln!(readme, "1. Read and validate the 16-byte header")?;
-    writeln!(readme, "2. For each frame: read kind, reserved, length, then payload")?;
+    writeln!(
+        readme,
+        "2. For each frame: read kind, reserved, length, then payload"
+    )?;
     writeln!(readme, "3. Parse payload as JSON")?;
     writeln!(readme, "4. Compute `event_id` from canonical bytes")?;
     writeln!(readme, "5. Verify computed ID matches claimed `event_id`")?;
@@ -338,9 +353,12 @@ fn generate_nrj_fixtures(canonicalizer: &Canonicalizer) -> Result<(), Box<dyn st
     // Also write the event JSON for reference
     let event_json_path = dir.join("single_event.json");
     let mut event_json_file = File::create(&event_json_path)?;
-    writeln!(event_json_file, "{}", serde_json::to_string_pretty(&complete_event)?)?;
+    writeln!(
+        event_json_file,
+        "{}",
+        serde_json::to_string_pretty(&complete_event)?
+    )?;
 
     println!("  ✓ Generated 1 NRJ fixture");
     Ok(())
 }
-

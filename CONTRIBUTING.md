@@ -31,6 +31,23 @@ For a consistent development environment, use the devcontainer. See [docs/operat
 
 ## Code Quality
 
+### Pre-Commit Hooks
+
+A pre-commit hook is installed automatically (in `.git/hooks/pre-commit`) that runs critical CI checks before allowing commits:
+
+- Format check (`cargo fmt --all --check`)
+- Clippy linting (`cargo clippy --all-targets --all-features -- -D warnings`)
+- All tests (`cargo test --all --all-features`)
+- Golden tests (`cargo test --package northroot-canonical --test golden`)
+- Documentation doctests (`cargo test --workspace --doc`)
+
+If any check fails, the commit is blocked. Fix the issues and try again.
+
+To bypass the hook (not recommended):
+```bash
+git commit --no-verify
+```
+
 ### Pre-Push Checks
 
 Always run the fast QA suite before pushing:

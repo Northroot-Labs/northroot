@@ -24,7 +24,7 @@ pub enum ReadMode {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use northroot_journal::{JournalReader, ReadMode};
 ///
 /// let mut reader = JournalReader::open("events.nrj", ReadMode::Strict)?;
@@ -59,7 +59,7 @@ impl JournalReader {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use northroot_journal::{JournalReader, ReadMode};
     ///
     /// let reader = JournalReader::open("events.nrj", ReadMode::Strict)?;
@@ -68,7 +68,7 @@ impl JournalReader {
     ///
     /// # Errors
     ///
-    /// Returns [`JournalError`](crate::JournalError) if:
+    /// Returns [`JournalError`] if:
     /// - File cannot be opened
     /// - File header is invalid
     /// - I/O error occurs
@@ -154,7 +154,7 @@ impl JournalReader {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use northroot_journal::{JournalReader, ReadMode};
     ///
     /// let mut reader = JournalReader::open("events.nrj", ReadMode::Strict)?;
@@ -166,7 +166,7 @@ impl JournalReader {
     ///
     /// # Errors
     ///
-    /// Returns [`JournalError`](crate::JournalError) if:
+    /// Returns [`JournalError`] if:
     /// - Frame structure is invalid
     /// - JSON parsing fails
     /// - Truncation detected (in strict mode)

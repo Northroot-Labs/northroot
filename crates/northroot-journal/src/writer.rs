@@ -35,7 +35,7 @@ impl Default for WriteOptions {
 ///
 /// # Example
 ///
-/// ```rust
+/// ```rust,no_run
 /// use northroot_canonical::{compute_event_id, Canonicalizer, ProfileId};
 /// use northroot_journal::{JournalWriter, WriteOptions};
 /// use serde_json::json;
@@ -79,7 +79,7 @@ impl JournalWriter {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use northroot_journal::{JournalWriter, WriteOptions};
     ///
     /// let options = WriteOptions {
@@ -93,7 +93,7 @@ impl JournalWriter {
     ///
     /// # Errors
     ///
-    /// Returns [`JournalError`](crate::JournalError) if:
+    /// Returns [`JournalError`] if:
     /// - File cannot be opened/created
     /// - Existing file is not a valid journal
     /// - File is not empty but too small to be valid
@@ -157,7 +157,7 @@ impl JournalWriter {
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```rust,no_run
     /// use northroot_canonical::{compute_event_id, Canonicalizer, ProfileId};
     /// use northroot_journal::{JournalWriter, WriteOptions};
     /// use serde_json::json;
@@ -176,7 +176,7 @@ impl JournalWriter {
     ///
     /// # Errors
     ///
-    /// Returns [`JournalError`](crate::JournalError) if:
+    /// Returns [`JournalError`] if:
     /// - Header not written
     /// - JSON serialization fails
     /// - I/O error occurs
