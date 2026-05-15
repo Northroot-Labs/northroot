@@ -28,15 +28,20 @@
 //! let event_id = compute_event_id(&event, &canonicalizer)?;
 //! event["event_id"] = serde_json::to_value(&event_id)?;
 //!
-//! let mut writer = JournalWriter::open("events.nrj", WriteOptions::default())?;
+//! let journal_path = std::env::temp_dir()
+//!     .join(format!("northroot-journal-quick-start-{}.nrj", std::process::id()));
+//! let _ = std::fs::remove_file(&journal_path);
+//!
+//! let mut writer = JournalWriter::open(&journal_path, WriteOptions::default())?;
 //! writer.append_event(&event)?;
 //! writer.finish()?;
 //!
 //! // Read events
-//! let mut reader = JournalReader::open("events.nrj", ReadMode::Strict)?;
+//! let mut reader = JournalReader::open(&journal_path, ReadMode::Strict)?;
 //! while let Some(read_event) = reader.read_event()? {
 //!     println!("Read event: {}", read_event["event_id"]);
 //! }
+//! let _ = std::fs::remove_file(&journal_path);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!

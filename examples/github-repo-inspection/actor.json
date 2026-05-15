@@ -1,0 +1,13 @@
+{
+  "schema_version": "northroot.actor.v0",
+  "id": "actor:northroot:agent:repo_inspector",
+  "kind": "agent",
+  "display_name": "Repo Inspector Agent",
+  "authority_scope": [
+    "github.repository.read",
+    "filesystem.read"
+  ],
+  "metadata": {
+    "owner": "actor:northroot:human:founder"
+  }
+}

@@ -2,7 +2,7 @@
 
 use crate::path;
 use northroot_canonical::{Canonicalizer, ProfileId};
-use northroot_journal::{JournalReader, ReadMode, verify_event_id};
+use northroot_journal::{verify_event_id, JournalReader, ReadMode};
 use serde_json::json;
 
 pub fn run(
@@ -64,7 +64,11 @@ pub fn run(
             }
             Ok(false) => {
                 all_ok = false;
-                results.push((event_id_str.clone(), false, Some("event_id mismatch".to_string())));
+                results.push((
+                    event_id_str.clone(),
+                    false,
+                    Some("event_id mismatch".to_string()),
+                ));
             }
             Err(e) => {
                 all_ok = false;
@@ -91,7 +95,12 @@ pub fn run(
         println!("{}", "-".repeat(80));
         for (id, valid, error_opt) in results {
             let error_str = error_opt.as_deref().unwrap_or("");
-            println!("{:<44} {:<10} {}", truncate(&id, 44), if valid { "✓" } else { "✗" }, error_str);
+            println!(
+                "{:<44} {:<10} {}",
+                truncate(&id, 44),
+                if valid { "✓" } else { "✗" },
+                error_str
+            );
         }
     }
 

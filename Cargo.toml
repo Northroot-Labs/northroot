@@ -1,4 +1,19 @@
 [workspace]
-members = ["crates/northroot-canonical", "crates/northroot-journal"]
+members = [
+    "crates/northroot-canonical",
+    "crates/northroot-journal",
+    "crates/northroot-core",
+    "crates/northroot-actor",
+    "crates/northroot-obligation",
+    "crates/northroot-policy",
+    "crates/northroot-event",
+    "crates/northroot-receipt",
+    "crates/northroot-cost",
+    "apps/northroot",
+]
 resolver = "2"
 
+[workspace.package]
+edition = "2021"
+license = "MIT OR Apache-2.0"
+authors = ["Northroot Contributors"]

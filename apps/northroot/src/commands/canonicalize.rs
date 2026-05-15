@@ -19,13 +19,13 @@ pub fn run(input: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
         buffer
     };
 
-    let value: Value = serde_json::from_str(&json_str)
-        .map_err(|e| format!("Invalid JSON: {}", e))?;
+    let value: Value =
+        serde_json::from_str(&json_str).map_err(|e| format!("Invalid JSON: {}", e))?;
 
-    let result = canonicalizer.canonicalize(&value)
+    let result = canonicalizer
+        .canonicalize(&value)
         .map_err(|e| format!("Canonicalization failed: {}", e))?;
 
     println!("{}", String::from_utf8_lossy(&result.bytes));
     Ok(())
 }
-

@@ -19,8 +19,8 @@ pub fn run(input: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
         buffer
     };
 
-    let value: Value = serde_json::from_str(&json_str)
-        .map_err(|e| format!("Invalid JSON: {}", e))?;
+    let value: Value =
+        serde_json::from_str(&json_str).map_err(|e| format!("Invalid JSON: {}", e))?;
 
     let event_id = compute_event_id(&value, &canonicalizer)
         .map_err(|e| format!("Event ID computation failed: {}", e))?;
@@ -28,4 +28,3 @@ pub fn run(input: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     println!("{}", event_id.b64);
     Ok(())
 }
-

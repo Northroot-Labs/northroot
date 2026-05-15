@@ -1,0 +1,44 @@
+{
+  "schema_version": "northroot.receipt.v0",
+  "receipt_id": "rcpt_repo_inspection",
+  "obligation_id": "obl_repo_inspection",
+  "claim": "repository_inspected",
+  "actor_id": "actor:northroot:agent:repo_inspector",
+  "evidence": [
+    {
+      "kind": "actor",
+      "uri": "file://actor.json",
+      "hash": "sha256:a23b9d5f9a8668edae0f078a00bfcfd6bf3e39bae466a4bb7734654fa1e5fd37"
+    },
+    {
+      "kind": "obligation",
+      "uri": "file://obligation.json",
+      "hash": "sha256:c5e386c750a86762ef020e5b2c31e4d661e3c39e2a591e8a25fcb83ae0612687"
+    },
+    {
+      "kind": "policy",
+      "uri": "file://policy.json",
+      "hash": "sha256:cccc38e0797d82de8d0a2613cb335f399306f620fc766cd236caaaed6396f295"
+    },
+    {
+      "kind": "event_log",
+      "uri": "file://events.jsonl",
+      "hash": "sha256:0677fdd98cd9b62d5afb7777886d50ea1f14ff775e0a2c439e3453382362baec"
+    }
+  ],
+  "result": "passed",
+  "created_at": "2026-05-15T12:02:30Z",
+  "cost": {
+    "provider": "local",
+    "product": "manual-demo",
+    "unit_kind": "usd",
+    "units": "0",
+    "estimated_usd": "0.00",
+    "pricing_snapshot": "pricecat_demo_2026_05_15",
+    "attributed_to": {
+      "obligation": "obl_repo_inspection",
+      "actor": "actor:northroot:agent:repo_inspector",
+      "project": "northroot"
+    }
+  }
+}

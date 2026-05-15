@@ -1,0 +1,21 @@
+{
+  "schema_version": "northroot.policy.v0",
+  "id": "policy:github-readonly-inspection",
+  "applies_to": {
+    "actor": "actor:northroot:agent:repo_inspector"
+  },
+  "rules": [
+    {
+      "allow": "github.repository.read"
+    },
+    {
+      "allow": "filesystem.read"
+    },
+    {
+      "deny": "github.repository.write"
+    },
+    {
+      "deny": "github.pull_request.merge"
+    }
+  ]
+}

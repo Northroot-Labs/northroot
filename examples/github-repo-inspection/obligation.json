@@ -1,0 +1,33 @@
+{
+  "schema_version": "northroot.obligation.v0",
+  "id": "obl_repo_inspection",
+  "title": "Inspect Northroot repository required files",
+  "owner": "actor:northroot:human:founder",
+  "assignee": "actor:northroot:agent:repo_inspector",
+  "status": "completed",
+  "objective": {
+    "kind": "inspect_repository",
+    "target": "github:Northroot-Labs/northroot",
+    "required_files": [
+      "README.md",
+      "Cargo.toml",
+      "LICENSE-APACHE",
+      "LICENSE-MIT"
+    ]
+  },
+  "constraints": {
+    "allowed_actions": [
+      "repo.read",
+      "filesystem.read"
+    ],
+    "requires_human_approval_for_mutation": true,
+    "max_cost_usd": "0.00"
+  },
+  "verification": {
+    "required_receipts": [
+      "repository_inspected",
+      "event_log_hash_recorded",
+      "cost_attributed"
+    ]
+  }
+}

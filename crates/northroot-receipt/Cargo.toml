@@ -1,0 +1,12 @@
+[package]
+name = "northroot-receipt"
+version = "0.1.0"
+edition = "2021"
+authors.workspace = true
+license.workspace = true
+description = "Receipt primitive for Northroot claim-plus-evidence proofs"
+
+[dependencies]
+northroot-core = { path = "../northroot-core" }
+northroot-cost = { path = "../northroot-cost" }
+serde = { version = "1.0", features = ["derive"] }

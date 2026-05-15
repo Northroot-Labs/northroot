@@ -6,7 +6,7 @@ mod commands;
 mod output;
 mod path;
 
-use commands::{append, canonicalize, event_id, list, verify};
+use commands::{append, canonicalize, event_id, list, primitives, verify as journal_verify};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
@@ -18,6 +18,16 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Validate a Northroot JSON primitive
+    Validate {
+        /// Input JSON file
+        input: String,
+    },
+    /// Hash a JSON, JSONL, raw file, or directory with Northroot rules
+    Hash {
+        /// Input path
+        input: String,
+    },
     /// Show canonical bytes for input JSON
     Canonicalize {
         /// Input JSON file (or stdin if not provided)
@@ -44,8 +54,8 @@ enum Commands {
     },
     /// Verify all event IDs in a journal
     Verify {
-        /// Path to journal file
-        journal: String,
+        /// Path to receipt JSON or journal file
+        input: String,
         /// Exit with error code if any verification fails
         #[arg(long)]
         strict: bool,
@@ -58,6 +68,9 @@ enum Commands {
         /// Reject journals larger than SIZE bytes (default: unlimited)
         #[arg(long)]
         max_size: Option<u64>,
+        /// Base directory for file:// evidence in receipts
+        #[arg(long)]
+        base_dir: Option<String>,
     },
     /// Append an event to a journal
     Append {
@@ -78,6 +91,8 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
+        Commands::Validate { input } => primitives::validate(input),
+        Commands::Hash { input } => primitives::hash(input),
         Commands::Canonicalize { input } => canonicalize::run(input),
         Commands::EventId { input } => event_id::run(input),
         Commands::List {
@@ -87,12 +102,19 @@ fn main() {
             max_size,
         } => list::run(journal, json, max_events, max_size),
         Commands::Verify {
-            journal,
+            input,
             strict,
             json,
             max_events,
             max_size,
-        } => verify::run(journal, strict, json, max_events, max_size),
+            base_dir,
+        } => {
+            if input.ends_with(".nrj") {
+                journal_verify::run(input, strict, json, max_events, max_size)
+            } else {
+                primitives::verify_receipt(input, base_dir, json)
+            }
+        }
         Commands::Append {
             journal,
             input,
@@ -106,4 +128,3 @@ fn main() {
         std::process::exit(1);
     }
 }
-

@@ -19,12 +19,12 @@ pub fn run(
     } else {
         // For new files, validate the parent directory exists and path is safe
         let path = std::path::Path::new(&journal);
-        
+
         // Extract filename - must exist and be non-empty
         let filename = path
             .file_name()
             .ok_or_else(|| format!("Invalid journal path: no filename: {}", journal))?;
-        
+
         // Get parent directory (empty string means current dir)
         let parent = path.parent().unwrap_or(std::path::Path::new(""));
         let parent = if parent.as_os_str().is_empty() {
@@ -32,7 +32,7 @@ pub fn run(
         } else {
             parent
         };
-        
+
         // Canonicalize parent directory to resolve all traversal sequences
         let parent_canonical = if parent.is_absolute() {
             parent
@@ -44,7 +44,7 @@ pub fn run(
                 .canonicalize()
                 .map_err(|e| format!("Invalid journal path: {}: {}", journal, e))?
         };
-        
+
         // Construct final path from canonicalized parent + filename
         // This ensures traversal sequences in the original path are eliminated
         parent_canonical.join(filename)
@@ -60,8 +60,8 @@ pub fn run(
         buffer
     };
 
-    let mut event: Value = serde_json::from_str(&json_str)
-        .map_err(|e| format!("Invalid JSON: {}", e))?;
+    let mut event: Value =
+        serde_json::from_str(&json_str).map_err(|e| format!("Invalid JSON: {}", e))?;
 
     // Initialize canonicalizer
     let profile = ProfileId::parse("northroot-canonical-v1")
@@ -74,10 +74,10 @@ pub fn run(
             // Compute event_id and compare
             let computed_id = compute_event_id(&event, &canonicalizer)
                 .map_err(|e| format!("Event ID computation failed: {}", e))?;
-            
+
             let existing_id_str = serde_json::to_string(existing_id)?;
             let computed_id_str = serde_json::to_string(&computed_id)?;
-            
+
             if existing_id_str != computed_id_str {
                 return Err(format!(
                     "Event ID mismatch: computed {} but event has {}",
@@ -174,7 +174,8 @@ mod tests {
         assert!(result.is_ok(), "Append failed: {:?}", result.err());
 
         // Verify event was appended
-        let mut reader = JournalReader::open(&journal_path, northroot_journal::ReadMode::Strict).unwrap();
+        let mut reader =
+            JournalReader::open(&journal_path, northroot_journal::ReadMode::Strict).unwrap();
         let read_event = reader.read_event().unwrap().unwrap();
         assert_eq!(read_event["event_type"], "test");
         assert!(read_event.get("event_id").is_some());
@@ -226,7 +227,8 @@ mod tests {
             Some(event_file1.to_str().unwrap().to_string()),
             false,
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         // Append second event
         let event_file2 = temp.path().join("event2.json");
@@ -236,10 +238,12 @@ mod tests {
             Some(event_file2.to_str().unwrap().to_string()),
             false,
             false,
-        ).unwrap();
+        )
+        .unwrap();
 
         // Verify both events
-        let mut reader = JournalReader::open(&journal_path, northroot_journal::ReadMode::Strict).unwrap();
+        let mut reader =
+            JournalReader::open(&journal_path, northroot_journal::ReadMode::Strict).unwrap();
         let read_event1 = reader.read_event().unwrap().unwrap();
         assert_eq!(read_event1["event_type"], "test1");
 
@@ -324,7 +328,10 @@ mod tests {
             false,
         );
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Event ID mismatch"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Event ID mismatch"));
     }
 
     #[test]
@@ -374,4 +381,3 @@ mod tests {
         );
     }
 }
-

@@ -1,0 +1,13 @@
+[package]
+name = "northroot-event"
+version = "0.1.0"
+edition = "2021"
+authors.workspace = true
+license.workspace = true
+description = "Execution event primitive for Northroot JSONL logs"
+
+[dependencies]
+northroot-canonical = { path = "../northroot-canonical" }
+northroot-core = { path = "../northroot-core" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"

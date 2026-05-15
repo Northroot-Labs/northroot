@@ -1,80 +1,82 @@
-# Northroot Kernel
+# Northroot
 
-Trust kernel for deterministic, audit-grade evidence recording.
+Rust substrate for accountable agentic work.
 
 ## What is Northroot?
 
-Northroot provides a minimal trust kernel for recording verifiable events. It standardizes canonicalization, event identity computation, and portable evidence storage—without prescribing domain semantics or policy logic.
+Northroot provides open primitives for obligations, policies, execution events,
+receipts, actors, and cost attribution. It standardizes canonical hashing and
+evidence verification without importing client-specific workflows or domain
+semantics.
 
 **Core capabilities:**
-- Deterministic canonicalization (RFC 8785 + Northroot rules)
-- Content-derived event identity
-- Portable journal format (.nrj)
-- Offline verification
+- JSON primitives for actors, obligations, policies, events, receipts, and cost
+- JSONL execution logs for append-oriented evidence
+- Deterministic canonical hashes
+- Optional `.nrj` export container when framed offline audit is justified
 
 **What Northroot does NOT do:**
-- Make decisions or optimize outcomes
-- Execute actions or orchestrate workflows
-- Prescribe domain event schemas
-- Evaluate policy or enforce constraints
+- Store customer data
+- Encode agriculture or client-specific nouns
+- Provide hosted orchestration in the first build phase
+- Replace ClearlyOps service/client workflows
 
 See [GOVERNANCE.md](GOVERNANCE.md) for the project's foundational principles.
 
-## Kernel Hardening Charter (v1)
+## Clean Reset Charter (v0)
 
-This batch freezes the kernel scope and success criteria before any cross-repo expansion.
+This repo is the single public Northroot workspace. Separate crates keep the
+substrate modular without spreading primitives across many repos.
 
 ### Goals
-- Keep core primitives deterministic and offline-verifiable.
-- Standardize identity semantics for verifiable evidence.
-- Keep `.nrj` as a portable append-only audit container.
-- Publish minimal contracts that downstream repos can adopt without pulling orchestration into core.
+- Keep public primitives generic and reusable outside ClearlyOps.
+- Use common formats first: JSON, JSONL, canonical SHA-256 hashes.
+- Keep `.nrj` optional unless its framing and offline verification properties
+  are necessary and tested.
+- Ship examples that prove each primitive with inspectable evidence.
 
 ### Non-goals
-- No orchestration logic, workflow execution, or policy engines.
-- No model, runtime, or budget decisioning logic.
-- No domain-specific business semantics in core crates.
-
-### Batch acceptance checkpoints
-- `charter_frozen`: goals/non-goals and boundaries are explicit.
-- `id_vocab_locked`: `record_id`, `content_id`, `event_id` usage is documented and schema-backed.
-- `event_contract_v1`: minimal verifiable economic event contract is versioned.
-- `journal_contract_v1`: minimal `.nrj` contract is explicit and testable.
-- `golden_gates_green`: deterministic gates (fmt/clippy/golden/schema) are green.
-- `agent_role_partition_defined`: eval-bootstrap and implementer responsibilities are separated.
-
-### Contract-spine authority references
-- `repos/docs/internal/workspace/CONTRACT_SPINE_DECISION_REGISTER_V1.md`
-- `repos/docs/internal/workspace/CONTRACT_SPINE_CI_GATE_ALIGNMENT_V1.md`
-- `repos/docs/internal/product/NORTHROOT_KERNEL_AND_ID_SEMANTICS_DIRECTION_NOTE.md`
+- No hosted API, inbox automation, GitHub mutation workflow, MCP service, or
+  agent orchestration in phase one.
+- No client-specific compliance models in this repo.
+- No mandatory custom binary format for first-use adoption.
 
 ## Quick Start
 
 ### Building
 
 ```bash
-# Build kernel crates
+# Build all crates
 cargo build --workspace
 
-# Build CLI application
-cd apps/northroot && cargo build --release
+# Validate the first proof example
+cargo run -p northroot -- validate examples/github-repo-inspection/obligation.json
+cargo run -p northroot -- hash examples/github-repo-inspection/events.jsonl
+cargo run -p northroot -- verify examples/github-repo-inspection/receipt.json
 ```
-
-The CLI binary will be at `apps/northroot/target/release/northroot`.
 
 ### Using the CLI
 
 ```bash
+# Validate common primitives
+northroot validate examples/github-repo-inspection/actor.json
+northroot validate examples/github-repo-inspection/obligation.json
+northroot validate examples/github-repo-inspection/policy.json
+
+# Hash JSON or JSONL evidence
+northroot hash examples/github-repo-inspection/events.jsonl
+
+# Verify receipt evidence hashes
+northroot verify examples/github-repo-inspection/receipt.json
+
 # Canonicalize JSON input
 echo '{"b":2,"a":1}' | northroot canonicalize
 
-# Compute event_id for JSON
+# Compute event_id for JSON when needed
 echo '{"event_type":"test","event_version":"1",...}' | northroot event-id
 
-# List events in a journal
+# Optional .nrj journal support
 northroot list events.nrj
-
-# Verify all events in a journal
 northroot verify events.nrj
 ```
 
@@ -101,14 +103,22 @@ northroot verify events.nrj
 ```
 northroot/
 ├── crates/
-│   ├── northroot-canonical/  # Canonicalization + event_id
-│   └── northroot-journal/    # .nrj container format
+│   ├── northroot-core/        # Shared canonical hash + validation helpers
+│   ├── northroot-actor/       # Actor primitive
+│   ├── northroot-obligation/  # Obligation primitive
+│   ├── northroot-policy/      # Policy primitive
+│   ├── northroot-event/       # Execution event primitive
+│   ├── northroot-receipt/     # Receipt primitive
+│   ├── northroot-cost/        # Cost attribution primitive
+│   ├── northroot-canonical/   # Canonicalization + event_id
+│   └── northroot-journal/     # Optional .nrj container format
 ├── apps/
 │   └── northroot/            # CLI application
-├── fixtures/                  # Golden test vectors
-├── schemas/
-│   └── canonical/             # Canonical primitive schemas
-├── wip/                       # Non-core code (governance, agent-domain, store)
+├── examples/
+│   └── github-repo-inspection/
+├── fixtures/                 # Golden test vectors
+├── schemas/                  # Future schema publishing surface
+├── wip/                      # Historical incubation code
 ├── docs/                      # Documentation
 └── GOVERNANCE.md              # Project constitution
 ```

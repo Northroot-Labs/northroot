@@ -1,0 +1,27 @@
+{
+  "bundle": "github-repo-inspection",
+  "schema_version": "northroot.example_manifest.v0",
+  "description": "Minimal repo inspection obligation, policy, event log, and receipt.",
+  "files": [
+    {
+      "path": "actor.json",
+      "hash": "sha256:a23b9d5f9a8668edae0f078a00bfcfd6bf3e39bae466a4bb7734654fa1e5fd37"
+    },
+    {
+      "path": "obligation.json",
+      "hash": "sha256:c5e386c750a86762ef020e5b2c31e4d661e3c39e2a591e8a25fcb83ae0612687"
+    },
+    {
+      "path": "policy.json",
+      "hash": "sha256:cccc38e0797d82de8d0a2613cb335f399306f620fc766cd236caaaed6396f295"
+    },
+    {
+      "path": "events.jsonl",
+      "hash": "sha256:0677fdd98cd9b62d5afb7777886d50ea1f14ff775e0a2c439e3453382362baec"
+    },
+    {
+      "path": "receipt.json",
+      "hash": "sha256:9128e82b6f1cc1dea68d1d22016328ea1a7f6677f81ea89b043dfd1fa223c6f9"
+    }
+  ]
+}
