@@ -35,19 +35,28 @@ For a consistent development environment, use the devcontainer. See [.devcontain
 
 ### Codex Environment
 
-Repo-owned Codex setup lives in `.codex/environments/environment.toml` and calls `scripts/codex_setup.sh`. Use `scripts/codex_verify.sh` after setup or before handing off a branch to run the workspace checks, golden tests, doctests, and the out-of-workspace CLI tests.
+Repo-owned Codex setup lives in `.codex/environments/environment.toml` and calls `scripts/codex_setup.sh`. Use `scripts/codex_verify.sh` after setup or before handing off a branch to run the workspace checks, golden tests, doctests, schema validation, and the out-of-workspace CLI tests.
 
 ## Code Quality
 
 ### Pre-Commit Hooks
 
-A pre-commit hook is installed automatically (in `.git/hooks/pre-commit`) that runs critical CI checks before allowing commits:
+A pre-commit hook can be installed with:
+
+```bash
+bash scripts/install_git_hooks.sh
+```
+
+`scripts/codex_setup.sh` installs it by default. Set `NORTHROOT_CODEX_INSTALL_HOOKS=0` to skip hook installation in a disposable environment.
+
+The hook runs critical CI checks before allowing commits:
 
 - Format check (`cargo fmt --all --check`)
 - Clippy linting (`cargo clippy --all-targets --all-features -- -D warnings`)
 - All tests (`cargo test --all --all-features`)
 - Golden tests (`cargo test --package northroot-canonical --test golden`)
 - Documentation doctests (`cargo test --workspace --doc`)
+- Schema validation (`python3 scripts/validate_schemas.py`)
 
 If any check fails, the commit is blocked. Fix the issues and try again.
 
@@ -69,6 +78,9 @@ This runs:
 - Linting (`just lint`)
 - Tests (`just test`)
 - Golden tests (`just golden`)
+- Schema validation (`just schema`)
+
+Use `just codex-verify` for the full Codex handoff suite, including doctests and CLI tests.
 
 ### Coding Standards
 

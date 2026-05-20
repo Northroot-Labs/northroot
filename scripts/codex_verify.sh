@@ -23,6 +23,7 @@ run cargo test --all --all-features
 run cargo test --package northroot-canonical --test golden
 run cargo test --workspace --doc
 run cargo test --manifest-path apps/northroot/Cargo.toml
+run python3 scripts/validate_schemas.py
 
 git status --porcelain=v1 > "$after_status"
 if ! diff -u "$before_status" "$after_status"; then

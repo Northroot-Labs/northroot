@@ -103,6 +103,17 @@ ensure_optional_cargo_tools() {
   done
 }
 
+install_git_hooks() {
+  if [ "${NORTHROOT_CODEX_INSTALL_HOOKS:-1}" != "1" ]; then
+    return
+  fi
+
+  if [ -f scripts/install_git_hooks.sh ]; then
+    log "installing repo git hooks"
+    bash scripts/install_git_hooks.sh
+  fi
+}
+
 fetch_dependencies() {
   log "fetching workspace dependencies"
   cargo fetch --locked
@@ -139,5 +150,6 @@ ensure_baseline_packages
 ensure_rust_toolchain
 ensure_just
 ensure_optional_cargo_tools
+install_git_hooks
 fetch_dependencies
 report_environment
