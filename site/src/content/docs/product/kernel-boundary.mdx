@@ -1,0 +1,36 @@
+---
+title: Kernel Boundary
+description: What Northroot is responsible for, and what remains outside the trust kernel.
+section: product
+updated: 2026-05-20
+sourceRefs:
+  - repo: northroot
+    path: README.md
+  - repo: northroot
+    path: CORE_INVARIANTS.md
+---
+
+Northroot is a trust kernel for portable evidence.
+
+It owns deterministic primitives:
+
+- canonical JSON
+- append-only records
+- content-derived event identity and hashes
+- receipts bound to evidence
+- offline verification
+- optional journal framing
+
+It does not execute work, decide outcomes, store customer data, provide a live
+operating console, or encode client-specific workflow nouns.
+
+## Implementation Notes
+
+The kernel stays useful because it refuses to become the runtime. Domain
+systems, reconciliation layers, operating consoles, and agent frameworks can
+build around it, but the core remains small enough to inspect.
+
+## Operational Lessons
+
+When a concern requires interpretation, policy evaluation, or action, it belongs
+outside the kernel boundary.

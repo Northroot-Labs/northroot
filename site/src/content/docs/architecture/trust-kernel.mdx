@@ -1,0 +1,37 @@
+---
+title: Trust Kernel Architecture
+description: How records, receipts, journal storage, and offline verification compose.
+section: architecture
+updated: 2026-05-20
+sourceRefs:
+  - repo: northroot
+    path: docs/developer/architecture.md
+  - repo: northroot
+    path: docs/reference/spec.md
+---
+
+Northroot is organized as a minimal trust kernel. The kernel does not need one
+universal runtime to be useful.
+
+## Architecture
+
+```text
+external runtime
+  -> record JSON / JSONL
+  -> canonical bytes
+  -> hashes and event identity
+  -> receipt bound to evidence
+  -> optional append-only journal
+  -> offline verification without a service dependency
+```
+
+## Implementation Notes
+
+Domain-specific event types, authorization, reconciliation, execution lifecycle,
+and semantic verification are external layers. They may consume the kernel, but
+they do not become the kernel.
+
+## Operational Lessons
+
+Different runtimes can share evidence when the underlying records use stable
+hashes, explicit receipts, and replayable journals.

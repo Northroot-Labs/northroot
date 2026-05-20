@@ -1,0 +1,55 @@
+---
+title: GitHub Repo Inspection Bundle
+description: A portable-evidence bundle for read-only repo inspection, policy-constrained events, and offline receipt verification.
+section: examples
+updated: 2026-05-20
+sourceRefs:
+  - repo: northroot
+    path: examples/github-repo-inspection/
+---
+
+The GitHub repo inspection example is the first concrete portable-evidence
+bundle for Northroot primitives.
+
+It models a read-only repository inspection where an agent checks required files
+and leaves behind structured evidence. The example uses ordinary files first:
+JSON for actor, obligation, policy, receipt, and manifest objects; JSONL for the
+append-only event log.
+
+## Evidence Bundle
+
+| File | Role |
+| --- | --- |
+| `actor.json` | Declares the repo inspector agent and its authority scope. |
+| `obligation.json` | Defines the inspection objective, constraints, and required receipts. |
+| `policy.json` | Allows read access and denies write or merge actions. |
+| `events.jsonl` | Records accepted obligation, tool invocation, and receipt generation events. |
+| `receipt.json` | Binds the evidence hashes to a passed inspection claim. |
+| `manifest.json` | Lists the bundle files and their canonical hashes. |
+
+```bash
+cargo run -p northroot -- validate examples/github-repo-inspection/obligation.json
+cargo run -p northroot -- hash examples/github-repo-inspection/events.jsonl
+cargo run -p northroot -- verify examples/github-repo-inspection/receipt.json \
+  --base-dir examples/github-repo-inspection \
+  --json
+```
+
+## What The Example Proves
+
+- A completed work item can be described without a hosted workflow engine.
+- Mutation remains explicitly denied by policy.
+- Cost attribution can be recorded even when the cost is zero.
+- Verification can happen from local evidence files with no live service.
+- The JSONL records can be replayed into a temporary `.nrj` journal and verified.
+
+## Implementation Notes
+
+Runnable fixtures stay in `examples/github-repo-inspection/`. Generated `.nrj`
+journals remain temporary derived artifacts; the checked-in bundle stays readable
+as ordinary text.
+
+## Operational Lessons
+
+A useful example should leave behind evidence that can be inspected after it
+leaves the runtime that produced it.

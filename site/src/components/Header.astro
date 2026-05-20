@@ -1,0 +1,18 @@
+---
+import EarthMark from "./EarthMark.astro";
+import { navSections } from "../lib/sections";
+
+const navItems = navSections.map((section) => [section.label, `/${section.id}/`]);
+---
+
+<header class="site-header">
+  <div class="header-row">
+    <a class="brand" href="/" aria-label="northroot home">
+      <EarthMark />
+      <span>NORTHROOT</span>
+    </a>
+    <nav class="nav" aria-label="Primary">
+      {navItems.map(([label, href]) => <a href={href}>{label}</a>)}
+    </nav>
+  </div>
+</header>

@@ -1,0 +1,62 @@
+---
+title: CLI Verification Quickstart
+description: A short path from source checkout to validating the first portable-evidence bundle.
+section: docs
+updated: 2026-05-20
+sourceRefs:
+  - repo: northroot
+    path: README.md
+  - repo: northroot
+    path: examples/github-repo-inspection/README.md
+---
+
+The first public verification path uses the Northroot CLI and the
+`github-repo-inspection` portable-evidence bundle.
+
+## Build
+
+```bash
+cargo build --workspace
+```
+
+## Validate Primitive Files
+
+```bash
+cargo run -p northroot -- validate examples/github-repo-inspection/actor.json
+cargo run -p northroot -- validate examples/github-repo-inspection/obligation.json
+cargo run -p northroot -- validate examples/github-repo-inspection/policy.json
+```
+
+## Hash And Verify The Receipt
+
+```bash
+cargo run -p northroot -- hash examples/github-repo-inspection/events.jsonl
+cargo run -p northroot -- verify examples/github-repo-inspection/receipt.json \
+  --base-dir examples/github-repo-inspection \
+  --json
+```
+
+The receipt verifier resolves `file://` evidence against the bundle directory,
+hashes each evidence file, and compares the result to the receipt.
+
+## Optional Journal Replay
+
+The source example keeps events in JSONL. A generated `.nrj` journal is a
+derived artifact for framed replay:
+
+```bash
+cargo run -p northroot -- append /tmp/github-repo-inspection.nrj /tmp/event-1.json
+cargo run -p northroot -- list /tmp/github-repo-inspection.nrj --json
+cargo run -p northroot -- verify /tmp/github-repo-inspection.nrj --json --strict
+```
+
+## Implementation Notes
+
+The example intentionally starts with JSON and JSONL. The optional `.nrj`
+container is reserved for cases where binary framing, streaming verification,
+and truncation handling are worth the extra format.
+
+## Operational Lessons
+
+The quickstart should remain direct: clone, build, validate, hash, verify. The
+kernel should prove evidence without requiring a hosted console.

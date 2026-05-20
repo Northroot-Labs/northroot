@@ -1,0 +1,35 @@
+---
+title: Clean Reset Note
+description: "A field note on the current workspace shape: small kernel, inspectable examples, source-owned docs."
+section: journal
+updated: 2026-05-20
+sourceRefs:
+  - repo: northroot
+    path: README.md
+  - repo: northroot
+    path: docs/developer/architecture.md
+---
+
+The current Northroot workspace is intentionally small.
+
+The repository owns the public trust kernel, the first evidence example, and the
+docs that explain core invariants. The site lives beside those materials as a
+publication layer, not as a separate product shell.
+
+## Current Shape
+
+- Rust crates for canonicalization and journal verification.
+- CLI commands for validation, hashing, canonicalization, event IDs, and
+  receipt verification.
+- JSON/JSONL examples for the first public evidence bundle.
+- Static public site pages that point back to source-owned material.
+
+## Implementation Notes
+
+The next useful work is not a bigger homepage. It is more source-backed material:
+examples, invariants, command walkthroughs, and field notes tied to source.
+
+## Operational Lessons
+
+Identity should grow from evidence. The site can set the direction, but the
+repository has to supply the substance.

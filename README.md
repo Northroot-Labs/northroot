@@ -1,25 +1,27 @@
 # Northroot
 
-Rust substrate for accountable agentic work.
+Trust kernel for portable evidence.
 
 ## What is Northroot?
 
-Northroot provides open primitives for obligations, policies, execution events,
-receipts, actors, and cost attribution. It standardizes canonical hashing and
-evidence verification without importing client-specific workflows or domain
-semantics.
+Northroot provides open primitives for append-only records, receipts, and
+offline verification for operational and agentic work. It standardizes
+canonical hashing and evidence verification without importing client-specific
+workflows, runtime orchestration, or domain semantics.
 
 **Core capabilities:**
 - JSON primitives for actors, obligations, policies, events, receipts, and cost
-- JSONL execution logs for append-oriented evidence
+- JSONL execution logs for portable evidence bundles
 - Deterministic canonical hashes
-- Optional `.nrj` export container when framed offline audit is justified
+- Receipt verification against local `file://` evidence
+- Optional `.nrj` append-only journal container for framed offline audit
 
 **What Northroot does NOT do:**
 - Store customer data
 - Encode agriculture or client-specific nouns
 - Provide hosted orchestration in the first build phase
 - Replace ClearlyOps service/client workflows
+- Present a live operating console
 
 See [GOVERNANCE.md](GOVERNANCE.md) for the project's foundational principles.
 
@@ -33,7 +35,7 @@ substrate modular without spreading primitives across many repos.
 - Use common formats first: JSON, JSONL, canonical SHA-256 hashes.
 - Keep `.nrj` optional unless its framing and offline verification properties
   are necessary and tested.
-- Ship examples that prove each primitive with inspectable evidence.
+- Ship examples that prove each primitive with inspectable, portable evidence.
 
 ### Non-goals
 - No hosted API, inbox automation, GitHub mutation workflow, MCP service, or
@@ -49,10 +51,10 @@ substrate modular without spreading primitives across many repos.
 # Build all crates
 cargo build --workspace
 
-# Validate the first proof example
+# Validate the first portable-evidence example
 cargo run -p northroot -- validate examples/github-repo-inspection/obligation.json
 cargo run -p northroot -- hash examples/github-repo-inspection/events.jsonl
-cargo run -p northroot -- verify examples/github-repo-inspection/receipt.json
+cargo run -p northroot -- verify examples/github-repo-inspection/receipt.json --base-dir examples/github-repo-inspection --json
 ```
 
 ### Using the CLI
@@ -67,7 +69,7 @@ northroot validate examples/github-repo-inspection/policy.json
 northroot hash examples/github-repo-inspection/events.jsonl
 
 # Verify receipt evidence hashes
-northroot verify examples/github-repo-inspection/receipt.json
+northroot verify examples/github-repo-inspection/receipt.json --base-dir examples/github-repo-inspection --json
 
 # Canonicalize JSON input
 echo '{"b":2,"a":1}' | northroot canonicalize
@@ -76,11 +78,17 @@ echo '{"b":2,"a":1}' | northroot canonicalize
 echo '{"event_type":"test","event_version":"1",...}' | northroot event-id
 
 # Optional .nrj journal support
+northroot append /tmp/github-repo-inspection.nrj event.json
 northroot list events.nrj
-northroot verify events.nrj
+northroot verify events.nrj --json --strict
 ```
 
 ## Documentation
+
+### Site
+- [Northroot Site](site/README.md) - Static public publishing surface for
+  product notes, systems docs, examples, architecture, field notes, and draft
+  publish candidates
 
 ### For Users
 - [Getting Started](docs/user/getting-started.md) - Tutorial and examples
@@ -129,6 +137,8 @@ The kernel provides:
 - **Canonicalization**: RFC 8785 + Northroot hygiene rules
 - **Event Identity**: `sha256(domain_separator || canonical_json(event))`
 - **Journal Format**: Portable, append-only container (.nrj)
+- **Receipt Verification**: Local evidence hashes checked without a live
+  service dependency
 
 Everything else (typed schemas, domain verification, policy evaluation) is extension.
 

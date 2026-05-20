@@ -1,0 +1,26 @@
+---
+import { getCollection, render } from "astro:content";
+import ArticleLayout from "../../layouts/ArticleLayout.astro";
+import { contentSections } from "../../lib/sections";
+
+export async function getStaticPaths() {
+  const entries = await getCollection("docs");
+  const validSections = new Set(contentSections.map((section) => section.id));
+  return entries
+    .filter((entry) => validSections.has(entry.data.section))
+    .map((entry) => ({
+      params: {
+        section: entry.data.section,
+        slug: entry.id.replace(new RegExp(`^${entry.data.section}/`), "")
+      },
+      props: { entry }
+    }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+---
+
+<ArticleLayout frontmatter={entry.data}>
+  <Content />
+</ArticleLayout>

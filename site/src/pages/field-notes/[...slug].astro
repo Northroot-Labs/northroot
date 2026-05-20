@@ -1,0 +1,17 @@
+---
+import { getCollection, render } from "astro:content";
+import ArticleLayout from "../../layouts/ArticleLayout.astro";
+
+export async function getStaticPaths() {
+  const entries = await getCollection("fieldNotes");
+  return entries.map((entry) => ({ params: { slug: entry.id }, props: { entry } }));
+}
+
+const { entry } = Astro.props;
+const { Content } = await render(entry);
+const frontmatter = { ...entry.data, section: "field-notes" };
+---
+
+<ArticleLayout frontmatter={frontmatter}>
+  <Content />
+</ArticleLayout>

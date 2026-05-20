@@ -1,0 +1,24 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const candidates = (await getCollection("candidates")).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+
+<BaseLayout title="Drafts | northroot" description="Generated Northroot draft material awaiting review.">
+  <section class="article">
+    <h1>Drafts</h1>
+    <p class="lede">Generated material awaiting editorial review. Drafts are not canonical references.</p>
+    <div class="list">
+      {
+        candidates.map((entry) => (
+          <article class="list-item">
+            <p class="meta">{entry.data.date.toISOString().slice(0, 10)} / draft</p>
+            <a href={`/candidates/${entry.id}/`}>{entry.data.title}</a>
+            <p class="summary">{entry.data.summary}</p>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,29 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { sectionById } from "../../lib/sections";
+
+const section = sectionById("field-notes")!;
+const notes = (await getCollection("fieldNotes")).sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf());
+---
+
+<BaseLayout title="Field Notes | northroot" description={section.summary}>
+  <section class="section-index">
+    <aside class="section-intro">
+      <p class="section-kicker">Publication</p>
+      <h1>Field Notes</h1>
+      <p class="summary">{section.summary}</p>
+    </aside>
+    <div class="list">
+      {
+        notes.map((entry) => (
+          <article class="list-item">
+            <p class="meta">{entry.data.date.toISOString().slice(0, 10)}{entry.data.draft ? " / draft" : ""}</p>
+            <a href={`/field-notes/${entry.id}/`}>{entry.data.title}</a>
+            <p class="summary">{entry.data.summary}</p>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+</BaseLayout>

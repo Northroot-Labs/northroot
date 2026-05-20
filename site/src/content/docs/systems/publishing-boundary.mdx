@@ -1,0 +1,37 @@
+---
+title: Public Publishing Boundary
+description: The site is a static publication layer, separate from source control, internal tools, and any future operating console.
+section: systems
+updated: 2026-05-20
+sourceRefs:
+  - repo: northroot
+    path: site/README.md
+---
+
+The Northroot site is a static publication layer.
+
+The first version intentionally excludes a CMS, production deploy automation,
+analytics, comments, sign-in, and hosted control-plane behavior. Local Markdown
+editing, local preview, and pull request review are enough.
+
+```text
+source work -> generated draft -> human edit -> merge-gated publish
+```
+
+## Implementation Notes
+
+Generated drafts must carry source references, draft status, and a clear review
+path before they can become public pages.
+
+## Boundary Map
+
+| Area | Role |
+| --- | --- |
+| Public site | Explanations, docs, examples, journal notes. |
+| GitHub repo | Source of truth for code, specs, examples, and review. |
+| Drafts | Editorial inputs, never automatic publication. |
+| Internal tools | Out of scope for the public site until real software exists. |
+
+## Operational Lessons
+
+The publication layer should explain the system. It should not become the system.

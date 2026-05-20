@@ -1,0 +1,37 @@
+---
+title: What Northroot Is Not
+description: Boundary notes for what the trust kernel does not currently provide.
+section: product
+updated: 2026-05-20
+sourceRefs:
+  - repo: northroot
+    path: README.md
+  - repo: northroot
+    path: CORE_INVARIANTS.md
+---
+
+Northroot's public kernel is deliberately narrow. It covers evidence identity,
+journal framing, and offline verification.
+
+It does not currently provide:
+
+- a hosted control plane
+- an operating console
+- an access-control product
+- an agent planning system
+- a workflow engine
+- a customer-data store
+- a policy decision runtime
+
+Those may become separate systems later. They are not the current public kernel.
+
+## Implementation Notes
+
+Public pages should describe current primitives and verified examples. Internal
+tools, operating consoles, and sign-in paths stay outside the public navigation
+until they exist as real software.
+
+## Operational Lessons
+
+Trust comes from coherence and restraint. The site should show the shape of the
+system without presenting future systems as current capabilities.

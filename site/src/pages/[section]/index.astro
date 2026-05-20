@@ -1,0 +1,37 @@
+---
+import { getCollection } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { contentSections } from "../../lib/sections";
+
+export async function getStaticPaths() {
+  return contentSections.map((section) => ({ params: { section: section.id }, props: { section } }));
+}
+
+const { section } = Astro.props;
+const entries = (await getCollection("docs"))
+  .filter((entry) => entry.data.section === section.id)
+  .sort((a, b) => a.data.title.localeCompare(b.data.title));
+---
+
+<BaseLayout title={`${section.label} | northroot`} description={section.summary}>
+  <section class="section-index">
+    <aside class="section-intro">
+      <p class="section-kicker">Section</p>
+      <h1>{section.label}</h1>
+      <p class="summary">{section.summary}</p>
+    </aside>
+    <div class="list">
+      {
+        entries.map((entry) => {
+          const slug = entry.id.replace(new RegExp(`^${section.id}/`), "");
+          return (
+            <article class="list-item">
+              <a href={`/${section.id}/${slug}/`}>{entry.data.title}</a>
+              <p class="summary">{entry.data.description}</p>
+            </article>
+          );
+        })
+      }
+    </div>
+  </section>
+</BaseLayout>

@@ -1,0 +1,57 @@
+---
+title: Portable Evidence
+description: Northroot records operational and agentic work as append-only evidence that can be copied, inspected, and verified offline.
+section: product
+updated: 2026-05-20
+sourceRefs:
+  - repo: northroot
+    path: README.md
+  - repo: northroot
+    path: examples/github-repo-inspection/
+  - repo: northroot
+    path: CORE_INVARIANTS.md
+---
+
+Northroot is a trust kernel for portable evidence: append-only records,
+receipts, and offline verification for operational and agentic work.
+
+The kernel is intentionally smaller than a runtime. It gives other systems a
+stable evidence shape without deciding how those systems plan, reconcile,
+approve, or execute work.
+
+## Evidence Shape
+
+| Layer | Purpose |
+| --- | --- |
+| Records | JSON or JSONL events describing what happened. |
+| Receipts | Claims bound to local evidence hashes. |
+| Journals | Optional `.nrj` containers for framed append-only replay. |
+| Verification | Offline checks that do not require a Northroot service. |
+
+## Current Proof
+
+The first proof is the GitHub repo inspection bundle. It records a read-only
+agentic work item with an actor, obligation, policy, event log, manifest, and
+receipt.
+
+```bash
+cargo run -p northroot -- verify examples/github-repo-inspection/receipt.json \
+  --base-dir examples/github-repo-inspection \
+  --json
+```
+
+The same event log can be replayed into a temporary `.nrj` journal and verified
+with the current CLI. The generated journal is a derived artifact, not the
+canonical source of the example.
+
+## Boundary
+
+Portable evidence is not an operating console. It does not provide workflow
+state, hosted orchestration, reconciliation logic, sign-in, analytics, or
+approval UI. Those belong to runtimes and applications built around the kernel.
+
+## Operational Lessons
+
+The evidence should remain useful after it leaves the system that produced it.
+That means stable hashes, explicit receipts, ordinary files first, and no hidden
+service dependency for verification.

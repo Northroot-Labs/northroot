@@ -1,0 +1,66 @@
+name: Publication Drafts
+
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: "Git log window for public Northroot source scan"
+        required: false
+        default: "7 days ago"
+  schedule:
+    - cron: "12 10 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  generate:
+    name: Generate publication drafts
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout northroot
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.1.3
+
+      - name: Install site dependencies
+        run: pnpm --dir site install --frozen-lockfile
+
+      - name: Generate candidates
+        run: |
+          node site/scripts/generate-publish-candidates.mjs \
+            --source . \
+            --out site/src/content/candidates \
+            --since "${{ github.event.inputs.since || '7 days ago' }}"
+
+      - name: Validate site
+        run: pnpm --dir site check && pnpm --dir site build
+
+      - name: Open draft PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automation/northroot-publish-candidates
+          delete-branch: true
+          title: "Draft Northroot publish candidates"
+          body: |
+            Generated publication drafts from recent public `northroot` source changes.
+
+            Review requirements:
+            - confirm all references are public
+            - edit generated copy before publishing
+            - keep canonical spec text in the owning source path
+          commit-message: "Generate Northroot publish candidates"
+          add-paths: |
+            site/src/content/candidates
+          draft: true

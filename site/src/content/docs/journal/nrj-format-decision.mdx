@@ -1,0 +1,34 @@
+---
+title: The `.nrj` Format Decision
+description: Why Northroot starts with JSON and JSONL while keeping `.nrj` as an optional export container.
+section: journal
+updated: 2026-05-20
+sourceRefs:
+  - repo: northroot
+    path: docs/reference/nrj-decision.md
+---
+
+Northroot starts with JSON and JSONL because they are inspectable with ordinary
+tools, easy to diff, and enough for the first obligation, policy, event,
+receipt, and cost examples.
+
+The `.nrj` format remains optional. It is justified only when a workflow needs
+properties that plain JSON and JSONL do not provide.
+
+| Property | Why it matters |
+| --- | --- |
+| Binary framing | Avoid delimiter ambiguity in large exports. |
+| Record kinds | Allow readers to skip unknown frame types. |
+| Streaming verification | Verify large audit exports without loading everything. |
+| Truncation handling | Distinguish strict failure from permissive partial reads. |
+| Cross-language stability | Keep offline verifiers consistent across implementations. |
+
+## Implementation Notes
+
+If a workflow does not need those properties, it should use JSON/JSONL plus
+canonical hashes. `.nrj` should stay optional until tests and examples prove the
+extra format earns its keep.
+
+## Operational Lessons
+
+The simplest inspectable format wins until the harder format earns its keep.

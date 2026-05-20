@@ -1,0 +1,62 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import { navSections, sectionById } from "../lib/sections";
+
+interface SourceRef {
+  repo: string;
+  path?: string;
+  commit?: string;
+}
+
+interface Props {
+  frontmatter: {
+    title: string;
+    description?: string;
+    summary?: string;
+    date?: Date;
+    draft?: boolean;
+    section?: string;
+    sourceRefs?: SourceRef[];
+  };
+}
+
+const { frontmatter } = Astro.props;
+const description = frontmatter.description ?? frontmatter.summary ?? "Northroot public engineering note.";
+const activeSection = frontmatter.section ? sectionById(frontmatter.section) : sectionById("field-notes");
+---
+
+<BaseLayout title={`${frontmatter.title} | northroot`} description={description}>
+  <div class="article-shell">
+    <aside class="article-nav" aria-label="Section navigation">
+      <p class="rail-label">Section</p>
+      {navSections.map((section) => <a class:list={["rail-link", { active: activeSection?.id === section.id }]} href={`/${section.id}/`}>{section.label}</a>)}
+    </aside>
+
+    <article class="article">
+      <header class="article-header">
+        <div class="meta-row">
+          {frontmatter.draft && <span>Draft</span>}
+          {frontmatter.date && <span>{frontmatter.date.toISOString().slice(0, 10)}</span>}
+          {activeSection && <span>{activeSection.label}</span>}
+        </div>
+        <h1>{frontmatter.title}</h1>
+        <p class="lede">{description}</p>
+      </header>
+      <slot />
+    </article>
+
+    <aside class="article-aside" aria-label="Source references">
+      <p class="rail-label">Source</p>
+      {
+        frontmatter.sourceRefs && frontmatter.sourceRefs.length > 0 && (
+          <div class="source-list" aria-label="Source references">
+            {frontmatter.sourceRefs.map((source) => (
+              <span class="source-pill">{source.path ? `${source.repo}/${source.path}` : source.repo}</span>
+            ))}
+          </div>
+        )
+      }
+      <p class="rail-note">Explanations live here. Canonical contracts remain in source.</p>
+    </aside>
+  </div>
+</BaseLayout>
