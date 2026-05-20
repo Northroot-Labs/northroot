@@ -12,22 +12,30 @@ Thank you for your interest in contributing to Northroot.
 ### Quick Start
 
 1. Clone the repository
-2. Build the project:
+2. Bootstrap the Codex/development environment:
+   ```bash
+   bash scripts/codex_setup.sh
+   ```
+3. Build the project:
    ```bash
    cargo build
    ```
-3. Run tests:
+4. Run tests:
    ```bash
    just test
    ```
-4. Run QA checks:
+5. Run QA checks:
    ```bash
    just qa
    ```
 
 ### Development Container
 
-For a consistent development environment, use the devcontainer. See [docs/operator/devcontainer.md](docs/operator/devcontainer.md) for setup instructions.
+For a consistent development environment, use the devcontainer. See [.devcontainer/README.md](.devcontainer/README.md) for setup instructions. The devcontainer and Codex environment both use `scripts/codex_setup.sh`.
+
+### Codex Environment
+
+Repo-owned Codex setup lives in `.codex/environments/environment.toml` and calls `scripts/codex_setup.sh`. Use `scripts/codex_verify.sh` after setup or before handing off a branch to run the workspace checks, golden tests, doctests, and the out-of-workspace CLI tests.
 
 ## Code Quality
 
@@ -163,4 +171,3 @@ events by principal_id during replay.
 - Check existing documentation in `docs/`
 - Review [GOVERNANCE.md](GOVERNANCE.md) for project principles
 - Open an issue for clarification
-

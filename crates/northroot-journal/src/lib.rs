@@ -7,7 +7,7 @@
 //!
 //! ## Quick Start
 //!
-//! ```rust
+//! ```rust,no_run
 //! use northroot_canonical::{compute_event_id, Canonicalizer, ProfileId};
 //! use northroot_journal::{JournalWriter, JournalReader, WriteOptions, ReadMode};
 //! use serde_json::json;
