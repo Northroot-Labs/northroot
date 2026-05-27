@@ -6,7 +6,7 @@ mod commands;
 mod output;
 mod path;
 
-use commands::{append, canonicalize, event_id, list, verify};
+use commands::{append, canonicalize, event_id, list, verify, verify_bundle};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
@@ -59,6 +59,14 @@ enum Commands {
         #[arg(long)]
         max_size: Option<u64>,
     },
+    /// Verify a portable evidence bundle
+    VerifyBundle {
+        /// Path to bundle directory
+        dir: String,
+        /// Output as JSON (default)
+        #[arg(long)]
+        json: bool,
+    },
     /// Append an event to a journal
     Append {
         /// Path to journal file
@@ -93,6 +101,7 @@ fn main() {
             max_events,
             max_size,
         } => verify::run(journal, strict, json, max_events, max_size),
+        Commands::VerifyBundle { dir, json } => verify_bundle::run(dir, json),
         Commands::Append {
             journal,
             input,
@@ -106,4 +115,3 @@ fn main() {
         std::process::exit(1);
     }
 }
-

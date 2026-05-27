@@ -13,12 +13,14 @@ name = "northroot"
 path = "src/main.rs"
 
 [dependencies]
+base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
+sha2 = "0.10"
 thiserror = "1.0"
 northroot-canonical = { path = "../../crates/northroot-canonical" }
 northroot-journal = { path = "../../crates/northroot-journal" }
 
 [dev-dependencies]
 tempfile = "3.8"
-
