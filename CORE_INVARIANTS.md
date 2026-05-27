@@ -62,6 +62,12 @@ INV-2a — Canonical payloads are schema-defined
 
 All core evidence is the canonical JSON object. There is no separate `v` envelope, and every field that affects verification must be present in the object hashed as `event_id`. The kernel operates on untyped `EventJson = serde_json::Value`; domain layers add typed schemas.
 
+Untyped JSON is the neutrality boundary. The kernel may reject structural
+ambiguity such as duplicate object keys before parsing collapses them, and it
+may require `event_id` to be digest-shaped before identity verification. It must
+not validate event type, policy meaning, workflow state, authorization, or domain
+payload correctness.
+
 Operational metadata (request IDs, traces, retries, provider hints, tags, transport headers, etc.) lives outside the canonical event to keep hashes deterministic.
 
 ⸻

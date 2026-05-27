@@ -43,8 +43,39 @@ fn test_verify_event_id_invalid() {
     let mut event = make_test_event();
 
     // Tamper with event_id
-    event["event_id"]["b64"] = json!("tampered");
+    event["event_id"]["b64"] = json!("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
 
     let valid = verify_event_id(&event, &canonicalizer).unwrap();
     assert!(!valid);
+}
+
+#[test]
+fn test_verify_event_id_rejects_non_object() {
+    let canonicalizer = make_canonicalizer();
+    let event = json!(["not", "an", "object"]);
+
+    let err = verify_event_id(&event, &canonicalizer).unwrap_err();
+    assert!(err
+        .to_string()
+        .contains("event payload must be a JSON object"));
+}
+
+#[test]
+fn test_verify_event_id_rejects_missing_event_id() {
+    let canonicalizer = make_canonicalizer();
+    let mut event = make_test_event();
+    event.as_object_mut().unwrap().remove("event_id");
+
+    let err = verify_event_id(&event, &canonicalizer).unwrap_err();
+    assert!(err.to_string().contains("event_id is required"));
+}
+
+#[test]
+fn test_verify_event_id_rejects_malformed_event_id() {
+    let canonicalizer = make_canonicalizer();
+    let mut event = make_test_event();
+    event["event_id"]["b64"] = json!("not-digest-shaped");
+
+    let err = verify_event_id(&event, &canonicalizer).unwrap_err();
+    assert!(err.to_string().contains("event_id must be digest-shaped"));
 }

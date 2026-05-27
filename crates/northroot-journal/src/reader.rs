@@ -3,6 +3,7 @@
 use crate::errors::JournalError;
 use crate::event::EventJson;
 use crate::frame::{FrameKind, JournalHeader, RecordFrame};
+use northroot_canonical::parse_json_strict;
 use std::fs::File;
 use std::io::{self, Read, Seek};
 use std::path::Path;
@@ -178,9 +179,9 @@ impl JournalReader {
                 Some((FrameKind::EventJson, payload)) => {
                     // Validate UTF-8
                     let utf8_str = std::str::from_utf8(&payload)?;
-                    // Parse JSON
-                    let json: EventJson =
-                        serde_json::from_str(utf8_str).map_err(JournalError::JsonParse)?;
+                    // Parse JSON before object keys can collapse.
+                    let json: EventJson = parse_json_strict(utf8_str)
+                        .map_err(|e| JournalError::InvalidJson(e.to_string()))?;
                     return Ok(Some(json));
                 }
                 Some((FrameKind::Unknown(_), _)) => {
