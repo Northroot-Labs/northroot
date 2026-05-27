@@ -70,7 +70,7 @@ pub mod quantities;
 pub mod validation;
 
 pub use canonicalizer::{CanonicalizationError, CanonicalizationResult, Canonicalizer};
-pub use digest::{Digest, DigestAlg};
+pub use digest::{compute_blob_digest, Digest, DigestAlg};
 pub use event_id::{compute_event_id, verify_event_id, EventIdError};
 pub use hygiene::{HygieneReport, HygieneStatus, HygieneWarning};
 pub use identifiers::{ContentRef, PrincipalId, ProfileId, Timestamp, ToolName};
