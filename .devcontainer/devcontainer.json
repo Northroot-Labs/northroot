@@ -57,6 +57,5 @@
     "RUSTFLAGS": "-Dwarnings",
     "SSH_AUTH_SOCK": "/ssh-agent"
   },
-  "postCreateCommand": "rustup component add clippy rustfmt && cargo fetch && just --version"
+  "postCreateCommand": "bash scripts/codex_setup.sh"
 }
-

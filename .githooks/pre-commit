@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+echo "northroot pre-commit: formatting"
+cargo fmt --all --check
+
+echo "northroot pre-commit: clippy"
+cargo clippy --all-targets --all-features -- -D warnings
+
+echo "northroot pre-commit: tests"
+cargo test --all --all-features
+
+echo "northroot pre-commit: golden tests"
+cargo test --package northroot-canonical --test golden
+
+echo "northroot pre-commit: doctests"
+cargo test --workspace --doc
+
+echo "northroot pre-commit: schemas"
+python3 scripts/validate_schemas.py

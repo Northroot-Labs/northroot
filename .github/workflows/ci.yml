@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -Dwarnings
@@ -36,7 +39,6 @@ jobs:
 
   test:
     name: Tests
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -58,28 +60,15 @@ jobs:
         run: cargo test --package northroot-canonical --test golden
 
   schema:
-    name: Schema Parse Check
+    name: Schema Validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate JSON schema files parse
-        run: |
-          python - <<'PY'
-          import json
-          from pathlib import Path
-          root = Path("schemas")
-          files = sorted(root.rglob("*.schema.json"))
-          if not files:
-              raise SystemExit("no schema files found")
-          for path in files:
-              with path.open("r", encoding="utf-8") as f:
-                  json.load(f)
-          print(f"validated {len(files)} schema files")
-          PY
+      - name: Validate schema files
+        run: python3 scripts/validate_schemas.py
 
   docs:
     name: Documentation
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,7 +82,6 @@ jobs:
 
   cli:
     name: CLI Tests
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -103,3 +91,14 @@ jobs:
       - name: Run CLI tests
         run: cargo test --manifest-path apps/northroot/Cargo.toml
 
+  codex-verify:
+    name: Codex Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: "1.91.0"
+          components: clippy, rustfmt
+      - name: Run Codex verification
+        run: bash scripts/codex_verify.sh

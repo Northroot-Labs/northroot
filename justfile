@@ -14,8 +14,20 @@ test:
 golden:
     cargo test --package northroot-canonical --test golden
 
+schema:
+    python3 scripts/validate_schemas.py
+
+cli-test:
+    cargo test --manifest-path apps/northroot/Cargo.toml
+
+install-hooks:
+    bash scripts/install_git_hooks.sh
+
+codex-verify:
+    bash scripts/codex_verify.sh
+
 # Combined fast QA suite
-qa: fmt lint test golden
+qa: fmt lint test golden schema
 
 # Coverage (requires cargo-llvm-cov)
 coverage:
@@ -46,4 +58,3 @@ docs-test:
 
 # Full nightly suite (slow)
 nightly: fmt lint test golden docs coverage audit
-
