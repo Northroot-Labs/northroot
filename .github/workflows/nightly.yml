@@ -6,6 +6,9 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch: # Allow manual trigger
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: -Dwarnings
@@ -94,4 +97,3 @@ jobs:
           path: |
             crates/northroot-canonical/fuzz/artifacts
           retention-days: 30
-
