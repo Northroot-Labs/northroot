@@ -1,0 +1,37 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="The site is a static publication layer, separate from source control, internal tools, and any future operating console."><title>Public Publishing Boundary | northroot</title><link rel="stylesheet" href="/_astro/BaseLayout.Cg6rbscu.css"></head> <body> <header class="site-header"> <div class="header-row"> <a class="brand" href="/" aria-label="northroot home"> <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"> <path d="M16 3.5v25" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 3.5 7.8 11.7M16 3.5l8.2 8.2" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 9.6 9.9 15.7M16 9.6l6.1 6.1" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 15.8 11 20.8M16 15.8l5 5" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 23.4 11.6 28.5M16 23.4l4.4 5.1" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.35" opacity="0.78"></path> </svg> <span>NORTHROOT</span> </a> <nav class="nav" aria-label="Primary"> <a href="/product/">Product</a><a href="/systems/">Systems</a><a href="/docs/">Docs</a><a href="/journal/">Journal</a><a href="/examples/">Examples</a> </nav> </div> </header> <main>  <div class="article-shell"> <aside class="article-nav" aria-label="Section navigation"> <p class="rail-label">Section</p> <a class="rail-link" href="/product/">Product</a><a class="rail-link active" href="/systems/">Systems</a><a class="rail-link" href="/docs/">Docs</a><a class="rail-link" href="/journal/">Journal</a><a class="rail-link" href="/examples/">Examples</a> </aside> <article class="article"> <header class="article-header"> <div class="meta-row">   <span>Systems</span> </div> <h1>Public Publishing Boundary</h1> <p class="lede">The site is a static publication layer, separate from source control, internal tools, and any future operating console.</p> </header>  <p>The Northroot site is a static publication layer.</p>
+<p>The first version intentionally excludes a CMS, production deploy automation,
+analytics, comments, sign-in, and hosted control-plane behavior. Local Markdown
+editing, local preview, and pull request review are enough.</p>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8;overflow-x:auto" tabindex="0" data-language="text"><code><span class="line"><span>source work -&gt; generated draft -&gt; human edit -&gt; merge-gated publish</span></span></code></pre>
+<h2 id="implementation-notes">Implementation Notes</h2>
+<p>Generated drafts must carry source references, draft status, and a clear review
+path before they can become public pages.</p>
+<h2 id="boundary-map">Boundary Map</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Area</th><th>Role</th></tr></thead><tbody><tr><td>Public site</td><td>Explanations, docs, examples, journal notes.</td></tr><tr><td>GitHub repo</td><td>Source of truth for code, specs, examples, and review.</td></tr><tr><td>Drafts</td><td>Editorial inputs, never automatic publication.</td></tr><tr><td>Internal tools</td><td>Out of scope for the public site until real software exists.</td></tr></tbody></table>
+<h2 id="operational-lessons">Operational Lessons</h2>
+<p>The publication layer should explain the system. It should not become the system.</p>  </article> <aside class="article-aside" aria-label="Source references"> <p class="rail-label">Source</p> <div class="source-list" aria-label="Source references"> <span class="source-pill">northroot/site/README.md</span> </div> <p class="rail-note">Explanations live here. Canonical contracts remain in source.</p> </aside> </div>  </main> </body></html>

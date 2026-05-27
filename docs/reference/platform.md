@@ -45,6 +45,7 @@ Operational logs may reference receipts, but logs are not receipts.
 
 - Use for: files and artifacts (PDF, CSV, XLSX, JSON, markdown, etc.).
 - Format: digest of raw bytes (sha-256 by default).
+- Reference helper: `northroot_canonical::compute_blob_digest`.
 
 ### content_ref (pointer to external bytes)
 
@@ -64,4 +65,3 @@ Emit verifiable receipts at boundaries that matter for auditability:
 - commit applied (promotion/finalization)
 
 Keep operational logs separate (JSONL is fine). Logs MAY reference receipt `event_id`s.
-

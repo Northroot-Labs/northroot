@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use northroot_canonical::{
-    canonicalizer::Canonicalizer, ContentRef, Digest, DigestAlg, HygieneReport, HygieneStatus,
-    HygieneWarning, ProfileId, Quantity,
+    canonicalizer::Canonicalizer, compute_blob_digest, ContentRef, Digest, DigestAlg,
+    HygieneReport, HygieneStatus, HygieneWarning, ProfileId, Quantity,
 };
 use serde_json::json;
 
@@ -17,6 +17,14 @@ fn digest_serializes_to_golden_json() {
         serde_json::to_string(&digest).unwrap(),
         r#"{"alg":"sha-256","b64":"Zm9vYmFy"}"#
     );
+}
+
+#[test]
+fn blob_digest_matches_sha256_base64url_golden() {
+    let digest = compute_blob_digest(b"northroot artifact bytes").unwrap();
+
+    assert_eq!(digest.alg, DigestAlg::Sha256);
+    assert_eq!(digest.b64, "bJeloqUODbW_XyWyWOnvTXqujZKnX7R2D2j86EJG7pY");
 }
 
 #[test]

@@ -1,0 +1,15 @@
+
+export default new Map([
+["src/content/candidates/2026-05-20-bootstrap-candidate.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fcandidates%2F2026-05-20-bootstrap-candidate.mdx&astroContentModuleFlag=true")],
+["src/content/docs/architecture/trust-kernel.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Farchitecture%2Ftrust-kernel.mdx&astroContentModuleFlag=true")],
+["src/content/docs/docs/cli-verification-quickstart.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fdocs%2Fcli-verification-quickstart.mdx&astroContentModuleFlag=true")],
+["src/content/docs/docs/reference-map.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fdocs%2Freference-map.mdx&astroContentModuleFlag=true")],
+["src/content/docs/examples/github-repo-inspection.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fexamples%2Fgithub-repo-inspection.mdx&astroContentModuleFlag=true")],
+["src/content/docs/journal/clean-reset-note.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fjournal%2Fclean-reset-note.mdx&astroContentModuleFlag=true")],
+["src/content/docs/journal/nrj-format-decision.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fjournal%2Fnrj-format-decision.mdx&astroContentModuleFlag=true")],
+["src/content/docs/product/kernel-boundary.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fproduct%2Fkernel-boundary.mdx&astroContentModuleFlag=true")],
+["src/content/docs/product/portable-evidence.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fproduct%2Fportable-evidence.mdx&astroContentModuleFlag=true")],
+["src/content/docs/product/what-northroot-is-not.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fproduct%2Fwhat-northroot-is-not.mdx&astroContentModuleFlag=true")],
+["src/content/docs/systems/publishing-boundary.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Fdocs%2Fsystems%2Fpublishing-boundary.mdx&astroContentModuleFlag=true")],
+["src/content/field-notes/2026-05-20-bootstrap.mdx", () => import("astro:content-layer-deferred-module?astro%3Acontent-layer-deferred-module=&fileName=src%2Fcontent%2Ffield-notes%2F2026-05-20-bootstrap.mdx&astroContentModuleFlag=true")]]);
+		

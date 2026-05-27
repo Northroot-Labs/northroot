@@ -1,0 +1,41 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="Why Northroot starts with JSON and JSONL while keeping `.nrj` as an optional export container."><title>The `.nrj` Format Decision | northroot</title><link rel="stylesheet" href="/_astro/BaseLayout.Cg6rbscu.css"></head> <body> <header class="site-header"> <div class="header-row"> <a class="brand" href="/" aria-label="northroot home"> <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"> <path d="M16 3.5v25" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 3.5 7.8 11.7M16 3.5l8.2 8.2" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 9.6 9.9 15.7M16 9.6l6.1 6.1" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 15.8 11 20.8M16 15.8l5 5" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 23.4 11.6 28.5M16 23.4l4.4 5.1" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.35" opacity="0.78"></path> </svg> <span>NORTHROOT</span> </a> <nav class="nav" aria-label="Primary"> <a href="/product/">Product</a><a href="/systems/">Systems</a><a href="/docs/">Docs</a><a href="/journal/">Journal</a><a href="/examples/">Examples</a> </nav> </div> </header> <main>  <div class="article-shell"> <aside class="article-nav" aria-label="Section navigation"> <p class="rail-label">Section</p> <a class="rail-link" href="/product/">Product</a><a class="rail-link" href="/systems/">Systems</a><a class="rail-link" href="/docs/">Docs</a><a class="rail-link active" href="/journal/">Journal</a><a class="rail-link" href="/examples/">Examples</a> </aside> <article class="article"> <header class="article-header"> <div class="meta-row">   <span>Journal</span> </div> <h1>The `.nrj` Format Decision</h1> <p class="lede">Why Northroot starts with JSON and JSONL while keeping `.nrj` as an optional export container.</p> </header>  <p>Northroot starts with JSON and JSONL because they are inspectable with ordinary
+tools, easy to diff, and enough for the first obligation, policy, event,
+receipt, and cost examples.</p>
+<p>The <code>.nrj</code> format remains optional. It is justified only when a workflow needs
+properties that plain JSON and JSONL do not provide.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>Property</th><th>Why it matters</th></tr></thead><tbody><tr><td>Binary framing</td><td>Avoid delimiter ambiguity in large exports.</td></tr><tr><td>Record kinds</td><td>Allow readers to skip unknown frame types.</td></tr><tr><td>Streaming verification</td><td>Verify large audit exports without loading everything.</td></tr><tr><td>Truncation handling</td><td>Distinguish strict failure from permissive partial reads.</td></tr><tr><td>Cross-language stability</td><td>Keep offline verifiers consistent across implementations.</td></tr></tbody></table>
+<h2 id="implementation-notes">Implementation Notes</h2>
+<p>If a workflow does not need those properties, it should use JSON/JSONL plus
+canonical hashes. <code>.nrj</code> should stay optional until tests and examples prove the
+extra format earns its keep.</p>
+<h2 id="operational-lessons">Operational Lessons</h2>
+<p>The simplest inspectable format wins until the harder format earns its keep.</p>  </article> <aside class="article-aside" aria-label="Source references"> <p class="rail-label">Source</p> <div class="source-list" aria-label="Source references"> <span class="source-pill">northroot/docs/reference/nrj-decision.md</span> </div> <p class="rail-note">Explanations live here. Canonical contracts remain in source.</p> </aside> </div>  </main> </body></html>

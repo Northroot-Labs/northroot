@@ -1,0 +1,61 @@
+<!DOCTYPE html><html lang="en"> <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="description" content="A portable-evidence bundle for read-only repo inspection, policy-constrained events, and offline receipt verification."><title>GitHub Repo Inspection Bundle | northroot</title><link rel="stylesheet" href="/_astro/BaseLayout.Cg6rbscu.css"></head> <body> <header class="site-header"> <div class="header-row"> <a class="brand" href="/" aria-label="northroot home"> <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" focusable="false"> <path d="M16 3.5v25" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 3.5 7.8 11.7M16 3.5l8.2 8.2" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 9.6 9.9 15.7M16 9.6l6.1 6.1" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 15.8 11 20.8M16 15.8l5 5" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.55"></path> <path d="M16 23.4 11.6 28.5M16 23.4l4.4 5.1" fill="none" stroke="currentColor" stroke-linecap="square" stroke-width="1.35" opacity="0.78"></path> </svg> <span>NORTHROOT</span> </a> <nav class="nav" aria-label="Primary"> <a href="/product/">Product</a><a href="/systems/">Systems</a><a href="/docs/">Docs</a><a href="/journal/">Journal</a><a href="/examples/">Examples</a> </nav> </div> </header> <main>  <div class="article-shell"> <aside class="article-nav" aria-label="Section navigation"> <p class="rail-label">Section</p> <a class="rail-link" href="/product/">Product</a><a class="rail-link" href="/systems/">Systems</a><a class="rail-link" href="/docs/">Docs</a><a class="rail-link" href="/journal/">Journal</a><a class="rail-link active" href="/examples/">Examples</a> </aside> <article class="article"> <header class="article-header"> <div class="meta-row">   <span>Examples</span> </div> <h1>GitHub Repo Inspection Bundle</h1> <p class="lede">A portable-evidence bundle for read-only repo inspection, policy-constrained events, and offline receipt verification.</p> </header>  <p>The GitHub repo inspection example is the first concrete portable-evidence
+bundle for Northroot primitives.</p>
+<p>It models a read-only repository inspection where an agent checks required files
+and leaves behind structured evidence. The example uses ordinary files first:
+JSON for actor, obligation, policy, receipt, and manifest objects; JSONL for the
+append-only event log.</p>
+<h2 id="evidence-bundle">Evidence Bundle</h2>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<table><thead><tr><th>File</th><th>Role</th></tr></thead><tbody><tr><td><code>actor.json</code></td><td>Declares the repo inspector agent and its authority scope.</td></tr><tr><td><code>obligation.json</code></td><td>Defines the inspection objective, constraints, and required receipts.</td></tr><tr><td><code>policy.json</code></td><td>Allows read access and denies write or merge actions.</td></tr><tr><td><code>events.jsonl</code></td><td>Records accepted obligation, tool invocation, and receipt generation events.</td></tr><tr><td><code>receipt.json</code></td><td>Binds the evidence hashes to a passed inspection claim.</td></tr><tr><td><code>manifest.json</code></td><td>Lists the bundle files and their canonical hashes.</td></tr></tbody></table>
+<pre class="astro-code github-dark" style="background-color:#24292e;color:#e1e4e8;overflow-x:auto" tabindex="0" data-language="bash"><code><span class="line"><span style="color:#B392F0">cargo</span><span style="color:#9ECBFF"> run</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> northroot</span><span style="color:#79B8FF"> --</span><span style="color:#9ECBFF"> validate</span><span style="color:#9ECBFF"> examples/github-repo-inspection/obligation.json</span></span>
+<span class="line"><span style="color:#B392F0">cargo</span><span style="color:#9ECBFF"> run</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> northroot</span><span style="color:#79B8FF"> --</span><span style="color:#9ECBFF"> hash</span><span style="color:#9ECBFF"> examples/github-repo-inspection/events.jsonl</span></span>
+<span class="line"><span style="color:#B392F0">cargo</span><span style="color:#9ECBFF"> run</span><span style="color:#79B8FF"> -p</span><span style="color:#9ECBFF"> northroot</span><span style="color:#79B8FF"> --</span><span style="color:#9ECBFF"> verify</span><span style="color:#9ECBFF"> examples/github-repo-inspection/receipt.json</span><span style="color:#79B8FF"> \</span></span>
+<span class="line"><span style="color:#79B8FF">  --base-dir</span><span style="color:#9ECBFF"> examples/github-repo-inspection</span><span style="color:#79B8FF"> \</span></span>
+<span class="line"><span style="color:#79B8FF">  --json</span></span></code></pre>
+<h2 id="what-the-example-proves">What The Example Proves</h2>
+<ul>
+<li>A completed work item can be described without a hosted workflow engine.</li>
+<li>Mutation remains explicitly denied by policy.</li>
+<li>Cost attribution can be recorded even when the cost is zero.</li>
+<li>Verification can happen from local evidence files with no live service.</li>
+<li>The JSONL records can be replayed into a temporary <code>.nrj</code> journal and verified.</li>
+</ul>
+<h2 id="implementation-notes">Implementation Notes</h2>
+<p>Runnable fixtures stay in <code>examples/github-repo-inspection/</code>. Generated <code>.nrj</code>
+journals remain temporary derived artifacts; the checked-in bundle stays readable
+as ordinary text.</p>
+<h2 id="operational-lessons">Operational Lessons</h2>
+<p>A useful example should leave behind evidence that can be inspected after it
+leaves the runtime that produced it.</p>  </article> <aside class="article-aside" aria-label="Source references"> <p class="rail-label">Source</p> <div class="source-list" aria-label="Source references"> <span class="source-pill">northroot/examples/github-repo-inspection/</span> </div> <p class="rail-note">Explanations live here. Canonical contracts remain in source.</p> </aside> </div>  </main> </body></html>
