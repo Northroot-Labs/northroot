@@ -57,10 +57,15 @@ identical framing behavior without coupling to orchestration/runtime semantics.
 EventJson payloads MUST:
 
 1. Be valid UTF-8 JSON.
-2. Be a single JSON object (flat, no `v` envelope).
-3. Include required fields such as `event_id`, `event_type`, `event_version`, `occurred_at`, `principal_id`, `canonical_profile_id`, and any domain-specific properties.
+2. Reject duplicate object keys before parsing collapses them.
+3. Be a single JSON object (flat, no `v` envelope).
+4. Include a digest-shaped `event_id`.
 
-The journal format is schema-agnostic - it stores any valid JSON event. Domain layers define event schemas.
+The journal format is schema-agnostic - it stores untyped JSON event objects.
+Domain layers define fields such as `event_type`, `event_version`,
+`occurred_at`, `principal_id`, `canonical_profile_id`, and any domain-specific
+properties. The core does not validate policy meaning, workflow state,
+authorization, or domain payload semantics.
 
 Example:
 
@@ -78,9 +83,12 @@ Example:
 
 ### Verification note
 
-Stored JSON bytes are not canonicalized. Verifiers must parse the object, canonicalize it according to the event’s `event_version`, and confirm:  
+Stored JSON bytes are not canonicalized. Verifiers must strictly parse the
+object, reject duplicate object keys at any depth, canonicalize it according to
+the event's `event_version`, and confirm:
 `event_id == H(domain_separator || canonical_json(event))`.  
-This canonicalization covers the entire event object as defined by the schema (including the `signatures` array for attestation events).
+This canonicalization covers the entire untyped event object. Domain schemas may
+add further checks outside the journal core.
 
 ## 6. Limits
 
@@ -132,4 +140,3 @@ Future versions may add new record kinds, compression, checksums, or alternative
 ## 11. Summary
 
 The Northroot Journal is a durable evidence container for canonical events. Everything else—policy interpretation, enforcement, tooling—layers on top of the verified history.
-

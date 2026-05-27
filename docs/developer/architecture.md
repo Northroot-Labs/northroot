@@ -34,6 +34,7 @@ Northroot is organized as a minimal trust kernel with two core crates:
 
 **Responsibilities**:
 - Canonical JSON serialization (RFC 8785 + Northroot rules)
+- Strict JSON parsing that rejects duplicate object keys before they collapse
 - Quantity encoding (Dec, Int, Rat, F64)
 - Identifier validation (PrincipalId, ProfileId, Timestamp, Digest)
 - Event ID computation (`compute_event_id`)
@@ -43,6 +44,7 @@ Northroot is organized as a minimal trust kernel with two core crates:
 - `Canonicalizer` - Produces canonical bytes
 - `Digest` - Content-addressed identifiers
 - `Quantity` - Lossless numeric types
+- `parse_json_strict` - Parses untyped JSON while rejecting duplicate keys
 - `compute_event_id` - Computes event identity from canonical bytes
 
 **Dependencies**: None (foundational crate)
@@ -103,9 +105,10 @@ Northroot is organized as a minimal trust kernel with two core crates:
 
 ```
 1. northroot-journal reads frame from disk
-2. Parse event JSON object (untyped)
-3. northroot-canonical verifies event_id matches canonical bytes
-4. Optional: domain-specific verification (external to core)
+2. Strictly parse event JSON object (untyped, duplicate keys rejected)
+3. Confirm event payload is an object with a digest-shaped event_id
+4. northroot-canonical verifies event_id matches canonical bytes
+5. Optional: domain-specific verification (external to core)
 ```
 
 ---

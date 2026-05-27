@@ -1,7 +1,6 @@
 //! Event ID command implementation.
 
-use northroot_canonical::{compute_event_id, Canonicalizer, ProfileId};
-use serde_json::Value;
+use northroot_canonical::{compute_event_id, parse_json_strict, Canonicalizer, ProfileId};
 use std::io::{self, Read};
 
 pub fn run(input: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
@@ -19,8 +18,7 @@ pub fn run(input: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
         buffer
     };
 
-    let value: Value = serde_json::from_str(&json_str)
-        .map_err(|e| format!("Invalid JSON: {}", e))?;
+    let value = parse_json_strict(&json_str).map_err(|e| format!("Invalid JSON: {}", e))?;
 
     let event_id = compute_event_id(&value, &canonicalizer)
         .map_err(|e| format!("Event ID computation failed: {}", e))?;
@@ -29,3 +27,21 @@ pub fn run(input: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+#[cfg(test)]
+mod tests {
+    use super::run;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn rejects_duplicate_key_input() {
+        let temp = TempDir::new().unwrap();
+        let input = temp.path().join("event.json");
+        fs::write(&input, r#"{"a":1,"a":2}"#).unwrap();
+
+        let result = run(Some(input.to_str().unwrap().to_string()));
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("duplicate key"));
+    }
+}

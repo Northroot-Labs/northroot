@@ -13,9 +13,8 @@ pub enum CanonicalizationError {
     #[error("invalid JSON structure: {0}")]
     InvalidStructure(String),
     /// A duplicate object member was detected.
-    /// Note: This error is reserved for future use at the JSON parsing layer.
-    /// serde_json::Value::Object cannot have duplicates by design, so this
-    /// cannot occur during canonicalization of already-parsed Values.
+    /// Duplicate detection occurs at the strict JSON parsing layer because
+    /// serde_json::Value::Object cannot preserve duplicates after parsing.
     #[error("duplicate key detected at {0}")]
     #[allow(dead_code)]
     DuplicateKey(String),

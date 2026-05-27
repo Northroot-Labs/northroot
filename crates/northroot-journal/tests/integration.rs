@@ -2,7 +2,9 @@
 // Miri's filesystem emulation is slow and doesn't provide additional UB detection
 // beyond normal test runs. Skip under Miri; core frame logic is tested in frame.rs.
 
-use northroot_journal::{EventJson, JournalReader, JournalWriter, ReadMode, WriteOptions};
+use northroot_journal::{
+    EventJson, FrameKind, JournalReader, JournalWriter, ReadMode, WriteOptions,
+};
 use serde_json::json;
 use std::fs;
 use tempfile::TempDir;
@@ -182,4 +184,26 @@ fn test_empty_file_creates_header() {
     let mut reader = JournalReader::open(&journal_path, ReadMode::Strict).unwrap();
     let event = reader.read_event().unwrap().unwrap();
     assert_eq!(event["event_id"]["b64"], "event1");
+}
+
+#[test]
+#[cfg_attr(miri, ignore)]
+fn test_strict_read_rejects_duplicate_event_payload_key() {
+    let temp_dir = TempDir::new().unwrap();
+    let journal_path = temp_dir.path().join("test.nrj");
+
+    {
+        let mut writer = JournalWriter::open(&journal_path, WriteOptions::default()).unwrap();
+        writer
+            .append_raw(
+                FrameKind::EventJson,
+                br#"{"event_id":{"alg":"sha-256","b64":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"},"x":1,"x":2}"#,
+            )
+            .unwrap();
+        writer.finish().unwrap();
+    }
+
+    let mut reader = JournalReader::open(&journal_path, ReadMode::Strict).unwrap();
+    let err = reader.read_event().unwrap_err();
+    assert!(err.to_string().contains("duplicate key 'x'"));
 }

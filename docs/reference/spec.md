@@ -60,15 +60,23 @@ All events share a common envelope structure:
 
 Every field in the event is part of the canonical payload; the kernel operates on untyped `EventJson = serde_json::Value`. Domain layers add typed schemas and validation.
 
+The untyped model is intentional. Core verification only checks parse-safe JSON,
+canonicalizability, digest-shaped `event_id`, event identity, and optional chain
+continuity. Rejection of duplicate object keys is structural verification needed
+to preserve parse evidence before map-backed JSON values collapse keys; it is not
+semantic validation of event type, policy meaning, workflow state, authorization,
+or domain payload correctness.
+
 ---
 
 ## 4. Verification model
 
 Verifiers must:
 
-1. Parse the journal record into the canonical JSON event object.
-2. Apply the canonicalization profile associated with `canonical_profile_id`.
-3. Recompute `event_id` from the canonical bytes and ensure it matches the stored digest.
+1. Strictly parse the journal record into the canonical JSON event object, rejecting duplicate object keys at any depth.
+2. Confirm the event payload is a JSON object with a digest-shaped `event_id`.
+3. Apply the canonicalization profile associated with `canonical_profile_id`.
+4. Recompute `event_id` from the canonical bytes and ensure it matches the stored digest.
 
 Optional: use `prev_event_id` for hash-chain checks.
 

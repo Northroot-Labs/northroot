@@ -62,6 +62,8 @@ pub mod event_id;
 pub mod hygiene;
 /// Core identifiers and newtypes derived from canonical schema.
 pub mod identifiers;
+/// Strict JSON parsing for canonical evidence boundaries.
+pub mod json;
 /// Quantity types (Dec, Int, Rat, F64) encoded per canonical profile.
 pub mod quantities;
 /// Validation helpers used by canonical types.
@@ -72,5 +74,6 @@ pub use digest::{compute_blob_digest, Digest, DigestAlg};
 pub use event_id::{compute_event_id, verify_event_id, EventIdError};
 pub use hygiene::{HygieneReport, HygieneStatus, HygieneWarning};
 pub use identifiers::{ContentRef, PrincipalId, ProfileId, Timestamp, ToolName};
+pub use json::{parse_json_strict, StrictJsonError};
 pub use quantities::Quantity;
 pub use validation::ValidationError;

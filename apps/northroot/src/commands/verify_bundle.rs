@@ -1,7 +1,7 @@
 //! Portable evidence bundle verification.
 
 use base64::Engine;
-use northroot_canonical::{Canonicalizer, Digest, DigestAlg, ProfileId};
+use northroot_canonical::{parse_json_strict, Canonicalizer, Digest, DigestAlg, ProfileId};
 use northroot_journal::{verify_event_id, JournalReader, ReadMode};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -590,8 +590,9 @@ fn verify_artifacts(root: &Path, manifest: &BundleManifest, report: &mut AuditRe
 }
 
 fn read_json_file<T: for<'de> Deserialize<'de>>(path: &Path) -> Result<T, String> {
-    let file = File::open(path).map_err(|e| e.to_string())?;
-    serde_json::from_reader(file).map_err(|e| e.to_string())
+    let input = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+    let value = parse_json_strict(&input).map_err(|e| e.to_string())?;
+    serde_json::from_value(value).map_err(|e| e.to_string())
 }
 
 fn resolve_bundle_file(root: &Path, rel: &str) -> Result<PathBuf, String> {
@@ -606,7 +607,9 @@ fn resolve_bundle_file(root: &Path, rel: &str) -> Result<PathBuf, String> {
     for component in rel_path.components() {
         match component {
             Component::Normal(_) | Component::CurDir => {}
-            Component::ParentDir => return Err("parent directory components are not allowed".to_string()),
+            Component::ParentDir => {
+                return Err("parent directory components are not allowed".to_string())
+            }
             Component::RootDir | Component::Prefix(_) => {
                 return Err("absolute path components are not allowed".to_string());
             }
@@ -673,7 +676,8 @@ fn extract_digest(event: &Value, field: &str) -> Result<Digest, String> {
         .get(field)
         .ok_or_else(|| format!("missing {}", field))?
         .clone();
-    serde_json::from_value(value).map_err(|e| e.to_string())
+    let digest: Digest = serde_json::from_value(value).map_err(|e| e.to_string())?;
+    Digest::new(digest.alg, digest.b64).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
@@ -725,6 +729,38 @@ mod tests {
             .errors
             .iter()
             .any(|error| error.contains("receipt event_id mismatch")));
+    }
+
+    #[test]
+    fn rejects_receipt_json_with_duplicate_keys() {
+        let temp = build_agent_turn_bundle(BundleVariant::Valid);
+        let receipt_path = temp.path().join("receipts/002-output.json");
+        let original = fs::read_to_string(&receipt_path).unwrap();
+        let duplicate = format!(
+            "{{\"duplicate_probe\":1,\"duplicate_probe\":2,{}",
+            original.trim_start().trim_start_matches('{')
+        );
+        fs::write(&receipt_path, duplicate).unwrap();
+
+        let manifest_path = temp.path().join(BUNDLE_MANIFEST);
+        let mut manifest: Value =
+            serde_json::from_str(&fs::read_to_string(&manifest_path).unwrap()).unwrap();
+        manifest["receipts"][1]["sha256"] =
+            serde_json::to_value(sha256_file(&receipt_path).unwrap()).unwrap();
+        fs::write(
+            &manifest_path,
+            serde_json::to_vec_pretty(&manifest).unwrap(),
+        )
+        .unwrap();
+
+        let report = verify_bundle_dir(temp.path());
+
+        assert!(!report.valid);
+        assert!(report
+            .errors
+            .iter()
+            .any(|error| error.contains("receipt JSON invalid")
+                && error.contains("duplicate key 'duplicate_probe'")));
     }
 
     #[test]
@@ -793,13 +829,21 @@ mod tests {
         fs::create_dir_all(temp.path().join("receipts")).unwrap();
         fs::create_dir_all(temp.path().join("artifacts")).unwrap();
 
-        fs::write(temp.path().join("artifacts/input.txt"), "review local input\n").unwrap();
+        fs::write(
+            temp.path().join("artifacts/input.txt"),
+            "review local input\n",
+        )
+        .unwrap();
         fs::write(
             temp.path().join("artifacts/command-output.txt"),
             "check completed\n",
         )
         .unwrap();
-        fs::write(temp.path().join("artifacts/summary.md"), "portable evidence\n").unwrap();
+        fs::write(
+            temp.path().join("artifacts/summary.md"),
+            "portable evidence\n",
+        )
+        .unwrap();
 
         let profile = ProfileId::parse(CANONICAL_PROFILE).unwrap();
         let canonicalizer = Canonicalizer::new(profile);
@@ -893,15 +937,19 @@ mod tests {
             })
             .collect();
 
-        let artifacts = ["artifacts/input.txt", "artifacts/command-output.txt", "artifacts/summary.md"]
-            .iter()
-            .map(|path| {
-                json!({
-                    "path": path,
-                    "content_id": sha256_file(&temp.path().join(path)).unwrap()
-                })
+        let artifacts = [
+            "artifacts/input.txt",
+            "artifacts/command-output.txt",
+            "artifacts/summary.md",
+        ]
+        .iter()
+        .map(|path| {
+            json!({
+                "path": path,
+                "content_id": sha256_file(&temp.path().join(path)).unwrap()
             })
-            .collect::<Vec<_>>();
+        })
+        .collect::<Vec<_>>();
 
         let bundle_version = if matches!(variant, BundleVariant::UnsupportedManifestVersion) {
             2
