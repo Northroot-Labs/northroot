@@ -1,7 +1,6 @@
 //! Canonicalize command implementation.
 
-use northroot_canonical::{Canonicalizer, ProfileId};
-use serde_json::Value;
+use northroot_canonical::{parse_json_strict, Canonicalizer, ProfileId};
 use std::io::{self, Read};
 
 pub fn run(input: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
@@ -19,13 +18,12 @@ pub fn run(input: Option<String>) -> Result<(), Box<dyn std::error::Error>> {
         buffer
     };
 
-    let value: Value = serde_json::from_str(&json_str)
-        .map_err(|e| format!("Invalid JSON: {}", e))?;
+    let value = parse_json_strict(&json_str).map_err(|e| format!("Invalid JSON: {}", e))?;
 
-    let result = canonicalizer.canonicalize(&value)
+    let result = canonicalizer
+        .canonicalize(&value)
         .map_err(|e| format!("Canonicalization failed: {}", e))?;
 
     println!("{}", String::from_utf8_lossy(&result.bytes));
     Ok(())
 }
-

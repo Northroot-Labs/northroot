@@ -33,6 +33,9 @@ Northroot canonical JSON MUST follow **RFC 8785 (JSON Canonicalization Scheme)**
 
    If duplicate keys are observed in input, canonicalization MUST fail with
    `HygieneStatus::Invalid` and warning `DuplicateKeys`.
+   Implementations that parse into a map-backed JSON value MUST reject
+   duplicates before keys collapse. In Rust, use
+   `northroot_canonical::parse_json_strict` at canonical evidence boundaries.
 
 2. **UTF-8 only**
 
@@ -186,8 +189,8 @@ If flexibility is required, it MUST be expressed via an explicit tagged union
 5. Serialization Rules
 
 5.1 Canonicalization pipeline
-	1.	Parse input as a JSON object graph
-	2.	Validate structural constraints (UTF-8, no duplicate keys)
+	1.	Parse input as a JSON object graph, rejecting duplicate object keys before map collapse
+	2.	Validate structural constraints (UTF-8, object/value shape)
 	3.	Validate schema typing (no JSON numbers for quantity fields)
 	4.	Validate numeric bounds (scale and mantissa limits)
 	5.	Serialize using RFC 8785 rules
@@ -210,19 +213,23 @@ Canonicalization exists to produce deterministic bytes, not to clean or reinterp
 
 6.1 Strict mode (default)
 
-Strict mode MUST be used for:
+Strict mode MUST be used for canonical evidence boundaries:
 	•	Hashing
 	•	Receipts
 	•	Verification
 	•	Policy evaluation
 
 Rules:
-	•	Reject unknown fields unless schema explicitly allows them
+	•	Reject duplicate keys before parsed objects collapse to maps
+	•	Preserve untyped JSON values otherwise
 	•	Reject JSON numbers for quantity fields
-	•	Reject duplicate keys
 	•	Reject non-minimal integer strings
 	•	Reject -0 encodings
 	•	Reject values exceeding scale or mantissa bounds
+
+Duplicate-key rejection is structural verification. It is not domain schema
+validation and does not validate event type, policy meaning, workflow state,
+authorization, or other product semantics.
 
 6.2 Permissive mode (ingestion only)
 
