@@ -49,6 +49,21 @@ and customer/domain semantics remain in downstream repos such as ClearlyOps.
 - `schemas/platform/v1/lifecycle.schema.json`
   - `RunLifecycleRecord`
 
+## Consumer Vocabulary
+
+Downstream repos should use the contract names above when recording extraction
+or routing decisions. In particular:
+
+- skill packages may declare expected substrate refs such as `SourceRef`,
+  `ReceiptRef`, `CapabilityGrantRef`, `PolicyOutcomeRef`, and
+  `RunLifecycleRecord`;
+- `northroot-agent` may map deployed broker and queue records to these refs,
+  but queueing, dispatch, worker leases, provider calls, and acceptance remain
+  local;
+- `northroot-foundation` may define authority doctrine for capabilities and
+  policy bundles, but Northroot only verifies the portable envelope shape and
+  receipt linkage.
+
 ## Non-Goals
 
 - No queue, scheduler, worker runtime, hosted service, or provider SDK.
