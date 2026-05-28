@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northroot.dev/schemas/platform/v1/policy.schema.json",
+  "title": "Northroot Platform Policy Envelope (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {},
+  "$defs": {
+    "CapabilityGrantRef": {
+      "title": "CapabilityGrantRef",
+      "description": "Reference to a capability grant. The grant may be verified by hash or receipt, but Northroot does not decide private authority.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["grant_id", "capability", "actor"],
+      "properties": {
+        "grant_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "capability": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "actor": {
+          "$ref": "refs.schema.json#/$defs/ActorRef"
+        },
+        "policy_hash": {
+          "$ref": "ids.schema.json#/$defs/Digest"
+        }
+      }
+    },
+    "PolicyOutcomeRef": {
+      "title": "PolicyOutcomeRef",
+      "description": "Portable reference to a policy decision outcome.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome_id", "decision"],
+      "properties": {
+        "outcome_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "decision": {
+          "type": "string",
+          "enum": ["allow", "deny", "human_required", "defer"]
+        },
+        "receipt": {
+          "$ref": "refs.schema.json#/$defs/ReceiptRef"
+        },
+        "policy_hash": {
+          "$ref": "ids.schema.json#/$defs/Digest"
+        }
+      }
+    },
+    "PolicyEnvelope": {
+      "title": "PolicyEnvelope",
+      "description": "Verifier-facing policy decision envelope. Private authority and acceptance criteria are supplied by downstream policy bundles.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor", "capability", "resource", "outcome"],
+      "properties": {
+        "actor": {
+          "$ref": "refs.schema.json#/$defs/ActorRef"
+        },
+        "capability": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "resource": {
+          "$ref": "refs.schema.json#/$defs/SourceRef"
+        },
+        "grant": {
+          "$ref": "#/$defs/CapabilityGrantRef"
+        },
+        "outcome": {
+          "$ref": "#/$defs/PolicyOutcomeRef"
+        }
+      }
+    }
+  }
+}

@@ -28,6 +28,7 @@ This directory contains documentation organized by audience.
 - [Journal Format](reference/format.md) - On-disk format
 - [Canonicalization](reference/canonicalization.md) - Canonical JSON rules
 - [Event Model](reference/events.md) - Event types and structure
+- [Incubating Substrate Policy and Reference Contracts](reference/incubating-substrate-policy-refs-v0.md) - Portable refs, policy envelopes, and lifecycle records without private policy authority
 
 ### QA
 - [QA Harness](qa/harness.md) - Quality assurance and testing
