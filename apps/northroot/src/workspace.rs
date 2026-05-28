@@ -10,18 +10,15 @@ use thiserror::Error;
 
 const WORKSPACE_DIR: &str = ".northroot";
 const WORKSPACE_MANIFEST: &str = "workspace.json";
+const VAULT_CONFIG: &str = "vault.json";
 const WORKSPACE_SCHEMA_VERSION: &str = "northroot.workspace.v0";
+const VAULT_CONFIG_SCHEMA_VERSION: &str = "northroot.workspace_vault_config.v0";
+const COMPANY_REGISTRY_SCHEMA_VERSION: &str = "northroot.company_registry.v0";
 const CONNECTION_SCHEMA_VERSION: &str = "northroot.connection.v0";
 
-const VAULT_DIRS: &[&str] = &[
-    "raw",
-    "derived",
-    "indexes",
-    "logs",
-    "receipts",
-    "manifests",
-    "manifests/connections",
-];
+const VAULT_DIRS: &[&str] = &["raw", "derived", "indexes", "logs", "receipts", "manifests"];
+
+const WORKSPACE_STATE_DIRS: &[&str] = &["connections", "skills", "agents", "registry"];
 
 /// Workspace operation errors.
 #[derive(Debug, Error)]
@@ -55,6 +52,8 @@ pub struct WorkspaceManifest {
     pub name: String,
     /// Workspace root path.
     pub workspace_root: String,
+    /// Northroot workspace state root path.
+    pub northroot_root: String,
     /// Workspace vault root path.
     pub vault_root: String,
     /// Object store configuration.
@@ -76,6 +75,21 @@ pub struct ObjectStoreConfig {
     pub root: String,
 }
 
+/// Workspace vault configuration.
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
+pub struct VaultConfig {
+    /// Manifest schema version.
+    pub schema_version: String,
+    /// Data-vault root path.
+    pub vault_root: String,
+    /// Object store configuration.
+    pub object_store: ObjectStoreConfig,
+    /// Optional future replication target references.
+    pub replication_targets: Vec<String>,
+    /// Secret posture statement.
+    pub secret_posture: String,
+}
+
 /// Reference to a provider connection manifest.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct ConnectionRef {
@@ -83,7 +97,7 @@ pub struct ConnectionRef {
     pub provider: String,
     /// Connection mode, such as `readonly`.
     pub mode: String,
-    /// Object-store path to the connection manifest.
+    /// Workspace-relative path to the connection manifest.
     pub manifest_path: String,
 }
 
@@ -115,12 +129,20 @@ pub struct WorkspaceStatus {
     pub workspace: WorkspaceManifest,
     /// Vault directory readiness.
     pub vault_dirs: Vec<VaultDirStatus>,
+    /// Generic workspace state directory readiness.
+    pub workspace_state_dirs: Vec<VaultDirStatus>,
+    /// Whether `.northroot/vault.json` exists.
+    pub vault_config_exists: bool,
     /// Whether the named workspace manifest exists in the vault object store.
     pub vault_manifest_exists: bool,
     /// Number of object-store paths under `manifests/`.
     pub manifest_object_count: usize,
     /// Number of connection manifests.
     pub connection_count: usize,
+    /// Number of enabled reusable skill package identifiers.
+    pub enabled_skill_count: usize,
+    /// Whether the local company/customer registry exists.
+    pub company_registry_exists: bool,
 }
 
 /// Per-directory readiness for a vault path.
@@ -139,16 +161,21 @@ pub fn init_workspace(name: &str, root: impl AsRef<Path>) -> Result<WorkspaceMan
     }
     let workspace_root = root.as_ref().to_path_buf();
     fs::create_dir_all(&workspace_root)?;
-    let vault_root = workspace_root.join("vault");
+    let northroot_root = workspace_root.join(WORKSPACE_DIR);
+    let vault_root = northroot_root.join("vault");
+    fs::create_dir_all(&northroot_root)?;
+    for dir in WORKSPACE_STATE_DIRS {
+        fs::create_dir_all(northroot_root.join(dir))?;
+    }
     for dir in VAULT_DIRS {
         fs::create_dir_all(vault_root.join(dir))?;
     }
-    fs::create_dir_all(workspace_root.join(WORKSPACE_DIR))?;
 
     let manifest = WorkspaceManifest {
         schema_version: WORKSPACE_SCHEMA_VERSION.to_string(),
         name: name.to_string(),
         workspace_root: workspace_root.display().to_string(),
+        northroot_root: northroot_root.display().to_string(),
         vault_root: vault_root.display().to_string(),
         object_store: ObjectStoreConfig {
             backend: "local".to_string(),
@@ -159,6 +186,8 @@ pub fn init_workspace(name: &str, root: impl AsRef<Path>) -> Result<WorkspaceMan
         created_at: now_utc_string(),
     };
     write_workspace_manifest(&manifest)?;
+    write_vault_config(&manifest)?;
+    write_company_registry(&manifest)?;
     Ok(manifest)
 }
 
@@ -174,6 +203,7 @@ pub fn load_workspace(root: impl AsRef<Path>) -> Result<WorkspaceManifest> {
 /// Compute workspace status.
 pub fn workspace_status(root: impl AsRef<Path>) -> Result<WorkspaceStatus> {
     let manifest = load_workspace(root)?;
+    let northroot_root = PathBuf::from(&manifest.northroot_root);
     let vault_root = PathBuf::from(&manifest.vault_root);
     let store = LocalObjectStore::open(&manifest.object_store.root)?;
     let vault_dirs = VAULT_DIRS
@@ -183,18 +213,32 @@ pub fn workspace_status(root: impl AsRef<Path>) -> Result<WorkspaceStatus> {
             exists: vault_root.join(dir).is_dir(),
         })
         .collect::<Vec<_>>();
+    let workspace_state_dirs = WORKSPACE_STATE_DIRS
+        .iter()
+        .map(|dir| VaultDirStatus {
+            path: (*dir).to_string(),
+            exists: northroot_root.join(dir).is_dir(),
+        })
+        .collect::<Vec<_>>();
+    let vault_config_exists = northroot_root.join(VAULT_CONFIG).is_file();
     let vault_manifest_exists = store.exists("manifests/workspace.json")?;
     if vault_manifest_exists {
         let _ = store.read_manifest("manifests/workspace.json")?;
     }
     let manifest_object_count = store.list_prefix("manifests")?.len();
     let connection_count = manifest.connections.len();
+    let enabled_skill_count = manifest.enabled_skills.len();
+    let company_registry_exists = northroot_root.join("registry/companies.json").is_file();
     Ok(WorkspaceStatus {
         workspace: manifest,
         vault_dirs,
+        workspace_state_dirs,
+        vault_config_exists,
         vault_manifest_exists,
         manifest_object_count,
         connection_count,
+        enabled_skill_count,
+        company_registry_exists,
     })
 }
 
@@ -223,9 +267,12 @@ pub fn connect_gmail(
         secret_posture: "no credential material stored in workspace vault".to_string(),
         created_at: now_utc_string(),
     };
-    let store = LocalObjectStore::open(&workspace.object_store.root)?;
-    let manifest_path = "manifests/connections/gmail.json";
-    store.write_manifest(manifest_path, &serde_json::to_value(&connection)?)?;
+    let manifest_path = "connections/gmail.json";
+    let connection_path = PathBuf::from(&workspace.northroot_root).join(manifest_path);
+    if let Some(parent) = connection_path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(&connection_path, serde_json::to_vec_pretty(&connection)?)?;
 
     workspace
         .connections
@@ -251,7 +298,7 @@ fn write_workspace_manifest(manifest: &WorkspaceManifest) -> Result<()> {
         "workspace": manifest.name,
         "vault_root": manifest.vault_root,
         "object_store_backend": manifest.object_store.backend,
-        "secret_posture": "secret values stay in external password managers or provider auth stores",
+        "secret_posture": "credential values stay in external credential managers or provider auth stores",
         "data_boundary": "raw and derived workspace data land in this vault"
     });
     store.write_manifest("manifests/vault-boundary.json", &boundary)?;
@@ -264,6 +311,33 @@ fn write_workspace_manifest(manifest: &WorkspaceManifest) -> Result<()> {
             "workspace vault boundary object verification failed",
         )));
     }
+    Ok(())
+}
+
+fn write_vault_config(manifest: &WorkspaceManifest) -> Result<()> {
+    let config = VaultConfig {
+        schema_version: VAULT_CONFIG_SCHEMA_VERSION.to_string(),
+        vault_root: manifest.vault_root.clone(),
+        object_store: manifest.object_store.clone(),
+        replication_targets: Vec::new(),
+        secret_posture: "vault stores data and non-secret references only; credentials stay in external auth stores".to_string(),
+    };
+    let path = PathBuf::from(&manifest.northroot_root).join(VAULT_CONFIG);
+    fs::write(path, serde_json::to_vec_pretty(&config)?)?;
+    Ok(())
+}
+
+fn write_company_registry(manifest: &WorkspaceManifest) -> Result<()> {
+    let registry = json!({
+        "schema_version": COMPANY_REGISTRY_SCHEMA_VERSION,
+        "companies": [],
+        "notes": [
+            "Company records may include local aliases such as APD without making those aliases substrate primitives.",
+            "Product and service-specific bindings belong in profile packs such as .clearlyops/."
+        ]
+    });
+    let path = PathBuf::from(&manifest.northroot_root).join("registry/companies.json");
+    fs::write(path, serde_json::to_vec_pretty(&registry)?)?;
     Ok(())
 }
 
@@ -291,10 +365,21 @@ mod tests {
         assert_eq!(manifest.name, "apd-local");
         assert_eq!(manifest.object_store.backend, "local");
         for dir in VAULT_DIRS {
-            assert!(temp.path().join("vault").join(dir).is_dir(), "{dir}");
+            assert!(
+                temp.path().join(".northroot/vault").join(dir).is_dir(),
+                "{dir}"
+            );
         }
         assert!(temp.path().join(".northroot/workspace.json").is_file());
-        assert!(temp.path().join("vault/manifests/workspace.json").is_file());
+        assert!(temp.path().join(".northroot/vault.json").is_file());
+        assert!(temp
+            .path()
+            .join(".northroot/registry/companies.json")
+            .is_file());
+        assert!(temp
+            .path()
+            .join(".northroot/vault/manifests/workspace.json")
+            .is_file());
     }
 
     #[test]
@@ -306,8 +391,11 @@ mod tests {
 
         assert_eq!(status.workspace.name, "ops");
         assert!(status.vault_dirs.iter().all(|item| item.exists));
+        assert!(status.workspace_state_dirs.iter().all(|item| item.exists));
+        assert!(status.vault_config_exists);
         assert!(status.vault_manifest_exists);
         assert!(status.manifest_object_count >= 3);
+        assert!(status.company_registry_exists);
     }
 
     #[test]
@@ -323,5 +411,51 @@ mod tests {
         assert!(!serialized.contains("password"));
         assert!(!serialized.contains("secret_value"));
         assert!(serialized.contains("provider:gws:profile:clearlyops_internal"));
+        assert!(temp
+            .path()
+            .join(".northroot/connections/gmail.json")
+            .is_file());
+        assert!(!temp
+            .path()
+            .join(".northroot/vault/manifests/connections/gmail.json")
+            .exists());
+    }
+
+    #[test]
+    fn northroot_workspace_files_contain_only_secret_references() {
+        let temp = TempDir::new().unwrap();
+        init_workspace("ops", temp.path()).unwrap();
+        connect_gmail(temp.path(), "readonly", "clearlyops_internal").unwrap();
+
+        let combined = read_all_text_files(&temp.path().join(".northroot"));
+
+        assert!(combined.contains("provider:gws:profile:clearlyops_internal"));
+        for forbidden in [
+            "oauth_token",
+            "access_token",
+            "refresh_token",
+            "client_secret",
+            "password",
+            "secret_value",
+            "private_key",
+        ] {
+            assert!(
+                !combined.contains(forbidden),
+                "workspace metadata contained forbidden credential marker {forbidden}"
+            );
+        }
+    }
+
+    fn read_all_text_files(root: &Path) -> String {
+        let mut combined = String::new();
+        for entry in fs::read_dir(root).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                combined.push_str(&read_all_text_files(&path));
+            } else {
+                combined.push_str(&fs::read_to_string(path).unwrap());
+            }
+        }
+        combined
     }
 }
