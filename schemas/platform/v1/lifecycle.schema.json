@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northroot.dev/schemas/platform/v1/lifecycle.schema.json",
+  "title": "Northroot Platform Run Lifecycle Record (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["run_id", "state", "actor", "occurred_at"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "task_ref": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256
+    },
+    "state": {
+      "type": "string",
+      "enum": ["accepted", "started", "observed", "blocked", "completed", "failed"]
+    },
+    "actor": {
+      "$ref": "refs.schema.json#/$defs/ActorRef"
+    },
+    "occurred_at": {
+      "$ref": "../../canonical/v1/types.schema.json#/$defs/Timestamp"
+    },
+    "sources": {
+      "type": "array",
+      "items": {"$ref": "refs.schema.json#/$defs/SourceRef"}
+    },
+    "artifacts": {
+      "type": "array",
+      "items": {"$ref": "refs.schema.json#/$defs/ArtifactRef"}
+    },
+    "receipts": {
+      "type": "array",
+      "items": {"$ref": "refs.schema.json#/$defs/ReceiptRef"}
+    },
+    "context_bundle": {
+      "$ref": "refs.schema.json#/$defs/ContextBundleRef"
+    },
+    "policy_outcome": {
+      "$ref": "policy.schema.json#/$defs/PolicyOutcomeRef"
+    }
+  }
+}

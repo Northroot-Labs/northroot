@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northroot.dev/schemas/platform/v1/refs.schema.json",
+  "title": "Northroot Platform Portable References (v1)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {},
+  "$defs": {
+    "ActorRef": {
+      "title": "ActorRef",
+      "description": "Portable reference to a human, service, agent, or system actor. This identifies provenance; it does not grant authority.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_type", "actor_id", "source"],
+      "properties": {
+        "actor_type": {
+          "type": "string",
+          "enum": ["human", "service", "agent", "system"]
+        },
+        "actor_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "SourceRef": {
+      "title": "SourceRef",
+      "description": "Portable pointer to an external source. Authorization and dereference behavior stay outside Northroot.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri"],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "digest": {
+          "$ref": "ids.schema.json#/$defs/Digest"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "ArtifactRef": {
+      "title": "ArtifactRef",
+      "description": "Portable reference to an immutable artifact or proof artifact.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifact_id", "uri"],
+      "properties": {
+        "artifact_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "uri": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2048
+        },
+        "digest": {
+          "$ref": "ids.schema.json#/$defs/Digest"
+        },
+        "media_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        }
+      }
+    },
+    "ReceiptRef": {
+      "title": "ReceiptRef",
+      "description": "Portable reference to a receipt and optional canonical hash binding.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["receipt_id", "action", "issued_at"],
+      "properties": {
+        "receipt_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "action": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "issued_at": {
+          "$ref": "../../canonical/v1/types.schema.json#/$defs/Timestamp"
+        },
+        "canonical_hash": {
+          "$ref": "ids.schema.json#/$defs/Digest"
+        }
+      }
+    },
+    "ContextBundleRef": {
+      "title": "ContextBundleRef",
+      "description": "Portable reference to a bounded context bundle used for accountable work.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["context_bundle_id", "sources"],
+      "properties": {
+        "context_bundle_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "sources": {
+          "type": "array",
+          "items": {"$ref": "#/$defs/SourceRef"}
+        },
+        "digest": {
+          "$ref": "ids.schema.json#/$defs/Digest"
+        }
+      }
+    }
+  }
+}

@@ -92,6 +92,9 @@ Current platform contracts:
 - `platform/v1/ids.schema.json` - ID taxonomy (`record_id`, `content_id`, `event_id`).
 - `platform/v1/receipt.schema.json` - minimal receipt envelope.
 - `platform/v1/economic_event.schema.json` - minimal verifiable economic event profile.
+- `platform/v1/refs.schema.json` - portable actor, source, artifact, receipt, and context-bundle refs.
+- `platform/v1/policy.schema.json` - policy envelope, capability-grant ref, and policy-outcome ref structures.
+- `platform/v1/lifecycle.schema.json` - run lifecycle record that composes refs without defining a scheduler.
 
 ---
 
