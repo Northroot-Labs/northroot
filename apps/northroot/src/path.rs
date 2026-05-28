@@ -109,7 +109,9 @@ mod tests {
 
     impl DirGuard {
         fn enter(path: &Path) -> Self {
-            let lock = CWD_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+            let lock = CWD_LOCK
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             let original = std::env::current_dir().unwrap();
             std::env::set_current_dir(path).unwrap();
             Self {

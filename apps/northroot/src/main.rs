@@ -3,10 +3,15 @@
 use clap::{Parser, Subcommand};
 
 mod commands;
+mod object_store;
 mod output;
 mod path;
+mod workspace;
 
-use commands::{append, canonicalize, event_id, list, verify, verify_bundle};
+use commands::{
+    append, canonicalize, connect, event_id, list, verify, verify_bundle,
+    workspace as workspace_command,
+};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
@@ -80,6 +85,51 @@ enum Commands {
         #[arg(long)]
         sync: bool,
     },
+    /// Manage local Northroot workspaces and workspace vaults
+    Workspace {
+        #[command(subcommand)]
+        command: WorkspaceCommands,
+    },
+    /// Record provider connection references for a workspace
+    Connect {
+        #[command(subcommand)]
+        command: ConnectCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum WorkspaceCommands {
+    /// Initialize a local workspace and workspace vault
+    Init {
+        /// Workspace name
+        #[arg(long)]
+        name: String,
+        /// Workspace root directory
+        #[arg(long)]
+        root: String,
+    },
+    /// Show workspace and vault status
+    Status {
+        /// Workspace root directory
+        #[arg(long, default_value = ".")]
+        root: String,
+    },
+}
+
+#[derive(Subcommand)]
+enum ConnectCommands {
+    /// Record a read-only Gmail/Drive connection reference
+    Gmail {
+        /// Workspace root directory
+        #[arg(long)]
+        workspace: String,
+        /// Connection mode. V0 supports readonly only.
+        #[arg(long, default_value = "readonly")]
+        mode: String,
+        /// Local Google Workspace CLI profile reference
+        #[arg(long, default_value = "default")]
+        profile: String,
+    },
 }
 
 fn main() {
@@ -108,6 +158,17 @@ fn main() {
             strict,
             sync,
         } => append::run(journal, input, strict, sync),
+        Commands::Workspace { command } => match command {
+            WorkspaceCommands::Init { name, root } => workspace_command::init(name, root),
+            WorkspaceCommands::Status { root } => workspace_command::status(root),
+        },
+        Commands::Connect { command } => match command {
+            ConnectCommands::Gmail {
+                workspace,
+                mode,
+                profile,
+            } => connect::gmail(workspace, mode, profile),
+        },
     };
 
     if let Err(e) = result {

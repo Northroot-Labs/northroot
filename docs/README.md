@@ -29,6 +29,7 @@ This directory contains documentation organized by audience.
 - [Canonicalization](reference/canonicalization.md) - Canonical JSON rules
 - [Event Model](reference/events.md) - Event types and structure
 - [Incubating Substrate Policy and Reference Contracts](reference/incubating-substrate-policy-refs-v0.md) - Portable refs, policy envelopes, and lifecycle records without private policy authority
+- [Workspace Vault](reference/workspace-vault.md) - Local workspace data boundary and ObjectStore facade
 
 ### QA
 - [QA Harness](qa/harness.md) - Quality assurance and testing
