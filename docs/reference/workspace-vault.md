@@ -7,6 +7,12 @@ Status: Incubating CLI contract
 A Northroot workspace is the local execution and configuration boundary for
 skills, connections, receipts, local agent state, and policy references.
 
+Workspace authority remains policy-owned outside the trust kernel. A workspace
+is the operating boundary; resources are targetable paths, objects, provider
+refs, or the workspace itself for workspace-wide actions. Object refs and
+content refs identify bytes. They do not grant permission to read or mutate
+those bytes.
+
 A workspace vault is the data boundary for a user, department, client, or
 project. It is where local and edge workflows land raw data, derived artifacts,
 indexes, logs, receipts, and manifests.
