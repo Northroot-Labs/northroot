@@ -1,9 +1,8 @@
 //! Local object store facade for workspace vaults.
 
-use base64::Engine;
+use northroot_canonical::compute_blob_digest;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sha2::{Digest as Sha2Digest, Sha256};
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 use thiserror::Error;
@@ -23,6 +22,9 @@ pub enum ObjectStoreError {
     /// JSON serialization or parsing failed.
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+    /// Digest computation failed.
+    #[error("digest error: {0}")]
+    Digest(#[from] northroot_canonical::ValidationError),
 }
 
 /// Result alias for object store operations.
@@ -81,7 +83,8 @@ impl LocalObjectStore {
 impl ObjectStore for LocalObjectStore {
     fn put(&self, prefix: &str, bytes: &[u8], media_type: &str) -> Result<ObjectMetadata> {
         let safe_prefix = safe_relative_path(prefix)?;
-        let sha256_b64 = sha256_b64(bytes);
+        let digest = compute_blob_digest(bytes)?;
+        let sha256_b64 = digest.b64;
         let shard = &sha256_b64[..2];
         let object_ref = format!("sha256:{}", sha256_b64);
         let relative = safe_prefix.join("sha256").join(shard).join(&sha256_b64);
@@ -157,12 +160,6 @@ fn collect_files(root: &Path, current: &Path, out: &mut Vec<String>) -> Result<(
         }
     }
     Ok(())
-}
-
-fn sha256_b64(bytes: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(hasher.finalize())
 }
 
 fn safe_relative_path(path: &str) -> Result<PathBuf> {

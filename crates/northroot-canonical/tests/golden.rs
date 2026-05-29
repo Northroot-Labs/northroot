@@ -1,10 +1,27 @@
 use std::collections::BTreeMap;
 
 use northroot_canonical::{
-    canonicalizer::Canonicalizer, compute_blob_digest, ContentRef, Digest, DigestAlg,
+    canonicalizer::Canonicalizer, compute_blob_digest, compute_event_id,
+    compute_grant_id_from_canonical_bytes, compute_receipt_id_from_canonical_bytes,
+    compute_record_id_from_canonical_bytes, compute_token_ref, ContentRef, Digest, DigestAlg,
     HygieneReport, HygieneStatus, HygieneWarning, ProfileId, Quantity,
 };
+use serde::Deserialize;
 use serde_json::json;
+
+#[derive(Debug, Deserialize)]
+struct HashRefVectors {
+    cases: Vec<HashRefCase>,
+}
+
+#[derive(Debug, Deserialize)]
+struct HashRefCase {
+    kind: String,
+    input_utf8: Option<String>,
+    canonical_json: Option<String>,
+    expected: Option<String>,
+    expected_b64: Option<String>,
+}
 
 #[test]
 fn digest_serializes_to_golden_json() {
@@ -25,6 +42,46 @@ fn blob_digest_matches_sha256_base64url_golden() {
 
     assert_eq!(digest.alg, DigestAlg::Sha256);
     assert_eq!(digest.b64, "bJeloqUODbW_XyWyWOnvTXqujZKnX7R2D2j86EJG7pY");
+}
+
+#[test]
+fn hashref_v0_shared_vectors_match_canonical_helpers() {
+    let vectors: HashRefVectors =
+        serde_json::from_str(include_str!("hashref-v0-golden.json")).unwrap();
+    let profile = ProfileId::parse("northroot-canonical-v1").unwrap();
+    let canonicalizer = Canonicalizer::new(profile);
+
+    for case in vectors.cases {
+        match case.kind.as_str() {
+            "blob_digest" => {
+                let digest = compute_blob_digest(case.input_utf8.unwrap().as_bytes()).unwrap();
+                assert_eq!(digest.b64, case.expected_b64.unwrap());
+            }
+            "event_id" => {
+                let value: serde_json::Value =
+                    serde_json::from_str(&case.canonical_json.unwrap()).unwrap();
+                let digest = compute_event_id(&value, &canonicalizer).unwrap();
+                assert_eq!(digest.b64, case.expected_b64.unwrap());
+            }
+            "receipt_id" => assert_eq!(
+                compute_receipt_id_from_canonical_bytes(case.canonical_json.unwrap().as_bytes()),
+                case.expected.unwrap()
+            ),
+            "grant_id" => assert_eq!(
+                compute_grant_id_from_canonical_bytes(case.canonical_json.unwrap().as_bytes()),
+                case.expected.unwrap()
+            ),
+            "record_id" => assert_eq!(
+                compute_record_id_from_canonical_bytes(case.canonical_json.unwrap().as_bytes()),
+                case.expected.unwrap()
+            ),
+            "token_ref" => assert_eq!(
+                compute_token_ref(case.input_utf8.unwrap().as_bytes()),
+                case.expected.unwrap()
+            ),
+            other => panic!("unknown hashref vector kind: {other}"),
+        }
+    }
 }
 
 #[test]

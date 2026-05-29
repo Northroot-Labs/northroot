@@ -58,6 +58,8 @@ pub mod canonicalizer;
 pub mod digest;
 /// Event ID computation with domain-separated hashing.
 pub mod event_id;
+/// HashRef v0 durable identifier helpers.
+pub mod hashref;
 /// Hygiene report types emitted during canonicalization.
 pub mod hygiene;
 /// Core identifiers and newtypes derived from canonical schema.
@@ -72,6 +74,11 @@ pub mod validation;
 pub use canonicalizer::{CanonicalizationError, CanonicalizationResult, Canonicalizer};
 pub use digest::{compute_blob_digest, Digest, DigestAlg};
 pub use event_id::{compute_event_id, verify_event_id, EventIdError};
+pub use hashref::{
+    compute_grant_id, compute_grant_id_from_canonical_bytes, compute_receipt_id,
+    compute_receipt_id_from_canonical_bytes, compute_record_id,
+    compute_record_id_from_canonical_bytes, compute_token_ref, HashRefError,
+};
 pub use hygiene::{HygieneReport, HygieneStatus, HygieneWarning};
 pub use identifiers::{ContentRef, PrincipalId, ProfileId, Timestamp, ToolName};
 pub use json::{parse_json_strict, StrictJsonError};

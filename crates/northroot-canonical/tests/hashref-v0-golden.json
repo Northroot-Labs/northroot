@@ -1,0 +1,46 @@
+{
+  "schema": "northroot.hashref_vectors.v0",
+  "cases": [
+    {
+      "name": "blob_digest.sample_artifact",
+      "kind": "blob_digest",
+      "input_utf8": "northroot artifact bytes",
+      "expected_b64": "bJeloqUODbW_XyWyWOnvTXqujZKnX7R2D2j86EJG7pY"
+    },
+    {
+      "name": "event_id.sample_event",
+      "kind": "event_id",
+      "domain": "northroot:event:v1\\0",
+      "canonical_json": "{\"canonical_profile_id\":\"northroot-canonical-v1\",\"event_type\":\"hashref.sample\",\"event_version\":\"1\",\"occurred_at\":\"2026-05-29T00:00:00Z\",\"principal_id\":\"service:hashref\"}",
+      "expected_b64": "00kQXQ6dsct8x1zna1NWbzzxd8T-yHjBiNpbx1n5njo"
+    },
+    {
+      "name": "receipt_id.backup_skipped",
+      "kind": "receipt_id",
+      "domain": "northroot:receipt:v0\\0",
+      "canonical_json": "{\"action\":\"backup.run\",\"status\":\"skipped\",\"workspace_ref\":\"workspace:/tmp/northroot-demo\"}",
+      "expected": "nr_receipt_6df15ffa02ab6e1b07d9a7060d377448e60659ed064a970cd47d93d771ef4a64"
+    },
+    {
+      "name": "grant_id.backup_run",
+      "kind": "grant_id",
+      "domain": "northroot:grant:v0\\0",
+      "canonical_json": "{\"actor\":\"agent:codex\",\"capability\":\"backup.run\",\"purpose\":\"local backup smoke\",\"resource_ref\":\"workspace:/tmp/northroot-demo\",\"ttl\":\"PT15M\",\"workspace_ref\":\"workspace:/tmp/northroot-demo\"}",
+      "expected": "nr_grant_8ae59d0d1a4aa6ddc459024625b87df67bd13dbf39d1777b04d9ede0b3d03b8a"
+    },
+    {
+      "name": "record_id.backup_run",
+      "kind": "record_id",
+      "domain": "northroot:record:v0\\0",
+      "canonical_json": "{\"kind\":\"backup_run\",\"receipt_id\":\"sample\",\"workspace_ref\":\"workspace:/tmp/northroot-demo\"}",
+      "expected": "nr_record_58c18206e581c800f15b963bd6ca1f56f3d82dcb09dcf6335642a57ce4d066df"
+    },
+    {
+      "name": "token_ref.github_example",
+      "kind": "token_ref",
+      "domain": "northroot:token-ref:v0\\0",
+      "input_utf8": "ghs_example_token",
+      "expected": "nr_token_ref_3767a1c83a17ddc944eef8cdff67f3fcea211baf76c4c5f230b56c2301badd57"
+    }
+  ]
+}

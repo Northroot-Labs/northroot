@@ -46,6 +46,11 @@ Operational logs may reference receipts, but logs are not receipts.
 - Use for: files and artifacts (PDF, CSV, XLSX, JSON, markdown, etc.).
 - Format: digest of raw bytes (sha-256 by default).
 - Reference helper: `northroot_canonical::compute_blob_digest`.
+- Downstream object stores should reuse this helper or match its golden vectors
+  instead of reimplementing ad hoc SHA-256 encoding.
+- HashRef v0 helpers for receipt, grant, record, and token refs live in
+  `northroot_canonical::hashref`; downstream adapters must pass the shared
+  HashRef v0 golden vectors.
 
 ### content_ref (pointer to external bytes)
 
