@@ -33,6 +33,12 @@ The vault uses an ObjectStore facade so storage backends can change without
 changing workspace semantics. V0 implements the local filesystem backend. Cloud
 backends such as GCS or S3 can preserve the same prefixes later.
 
+Objects are storage-level byte records with backend-relative paths and
+content-addressed metadata. Artifacts are semantic work products, such as a
+generated export, receipt bundle, extracted document, or proof package. An
+artifact may be backed by one or more objects or content refs, but an object is
+not an artifact by itself.
+
 Required object store operations:
 
 - `put`: store immutable bytes and return content-addressed metadata.
