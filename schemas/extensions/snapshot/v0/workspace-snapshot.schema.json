@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northroot.dev/schemas/extensions/snapshot/v0/workspace-snapshot.schema.json",
+  "title": "Northroot Workspace Snapshot v0",
+  "type": "object",
+  "required": [
+    "schema",
+    "workspace_id",
+    "generated_at",
+    "covered_event_count",
+    "covered_tip_event_id",
+    "state",
+    "projection_sections",
+    "evidence_index_sections",
+    "lineage"
+  ],
+  "properties": {
+    "schema": { "const": "northroot.workspace_snapshot.v0" },
+    "workspace_id": { "type": "string", "pattern": "^workspace:" },
+    "generated_at": { "type": "string" },
+    "covered_event_count": { "type": "integer", "minimum": 0 },
+    "covered_tip_event_id": { "type": ["object", "null"] },
+    "state": { "type": "object" },
+    "projection_sections": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["digest", "authoritative"],
+        "properties": {
+          "digest": { "type": "object" },
+          "authoritative": { "const": false }
+        },
+        "additionalProperties": true
+      }
+    },
+    "evidence_index_sections": {
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    },
+    "lineage": { "type": "object" }
+  },
+  "additionalProperties": false
+}

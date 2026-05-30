@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northroot.dev/schemas/extensions/snapshot/v0/snapshot-manifest.schema.json",
+  "title": "Northroot Snapshot Manifest v0",
+  "type": "object",
+  "required": [
+    "schema",
+    "workspace_id",
+    "generated_at",
+    "covered_journal_ref",
+    "covered_event_count",
+    "covered_tip_event_id",
+    "covered_journal_byte_offset",
+    "payload_digest",
+    "payload_digest_hex",
+    "payload_path",
+    "projection_digests",
+    "redaction_profile",
+    "generator_version"
+  ],
+  "properties": {
+    "schema": { "const": "northroot.snapshot_manifest.v0" },
+    "workspace_id": { "type": "string", "pattern": "^workspace:" },
+    "generated_at": { "type": "string" },
+    "covered_journal_ref": {
+      "type": "object",
+      "required": ["path", "digest"],
+      "properties": {
+        "path": { "type": "string" },
+        "digest": { "type": "object" }
+      },
+      "additionalProperties": true
+    },
+    "covered_event_count": { "type": "integer", "minimum": 0 },
+    "covered_tip_event_id": { "type": ["object", "null"] },
+    "covered_journal_byte_offset": { "type": "integer", "minimum": 0 },
+    "payload_digest": { "type": "object" },
+    "payload_digest_hex": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "payload_path": { "type": "string" },
+    "projection_digests": {
+      "type": "object",
+      "additionalProperties": { "type": "object" }
+    },
+    "redaction_profile": { "type": "string" },
+    "generator_version": { "type": "string" },
+    "lineage": { "type": "object" }
+  },
+  "additionalProperties": false
+}

@@ -6,7 +6,7 @@ mod commands;
 mod output;
 mod path;
 
-use commands::{append, canonicalize, event_id, list, verify, verify_bundle};
+use commands::{append, canonicalize, event_id, list, verify, verify_bundle, work};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
@@ -80,6 +80,11 @@ enum Commands {
         #[arg(long)]
         sync: bool,
     },
+    /// Work ledger ingestion, projection, and verification
+    Work {
+        #[command(subcommand)]
+        command: work::WorkCommand,
+    },
 }
 
 fn main() {
@@ -108,6 +113,7 @@ fn main() {
             strict,
             sync,
         } => append::run(journal, input, strict, sync),
+        Commands::Work { command } => work::run(command),
     };
 
     if let Err(e) = result {

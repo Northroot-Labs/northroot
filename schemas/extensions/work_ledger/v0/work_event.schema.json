@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northroot.dev/schemas/extensions/work_ledger/v0/work_event.schema.json",
+  "title": "Northroot Work Ledger Event v0",
+  "type": "object",
+  "required": [
+    "event_type",
+    "event_version",
+    "event_id",
+    "occurred_at",
+    "principal_id",
+    "canonical_profile_id",
+    "schema",
+    "work_id",
+    "source_system",
+    "source"
+  ],
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "work.observed",
+        "run.observed",
+        "artifact.observed",
+        "run.completed",
+        "run.blocked",
+        "snapshot.generated",
+        "snapshot.restored",
+        "backup.receipt.observed"
+      ]
+    },
+    "event_version": { "const": "0" },
+    "event_id": { "type": "object" },
+    "occurred_at": { "type": "string" },
+    "principal_id": { "type": "string" },
+    "canonical_profile_id": { "const": "northroot-canonical-v1" },
+    "schema": { "const": "northroot.work_ledger.v0" },
+    "work_id": { "type": "string", "pattern": "^work:" },
+    "run_id": { "type": "string", "pattern": "^run:" },
+    "source_system": { "type": "string" },
+    "source": {
+      "type": "object",
+      "required": ["kind", "path", "line"],
+      "properties": {
+        "kind": { "type": "string" },
+        "path": { "type": "string" },
+        "line": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "observation": { "type": "object" },
+    "artifact": { "type": "object" },
+    "snapshot": { "type": "object" },
+    "backup_receipt": { "type": "object" },
+    "status": { "type": "string", "enum": ["completed", "blocked"] },
+    "reason": { "type": "string" }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "event_type": { "enum": ["run.observed", "artifact.observed", "run.completed", "run.blocked"] }
+        }
+      },
+      "then": { "required": ["run_id"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": { "const": "artifact.observed" }
+        }
+      },
+      "then": { "required": ["artifact"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": { "enum": ["snapshot.generated", "snapshot.restored"] }
+        }
+      },
+      "then": { "required": ["snapshot"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "event_type": { "const": "backup.receipt.observed" }
+        }
+      },
+      "then": { "required": ["backup_receipt"] }
+    }
+  ],
+  "additionalProperties": true
+}
