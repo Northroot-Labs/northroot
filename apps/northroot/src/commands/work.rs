@@ -1634,7 +1634,7 @@ mod tests {
             let redacted = redact_text(&shape);
             assert!(
                 !redacted.contains(&secret),
-                "seeded redaction leaked {secret} from {shape}: {redacted}"
+                "seeded redaction variation {index} leaked generated value"
             );
         }
     }
