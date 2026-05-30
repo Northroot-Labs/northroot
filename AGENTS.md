@@ -13,7 +13,7 @@ Before making any changes, understand:
 1. **Neutrality**: The core proves what was allowed and what happened, not what should have happened
 2. **Determinism**: All core logic must be deterministic and replayable offline
 3. **Separation**: Core does not execute actions or make decisions
-4. **Verifiability**: Receipts are the primary artifact for audit
+4. **Verifiability**: Proof envelopes / verifiable events are the primary artifact for audit
 
 See [GOVERNANCE.md](GOVERNANCE.md) for the complete project constitution.
 
@@ -316,4 +316,3 @@ cargo clippy --all-targets --all-features --fix -- -D warnings
 - **Use actual APIs** - don't reference non-existent crates or types
 
 When in doubt, check the actual codebase before making assumptions.
-

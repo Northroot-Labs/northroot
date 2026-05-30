@@ -165,7 +165,7 @@ Run verification in multiple locations:
 
 - Journal files are append-only and tamper-evident
 - Events can be verified offline
-- Receipts provide audit trail
+- Proof envelopes / verifiable events provide audit trail
 
 ### Retention
 
@@ -179,4 +179,3 @@ Configure retention based on requirements:
 - [Kubernetes Security](k8s-security.md) - K8s deployment security
 - [Secrets Management](secrets.md) - Secret handling
 - [Core Specification](../reference/spec.md) - Protocol details
-

@@ -11,9 +11,12 @@ schema-agnostic. These conventions sit above the kernel to reduce org entropy.
 Two artifact classes must remain distinct:
 
 1) **Operational logs** (mutable, noisy, debugging/telemetry)
-2) **Verifiable receipts** (immutable evidence, offline-verifiable)
+2) **Proof envelopes / verifiable events** (immutable evidence, offline-verifiable)
 
-Operational logs may reference receipts, but logs are not receipts.
+Operational logs may reference proof envelope or receipt-profile `event_id`s, but
+logs are not proof envelopes.
+
+See [Proof Envelope Boundary](proof-envelope.md) for the receipt/profile split.
 
 ## ID taxonomy (v1)
 
@@ -29,12 +32,12 @@ Operational logs may reference receipts, but logs are not receipts.
 
 - Use for: immutable payloads/artifacts where identity is derived from canonical bytes.
 - Format: digest (`alg`, `b64`) with domain-appropriate canonicalization.
-- Allowed: receipts, facts, canonical artifacts, dedupe keys for immutable bundles.
+- Allowed: proof envelopes, facts, canonical artifacts, dedupe keys for immutable bundles.
 - Forbidden: mutable in-progress log rows and retry counters.
 
-### event_id (verifiable receipt identity)
+### event_id (verifiable event / proof envelope identity)
 
-- Use for: Northroot verifiable events / receipts.
+- Use for: Northroot verifiable events and proof envelopes.
 - Format: content-derived digest over canonical bytes of the event envelope
   (domain-separated; excludes the `event_id` field to avoid self-reference).
 - Allowed: append-only verifiable events stored in `.nrj`.
@@ -50,18 +53,20 @@ Operational logs may reference receipts, but logs are not receipts.
 ### content_ref (pointer to external bytes)
 
 - Shape: `{ digest, size_bytes?, media_type? }`
-- Use for: binding receipts to real input/output bytes without embedding large blobs.
+- Use for: binding proof envelopes to real input/output bytes without embedding large blobs.
 
 Normative schema references:
 - `schemas/platform/v1/ids.schema.json`
 - `schemas/canonical/v1/types.schema.json` (Digest, ContentRef, Timestamp, etc.)
 
-## Boundary guidance: where to emit receipts
+## Boundary guidance: where to emit proof envelopes
 
-Emit verifiable receipts at boundaries that matter for auditability:
+Emit proof envelopes / verifiable events at boundaries that matter for auditability:
 - intent accepted
 - authorization/gate decision
 - execution performed (artifact emitted)
 - commit applied (promotion/finalization)
 
-Keep operational logs separate (JSONL is fine). Logs MAY reference receipt `event_id`s.
+Keep operational logs separate (JSONL is fine). Logs MAY reference proof envelope
+or receipt-profile `event_id`s. Receipt is compatibility/profile terminology,
+not a core semantic.

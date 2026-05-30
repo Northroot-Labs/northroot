@@ -78,7 +78,7 @@
       }
     },
     "expected_outputs": {
-      "description": "Declared outputs. These are expectations, not evidence. Evidence is recorded in receipts.",
+      "description": "Declared outputs. These are expectations, not evidence. Evidence is recorded in proof envelopes; receipt refs are profile-level aliases where applicable.",
       "type": "array",
       "minItems": 0,
       "maxItems": 10000,
@@ -101,7 +101,7 @@
             "pattern": "^[A-Za-z0-9!#$&^_.+-]+\\/[A-Za-z0-9!#$&^_.+-]+$"
           },
           "path_hint": {
-            "description": "Optional path hint. Not evidence; do not hash into receipts unless explicitly intended.",
+            "description": "Optional path hint. Not evidence; do not hash into proof envelopes unless explicitly intended.",
             "type": "string",
             "minLength": 1,
             "maxLength": 2048
@@ -116,4 +116,3 @@
     }
   }
 }
-

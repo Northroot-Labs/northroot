@@ -8,7 +8,7 @@
   "$defs": {
     "CapabilityGrantRef": {
       "title": "CapabilityGrantRef",
-      "description": "Reference to a capability grant. The grant may be verified by hash or receipt, but Northroot does not decide private authority.",
+      "description": "Reference to a capability grant. The grant may be verified by hash or a receipt-profile proof envelope, but Northroot does not decide private authority.",
       "type": "object",
       "additionalProperties": false,
       "required": ["grant_id", "capability", "actor"],

@@ -1,4 +1,4 @@
-//! Canonical data model primitives for Northroot events and receipts.
+//! Canonical data model primitives for Northroot verifiable events and proof envelopes.
 //!
 //! This crate provides deterministic canonicalization, event identity computation, and
 //! lossless numeric types for the Northroot trust kernel.

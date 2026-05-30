@@ -79,7 +79,7 @@ Suggested layout (when implemented):
 ### `schemas/platform/`
 **Purpose:** Org-level contracts that are not part of the neutral trust kernel but
 need stable, versioned schemas for cross-repo standardization (e.g., IntentSpec,
-Receipt envelope constraints, operational ID taxonomy).
+proof envelope / receipt-profile constraints, operational ID taxonomy).
 
 **Audience:** Runner/control-plane integrators and application developers.
 
@@ -90,7 +90,7 @@ references and integration contracts.
 
 Current platform contracts:
 - `platform/v1/ids.schema.json` - ID taxonomy (`record_id`, `content_id`, `event_id`).
-- `platform/v1/receipt.schema.json` - minimal receipt envelope.
+- `platform/v1/receipt.schema.json` - compatibility receipt profile over the generic proof envelope.
 - `platform/v1/economic_event.schema.json` - minimal verifiable economic event profile.
 - `platform/v1/refs.schema.json` - portable actor, source, artifact, receipt, and context-bundle refs.
 - `platform/v1/policy.schema.json` - policy envelope, capability-grant ref, and policy-outcome ref structures.

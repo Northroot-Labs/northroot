@@ -1,4 +1,8 @@
 //! Portable evidence bundle verification.
+//!
+//! Bundle manifests keep the compatibility term `receipts`; this verifier checks
+//! receipt-shaped evidence artifacts for path, hash, event ID, and journal
+//! membership. It does not define domain receipt semantics.
 
 use base64::Engine;
 use northroot_canonical::{parse_json_strict, Canonicalizer, Digest, DigestAlg, ProfileId};
