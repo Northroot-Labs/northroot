@@ -97,3 +97,12 @@ jobs:
           path: |
             crates/northroot-canonical/fuzz/artifacts
           retention-days: 30
+
+  redaction-variations:
+    name: Redaction Variations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Run seeded redaction gate
+        run: cargo test --manifest-path apps/northroot/Cargo.toml seeded_redaction_variations -- --ignored
