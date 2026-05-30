@@ -8,7 +8,13 @@ Scope: On-disk representation of canonical events
 
 ## 1. Purpose
 
-The Northroot Journal (.nrj) stores verifiable events in an append-only, tamper-evident stream. It is designed to be portable, streamable, forward-compatible, and suitable for offline verification and audit.
+The Northroot Journal (.nrj) stores verifiable events in an append-only,
+tamper-evident stream. It is designed to be portable, streamable,
+forward-compatible, and suitable for offline verification and audit. It is the
+canonical event journal format, not a workspace, exchange, backup, or artifact
+bundle format. JSONL can be used for adapters, and tar/zip-style bundles can be
+used for portable exports that contain journals, manifests, schemas, receipts,
+and artifacts.
 
 ## 2. Principles
 
@@ -33,7 +39,22 @@ The Northroot Journal (.nrj) stores verifiable events in an append-only, tamper-
      - `len` (4 bytes, little-endian payload length)
    - Payload: `len` bytes
 
-## 3.1 Minimal portable contract (v1)
+### 3.1 Hex walkthrough
+
+An `.nrj` file with one EventJson frame starts with:
+
+| Offset | Bytes | Meaning |
+| --- | --- | --- |
+| `0x00..0x03` | `4e 52 4a 31` | ASCII `NRJ1` magic |
+| `0x04..0x05` | `01 00` | version `0x0001`, little-endian |
+| `0x06..0x07` | `00 00` | flags, must be zero |
+| `0x08..0x0f` | `00 00 00 00 00 00 00 00` | reserved header bytes |
+| `0x10` | `01` | frame kind: EventJson |
+| `0x11..0x13` | `00 00 00` | reserved frame bytes |
+| `0x14..0x17` | `<len u32le>` | payload length |
+| `0x18..` | JSON bytes | UTF-8 JSON object |
+
+## 3.2 Minimal portable contract (v1)
 
 The following fields are normative for portable verification:
 
