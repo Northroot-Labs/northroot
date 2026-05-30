@@ -1,6 +1,9 @@
 # NRJ Journal Fixtures
 
-These fixtures demonstrate the `.nrj` journal format for cross-language testing.
+These fixtures demonstrate the `.nrj` canonical event journal format for
+cross-language testing. `.nrj` is a framed append-only event log, not a
+workspace, exchange, backup, or artifact bundle format. JSONL remains useful for
+adapters; tar/zip-style bundles remain useful for portable exports.
 
 ## Format
 
@@ -12,8 +15,8 @@ These fixtures demonstrate the `.nrj` journal format for cross-language testing.
 
 ### Frame (variable length)
 - Kind: 1 byte (`0x01` = EventJson)
-- Reserved: 1 byte (must be `0x00`)
-- Length: 4 bytes (little-endian, payload size)
+- Reserved: 3 bytes (must be `00 00 00`)
+- Length: 4 bytes (`u32` little-endian, payload size)
 - Payload: `length` bytes of JSON
 
 ## Files

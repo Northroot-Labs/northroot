@@ -2,6 +2,7 @@
 // Miri's filesystem emulation is slow and doesn't provide additional UB detection
 // beyond normal test runs. Skip under Miri; core frame logic is tested in frame.rs.
 
+use northroot_canonical::{verify_event_id, Canonicalizer, Digest, ProfileId};
 use northroot_journal::{
     EventJson, FrameKind, JournalReader, JournalWriter, ReadMode, WriteOptions,
 };
@@ -206,4 +207,22 @@ fn test_strict_read_rejects_duplicate_event_payload_key() {
     let mut reader = JournalReader::open(&journal_path, ReadMode::Strict).unwrap();
     let err = reader.read_event().unwrap_err();
     assert!(err.to_string().contains("duplicate key 'x'"));
+}
+
+#[test]
+#[cfg_attr(miri, ignore)]
+fn test_checked_in_nrj_fixtures_are_readable_and_verifiable() {
+    let repo_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .and_then(std::path::Path::parent)
+        .expect("crate lives under crates/northroot-journal");
+    let fixture = repo_root.join("fixtures/nrj/single_event.nrj");
+    let profile = ProfileId::parse("northroot-canonical-v1").unwrap();
+    let canonicalizer = Canonicalizer::new(profile);
+    let mut reader = JournalReader::open(&fixture, ReadMode::Strict).unwrap();
+
+    let event = reader.read_event().unwrap().expect("fixture has one event");
+    let claimed_id: Digest = serde_json::from_value(event["event_id"].clone()).unwrap();
+    assert!(verify_event_id(&event, &claimed_id, &canonicalizer).unwrap());
+    assert!(reader.read_event().unwrap().is_none());
 }
