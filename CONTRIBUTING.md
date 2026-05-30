@@ -113,7 +113,7 @@ Northroot follows strict principles defined in [GOVERNANCE.md](GOVERNANCE.md):
 - **Neutrality**: We prove what was allowed and what happened, not what should have happened
 - **Determinism**: All core logic must be deterministic and replayable offline
 - **Separation**: Core does not execute actions or make decisions
-- **Verifiability**: Receipts are the primary artifact for audit
+- **Verifiability**: Proof envelopes / verifiable events are the primary artifact for audit
 
 Any contribution that violates these principles will be rejected.
 

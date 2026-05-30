@@ -41,7 +41,7 @@ impl Digest {
 /// Computes the canonical raw-byte blob digest for immutable external content.
 ///
 /// This helper is for file-like payloads and artifacts. Use `compute_event_id`
-/// for canonical Northroot event and receipt envelopes.
+/// for canonical Northroot event and proof envelopes.
 pub fn compute_blob_digest(bytes: &[u8]) -> Result<Digest, ValidationError> {
     let mut hasher = Sha256::new();
     hasher.update(bytes);

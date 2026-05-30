@@ -80,7 +80,7 @@
     },
     "ReceiptRef": {
       "title": "ReceiptRef",
-      "description": "Portable reference to a receipt and optional canonical hash binding.",
+      "description": "Portable reference to a receipt-profile proof envelope and optional canonical hash binding.",
       "type": "object",
       "additionalProperties": false,
       "required": ["receipt_id", "action", "issued_at"],

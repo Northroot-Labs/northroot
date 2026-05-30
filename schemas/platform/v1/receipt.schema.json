@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://northroot.dev/schemas/platform/v1/receipt.schema.json",
-  "title": "Platform Receipt Envelope (v1)",
-  "description": "Contract of execution: a verifiable receipt recorded as a Northroot event. This schema defines a minimal envelope; domain layers extend via additional properties.",
+  "title": "Platform Receipt Profile Envelope (v1)",
+  "description": "Platform receipt profile over the generic Northroot proof envelope. This compatibility schema defines a minimal verifiable envelope; domain layers supply receipt semantics via extensions or profiles.",
   "type": "object",
   "additionalProperties": true,
   "required": [
@@ -15,17 +15,17 @@
   ],
   "properties": {
     "event_id": {
-      "description": "Verifiable identity of this receipt (content-derived digest of the canonical envelope; excludes event_id field).",
+      "description": "Verifiable identity of this receipt-profile proof envelope (content-derived digest of the canonical envelope; excludes event_id field).",
       "$ref": "ids.schema.json#/$defs/EventID"
     },
     "event_type": {
-      "description": "Receipt type. Suggested: intent.accepted, auth.decided, exec.performed, commit.applied, artifact.emitted.",
+      "description": "Receipt-profile event type. Suggested generic examples: intent.accepted, auth.decided, exec.performed, commit.applied, artifact.emitted.",
       "type": "string",
       "minLength": 3,
       "maxLength": 128
     },
     "event_version": {
-      "description": "Receipt type version (string for forward compatibility).",
+      "description": "Receipt-profile event type version (string for forward compatibility).",
       "type": "string",
       "minLength": 1,
       "maxLength": 16
@@ -39,7 +39,7 @@
       "$ref": "../../canonical/v1/types.schema.json#/$defs/PrincipalID"
     },
     "canonical_profile_id": {
-      "description": "Canonicalization profile used for hashing/verifying this receipt.",
+      "description": "Canonicalization profile used for hashing/verifying this receipt-profile proof envelope.",
       "$ref": "../../canonical/v1/types.schema.json#/$defs/ProfileID"
     },
     "prev_event_id": {
@@ -47,22 +47,21 @@
       "$ref": "ids.schema.json#/$defs/EventID"
     },
     "intent_ref": {
-      "description": "Optional link back to an accepted intent (either by event_id of an IntentReceipt or by digest of a canonical intent document).",
+      "description": "Optional link back to an accepted intent (either by event_id of a receipt-profile proof envelope or by digest of a canonical intent document).",
       "oneOf": [
         { "$ref": "ids.schema.json#/$defs/EventID" },
         { "$ref": "ids.schema.json#/$defs/Digest" }
       ]
     },
     "inputs": {
-      "description": "Input content refs bound into this receipt (evidence).",
+      "description": "Input content refs bound into this proof envelope (evidence).",
       "type": "array",
       "items": { "$ref": "ids.schema.json#/$defs/ContentRef" }
     },
     "outputs": {
-      "description": "Output content refs bound into this receipt (evidence).",
+      "description": "Output content refs bound into this proof envelope (evidence).",
       "type": "array",
       "items": { "$ref": "ids.schema.json#/$defs/ContentRef" }
     }
   }
 }
-

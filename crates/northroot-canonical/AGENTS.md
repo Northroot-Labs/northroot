@@ -2,7 +2,7 @@
 
 ## Scope
 
-This crate provides **deterministic canonicalization primitives** for Northroot events and receipts. It implements the canonical JSON profile (RFC 8785 + Northroot hygiene rules) and schema-aligned type definitions.
+This crate provides **deterministic canonicalization primitives** for Northroot verifiable events and proof envelopes. It implements the canonical JSON profile (RFC 8785 + Northroot hygiene rules) and schema-aligned type definitions.
 
 ## Constraints
 
@@ -42,4 +42,3 @@ This crate provides **deterministic canonicalization primitives** for Northroot 
 - Hash fixtures must remain stable across runs
 - Validation must reject non-conforming inputs
 - Generator example must produce CI-verifiable outputs
-

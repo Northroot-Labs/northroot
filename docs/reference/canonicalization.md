@@ -3,7 +3,7 @@
 ## 0. Purpose
 
 Northroot requires **deterministic, cross-language canonical bytes** for hashing,
-identifiers, receipts, and offline verification.
+identifiers, proof envelopes, and offline verification.
 
 This document defines:
 
@@ -215,7 +215,7 @@ Canonicalization exists to produce deterministic bytes, not to clean or reinterp
 
 Strict mode MUST be used for canonical evidence boundaries:
 	•	Hashing
-	•	Receipts
+	•	Proof envelopes
 	•	Verification
 	•	Policy evaluation
 

@@ -46,9 +46,8 @@
     },
     "ContentRef": {
       "title": "ContentRef",
-      "description": "Pointer to external bytes by digest; used to bind receipts to real artifacts without embedding bytes.",
+      "description": "Pointer to external bytes by digest; used to bind proof envelopes to real artifacts without embedding bytes.",
       "$ref": "../../canonical/v1/types.schema.json#/$defs/ContentRef"
     }
   }
 }
-

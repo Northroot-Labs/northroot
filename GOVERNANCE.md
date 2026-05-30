@@ -84,18 +84,23 @@ If a component cannot be replayed and verified offline, it does not belong in th
 
 ⸻
 
-4. Receipts Are the Primary Artifact
+4. Proof Envelopes Are the Primary Artifact
 
-Receipts are:
+Proof envelopes / verifiable events are:
 	•	First-class objects
 	•	Immutable once emitted
 	•	Append-only
 	•	Content-addressed or hash-bound
 	•	Sufficient for audit and dispute resolution
 
-Logs, metrics, and telemetry are not substitutes for receipts.
+Logs, metrics, and telemetry are not substitutes for proof envelopes.
 
-The system may ingest logs, but it only commits receipts.
+The system may ingest logs, but it only commits verifiable events.
+
+Receipt is a platform, profile, or domain name for a proof envelope. The core
+trust kernel verifies the envelope shape and identity; it does not define
+payment, settlement, work acceptance, backup success, or other receipt
+semantics.
 
 ⸻
 
