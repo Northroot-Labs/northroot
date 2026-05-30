@@ -26,6 +26,7 @@ run cargo test --manifest-path apps/northroot/Cargo.toml
 run python3 scripts/validate_schemas.py
 run python3 scripts/validate_nrj_fixtures.py
 run python3 scripts/validate_state_recovery_invariants.py
+run python3 scripts/benchmark_journal_formats.py --scale 0.1 --quiet --out "${TMPDIR:-/tmp}/northroot-format-complexity-bench-smoke"
 
 git status --porcelain=v1 > "$after_status"
 if ! diff -u "$before_status" "$after_status"; then
