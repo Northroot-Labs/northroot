@@ -1,12 +1,15 @@
-# Work Ledger Extension Profile
+# Work Ledger Profile
 
-Status: Incubating extension profile
+Status: Incubating profile
 
 Northroot's core journal remains neutral: it canonicalizes, stores, and verifies
-events. The work ledger profile is an extension profile for accountable work
-telemetry. It records observed work, runs, artifacts, and terminal states without
-adding schedulers, policy engines, provider runtimes, or product semantics to
-the trust kernel.
+events. The work ledger profile is a consumer protocol over that substrate for
+accountable work telemetry. It records observed work, runs, artifacts, and
+terminal states without adding schedulers, policy engines, provider runtimes, or
+product semantics to the trust kernel.
+
+The kernel may preserve and verify profile-bearing events. The kernel must not
+decide profile meaning.
 
 State recovery follows the binding [State Recovery Invariants v0](state-recovery-invariants-v0.md).
 
@@ -128,3 +131,15 @@ not operational checkpoints.
 
 The work ledger records accountable work evidence. It does not decide whether
 work is authorized, billable, product-complete, or semantically correct.
+
+## Validation Layers
+
+- Kernel-valid: the event is parse-safe JSON, canonicalizable, has a
+  digest-shaped `event_id`, and the ID matches its canonical bytes.
+- Profile-valid: the event conforms to `northroot.work_ledger.v0`, including
+  schema, event vocabulary, required work/run IDs, and event-type-specific
+  payload fields.
+- Policy-admissible: a runtime, control plane, or workspace policy accepts the
+  event for a governed ledger.
+- Projection-valid: a projector can apply accepted profile-valid events to a
+  derived view without treating that view as authoritative.

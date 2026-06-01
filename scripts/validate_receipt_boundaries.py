@@ -32,7 +32,7 @@ REQUIRED = {
     RECEIPT_SCHEMA: [
         "Platform Receipt Profile Envelope",
         "Platform receipt profile over the generic Northroot proof envelope",
-        "domain layers supply receipt semantics via extensions or profiles",
+        "domain layers supply receipt semantics via profiles or consuming protocols",
     ],
     REFS_SCHEMA: [
         "receipt-profile proof envelope",
@@ -115,7 +115,7 @@ def main() -> int:
 
         if path not in DOMAIN_ALLOWED and "schemas/extensions" not in path.as_posix():
             if DOMAIN_RECEIPT_PATTERN.search(text):
-                errors.append(f"{path}: domain receipt semantics must stay in proof-envelope docs or extension/profile surfaces")
+                errors.append(f"{path}: domain receipt semantics must stay in proof-envelope docs or profile/consumer surfaces")
 
     if errors:
         for error in errors:

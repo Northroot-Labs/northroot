@@ -25,7 +25,7 @@ The CLI binary will be at `apps/northroot/target/release/northroot`.
 ### Verify Installation
 
 ```bash
-northroot --version
+northroot --help
 ```
 
 ## Your First Journal
@@ -91,5 +91,4 @@ This checks:
 
 - [Integration Examples](integration-examples.md) - Code samples for integration
 - [API Contract](../developer/api-contract.md) - Complete API reference
-- [Deployment Guide](../operator/deployment.md) - Production deployment
 - [Core Specification](../reference/spec.md) - Protocol details

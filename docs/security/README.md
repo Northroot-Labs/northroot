@@ -1,38 +1,33 @@
-# Security Documentation
+# Security Notes
 
-Security documentation for Northroot, focusing on threat modeling, attack surface analysis, and hardening requirements.
+Northroot v0.1 has a small security surface: deterministic canonicalization,
+content-derived event identity, `.nrj` journal framing, and offline
+verification. It is not a network service, API deployment, container workload,
+scheduler, runtime, or policy engine.
 
-## Threat Model
+## v0.1 Threat Model
 
-- **[Threat Model (JSON)](threat-model.json)** - Structured threat model analysis
-- **[Threat Model Summary](threat-model.md)** - Human-readable summary
+The v0.1 kernel assumes an adversary may provide malformed JSON, malformed
+journal bytes, truncated frames, oversized payloads, or events with incorrect
+`event_id` values. Kernel verification is responsible for rejecting corrupted
+frames, recomputing event identity from canonical bytes, and preserving journal
+readability boundaries.
 
-The threat model documents:
-- Adversary capabilities and goals
-- Attack surface analysis for CLI commands
-- Security hardening requirements (critical, high, medium priority)
-- Sandbox requirements for safe execution
-- Audit guarantees and compliance notes
+The v0.1 kernel does not decide whether a profile event is semantically valid.
+Schema conformance, policy admissibility, actor authority, work acceptance, and
+projection correctness belong to profiles and consuming repositories.
 
-## Key Security Findings
+## Hardening Expectations
 
-### Critical Issues (P0)
-1. **Path validation** - All file path arguments must be validated to prevent path traversal
-2. **Memory exhaustion in verify** - `verify` command loads entire journal into memory (needs streaming fix)
-
-### High Priority (P1)
-1. **Resource limits** - Add configurable limits for journal size, event count, memory usage
-2. **Symlink handling** - Resolve symlinks before opening files
-
-### Security Posture
-- **Memory safety**: Excellent (Rust, no unsafe code)
-- **Attack surface**: Minimal (read-only CLI, offline verification)
-- **Journal format**: Tamper-evident, append-only, bounded payloads
+- Keep verification offline and deterministic.
+- Keep writes single-writer for v0.1.
+- Preserve bounded frame validation in `northroot-journal`.
+- Treat `list` as a dumb journal read, not a projection.
+- Treat structural checkpoints as verified-prefix records, not semantic state.
+- Keep deployment, secret, runtime, and API-service guidance outside this repo until a separate product surface exists.
 
 ## Related Documentation
 
-- **[Git Signing & Merge Policy](signing-policy.md)** - Two-tier signing policy for audit-grade provenance
-- [Kubernetes Security](../operator/k8s-security.md) - K8s-specific security practices
-- [Secrets Management](../operator/secrets.md) - Secret handling
-- [Deployment Guide](../operator/deployment.md) - Production deployment security
-
+- [Git Signing & Merge Policy](signing-policy.md) - Two-tier signing policy for audit-grade provenance.
+- [v0.1 Stability Contract](../reference/v0.1-stability.md) - Stable kernel and incubating profile boundaries.
+- [Segmented Journals](../reference/segmented-journals.md) - Structural segment and checkpoint contract.

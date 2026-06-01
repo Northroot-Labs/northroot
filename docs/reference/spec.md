@@ -1,10 +1,10 @@
 Northroot Core Specification
 
-Version: 1.0
-Status: Stable core (additive changes only)
+Protocol Version: 1
+Release Status: v0.1 stable kernel (additive changes only)
 Scope: Verifiable events, canonical identities, journal storage
 
-**Note**: This document defines the protocol specification (invariants, identity computation, verification model). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md). For extension patterns, see [Extensions](extensions.md).
+**Note**: This document defines the protocol specification (invariants, identity computation, verification model). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md). For profile and consumer-protocol patterns, see [Profiles and Consumer Protocols](profiles.md).
 
 ---
 
@@ -17,7 +17,7 @@ The trust kernel provides:
 - Event identity computation
 - Journal format (.nrj)
 
-Domain-specific event types (authorization, execution, checkpoint, attestation, etc.) are defined by consuming applications or extension layers.
+Domain-specific event types (authorization, execution, checkpoint, attestation, etc.) are defined by consuming applications, profiles, or domain layers.
 
 ---
 

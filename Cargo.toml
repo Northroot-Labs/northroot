@@ -1,4 +1,3 @@
 [workspace]
 members = ["crates/northroot-canonical", "crates/northroot-journal"]
-exclude = ["wip/governance", "wip/store"]
 resolver = "2"

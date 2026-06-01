@@ -102,7 +102,7 @@ cargo fuzz run validation -- -max_total_time=60
 
 ### Using DevContainer (Recommended)
 
-All tools are pre-installed in the development container. See `.devcontainer/README.md` for setup.
+All required tools are installed by `scripts/codex_setup.sh`.
 
 ### Manual Installation
 
@@ -153,4 +153,3 @@ For guidance on writing tests, see [Testing Guide](../developer/testing.md).
 - **Golden tests fail**: Review changes, update golden files if intentional
 - **Miri fails**: Investigate undefined behavior, fix memory safety issues
 - **Fuzz finds crash**: Minimize input, add regression test, fix bug
-

@@ -48,7 +48,10 @@ run_check "unit and integration tests" cargo test --all --all-features || true
 # 4. CLI-specific tests
 run_check "CLI package tests" cargo test --manifest-path apps/northroot/Cargo.toml || true
 
-# 5. Build release binary
+# 5. v0.1 readiness report
+run_check "v0.1 readiness report" python3 scripts/v01_readiness.py --json || true
+
+# 6. Build release binary
 echo -n "Building release binary... "
 if cargo build --release --manifest-path apps/northroot/Cargo.toml > /tmp/northroot-release-check.log 2>&1; then
     echo -e "${GREEN}✓${NC}"
@@ -94,7 +97,7 @@ if [ -n "$BINARY_PATH" ] && [ -f "$BINARY_PATH" ]; then
     # 7. Verify all commands are available
     echo ""
     echo "Verifying CLI commands:"
-    commands=("canonicalize" "event-id" "list" "verify")
+    commands=("canonicalize" "event-id" "append" "list" "verify" "verify-bundle" "journal" "work")
     for cmd in "${commands[@]}"; do
         if "$BINARY_PATH" "$cmd" --help > /dev/null 2>&1; then
             echo -e "  ${GREEN}✓${NC} $cmd command available"
@@ -115,4 +118,3 @@ else
     echo -e "${RED}Some checks failed. Review output above.${NC}"
     exit 1
 fi
-

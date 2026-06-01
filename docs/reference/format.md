@@ -122,6 +122,21 @@ add further checks outside the journal core.
 - Readers may operate in:
   - Strict mode: truncated headers/payloads are errors.
   - Permissive mode: truncation is treated as end-of-file.
+- v0.1 assumes single-writer / many-reader operation. Concurrent write
+  coordination, leases, and multi-event transactions belong above the journal
+  kernel or in a database adapter.
+
+## 7.1 Segmentation and checkpoints
+
+Large journals may be split into ordered `.nrj` segment files. Each segment is a
+normal journal file and must remain independently readable and verifiable.
+Segment manifests and checkpoints are structural metadata over ordered segments;
+they are rebuildable and do not encode projection or policy meaning.
+Segment verification reports include a verified prefix count so readers can
+recover the structurally valid prefix without treating later corrupt or
+profile-invalid bytes as accepted state.
+
+See [Segmented Journals and Structural Checkpoints](segmented-journals.md).
 
 ## 8. Verification responsibilities
 

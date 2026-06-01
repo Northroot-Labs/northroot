@@ -6,7 +6,7 @@ mod commands;
 mod output;
 mod path;
 
-use commands::{append, canonicalize, event_id, list, verify, verify_bundle, work};
+use commands::{append, canonicalize, event_id, journal, list, verify, verify_bundle, work};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
@@ -85,6 +85,11 @@ enum Commands {
         #[command(subcommand)]
         command: work::WorkCommand,
     },
+    /// Structural segmented journal and checkpoint operations
+    Journal {
+        #[command(subcommand)]
+        command: journal::JournalCommand,
+    },
 }
 
 fn main() {
@@ -114,6 +119,7 @@ fn main() {
             sync,
         } => append::run(journal, input, strict, sync),
         Commands::Work { command } => work::run(command),
+        Commands::Journal { command } => journal::run(command),
     };
 
     if let Err(e) = result {

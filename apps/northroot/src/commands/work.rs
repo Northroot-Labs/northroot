@@ -636,6 +636,14 @@ fn read_projection(journal: &Path) -> Result<WorkLedgerProjection, Box<dyn std::
         if !verify_event_id(&event, &canonicalizer)? {
             return Err("journal contains event_id mismatch".into());
         }
+        let profile_errors = validate_work_ledger_profile_event(&event);
+        if !profile_errors.is_empty() {
+            return Err(format!(
+                "journal contains profile-invalid work ledger event: {}",
+                profile_errors.join("; ")
+            )
+            .into());
+        }
         projection.apply(&event);
         projection.record_metadata(&event);
     }
@@ -657,6 +665,14 @@ fn replay_tail(
         }
         if !verify_event_id(&event, &canonicalizer)? {
             return Err("journal contains event_id mismatch".into());
+        }
+        let profile_errors = validate_work_ledger_profile_event(&event);
+        if !profile_errors.is_empty() {
+            return Err(format!(
+                "journal contains profile-invalid work ledger event: {}",
+                profile_errors.join("; ")
+            )
+            .into());
         }
         projection.apply(&event);
         projection.record_metadata(&event);
@@ -869,12 +885,32 @@ fn verify(journal: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let canonicalizer = canonicalizer()?;
     let mut reader = JournalReader::open(journal, ReadMode::Strict)?;
     let mut checked = 0usize;
-    let mut invalid = 0usize;
+    let mut invalid_events = 0usize;
+    let mut kernel_valid_events = 0usize;
+    let mut profile_valid_events = 0usize;
+    let mut profile_invalid_events = 0usize;
+    let mut profile_errors = Vec::new();
 
     while let Some(event) = reader.read_event()? {
         checked += 1;
         if !verify_event_id(&event, &canonicalizer)? {
-            invalid += 1;
+            invalid_events += 1;
+            continue;
+        }
+        kernel_valid_events += 1;
+
+        let errors = validate_work_ledger_profile_event(&event);
+        if errors.is_empty() {
+            profile_valid_events += 1;
+        } else {
+            profile_invalid_events += 1;
+            if profile_errors.len() < 20 {
+                profile_errors.push(json!({
+                    "event_index": checked,
+                    "event_id": event.get("event_id").cloned().unwrap_or(Value::Null),
+                    "errors": errors
+                }));
+            }
         }
     }
 
@@ -883,16 +919,140 @@ fn verify(journal: &Path) -> Result<(), Box<dyn std::error::Error>> {
         serde_json::to_string_pretty(&json!({
             "journal": journal.display().to_string(),
             "events_checked": checked,
-            "invalid_events": invalid,
-            "valid": invalid == 0
+            "kernel_valid_events": kernel_valid_events,
+            "profile_valid_events": profile_valid_events,
+            "invalid_events": invalid_events,
+            "profile_invalid_events": profile_invalid_events,
+            "profile_errors": profile_errors,
+            "valid": invalid_events == 0 && profile_invalid_events == 0
         }))?
     );
 
-    if invalid > 0 {
+    if invalid_events > 0 || profile_invalid_events > 0 {
         return Err("work ledger verification failed".into());
     }
 
     Ok(())
+}
+
+fn validate_work_ledger_profile_event(event: &Value) -> Vec<String> {
+    let mut errors = Vec::new();
+
+    if !event.is_object() {
+        return vec!["event must be a JSON object".to_string()];
+    }
+
+    let event_type = require_string(event, "event_type", &mut errors);
+    validate_digest_ref(event.get("event_id"), "event_id", &mut errors);
+    require_string(event, "occurred_at", &mut errors);
+    require_string(event, "principal_id", &mut errors);
+    require_string(event, "source_system", &mut errors);
+
+    if require_string(event, "event_version", &mut errors) != Some("0") {
+        errors.push("event_version must be 0".to_string());
+    }
+    if require_string(event, "canonical_profile_id", &mut errors) != Some(CANONICAL_PROFILE_ID) {
+        errors.push(format!(
+            "canonical_profile_id must be {CANONICAL_PROFILE_ID}"
+        ));
+    }
+    if require_string(event, "schema", &mut errors) != Some(WORK_LEDGER_SCHEMA) {
+        errors.push(format!("schema must be {WORK_LEDGER_SCHEMA}"));
+    }
+    if let Some(work_id) = require_string(event, "work_id", &mut errors) {
+        if !work_id.starts_with("work:") {
+            errors.push("work_id must start with work:".to_string());
+        }
+    }
+
+    validate_source_ref(event.get("source"), &mut errors);
+
+    let Some(event_type) = event_type else {
+        return errors;
+    };
+
+    match event_type {
+        "work.observed" => {}
+        "run.observed" | "run.completed" | "run.blocked" => {
+            require_run_id(event, &mut errors);
+        }
+        "artifact.observed" => {
+            require_run_id(event, &mut errors);
+            require_object(event, "artifact", &mut errors);
+        }
+        "snapshot.generated" | "snapshot.restored" => {
+            require_object(event, "snapshot", &mut errors);
+        }
+        "backup.receipt.observed" => {
+            require_object(event, "backup_receipt", &mut errors);
+        }
+        other => errors.push(format!("event_type is not in work-ledger vocabulary: {other}")),
+    }
+
+    errors
+}
+
+fn require_string<'a>(event: &'a Value, field: &str, errors: &mut Vec<String>) -> Option<&'a str> {
+    match event.get(field).and_then(Value::as_str) {
+        Some(value) if !value.is_empty() => Some(value),
+        _ => {
+            errors.push(format!("{field} must be a non-empty string"));
+            None
+        }
+    }
+}
+
+fn require_object(event: &Value, field: &str, errors: &mut Vec<String>) {
+    if !event.get(field).is_some_and(Value::is_object) {
+        errors.push(format!("{field} must be an object"));
+    }
+}
+
+fn require_run_id(event: &Value, errors: &mut Vec<String>) {
+    if let Some(run_id) = require_string(event, "run_id", errors) {
+        if !run_id.starts_with("run:") {
+            errors.push("run_id must start with run:".to_string());
+        }
+    }
+}
+
+fn validate_source_ref(source: Option<&Value>, errors: &mut Vec<String>) {
+    let Some(source) = source else {
+        errors.push("source must be an object".to_string());
+        return;
+    };
+    if !source.is_object() {
+        errors.push("source must be an object".to_string());
+        return;
+    }
+    for field in ["kind", "path"] {
+        match source.get(field).and_then(Value::as_str) {
+            Some(value) if !value.is_empty() => {}
+            _ => errors.push(format!("source.{field} must be a non-empty string")),
+        }
+    }
+    if !source.get("line").is_some_and(Value::is_u64) {
+        errors.push("source.line must be a non-negative integer".to_string());
+    }
+}
+
+fn validate_digest_ref(value: Option<&Value>, field: &str, errors: &mut Vec<String>) {
+    let Some(value) = value else {
+        errors.push(format!("{field} must be a digest object"));
+        return;
+    };
+    if !value.is_object() {
+        errors.push(format!("{field} must be a digest object"));
+        return;
+    }
+    match value.get("alg").and_then(Value::as_str) {
+        Some("sha-256") => {}
+        _ => errors.push(format!("{field}.alg must be sha-256")),
+    }
+    match value.get("b64").and_then(Value::as_str) {
+        Some(b64) if !b64.is_empty() => {}
+        _ => errors.push(format!("{field}.b64 must be a non-empty string")),
+    }
 }
 
 #[derive(Debug)]
@@ -1698,6 +1858,67 @@ mod tests {
                 .len()
                 >= 3
         );
+    }
+
+    #[test]
+    fn work_ledger_profile_verifier_accepts_valid_event() {
+        let canonicalizer = canonicalizer().unwrap();
+        let event = signed_event(
+            json!({
+                "event_type": "work.observed",
+                "event_version": "0",
+                "occurred_at": "2026-05-30T12:00:00Z",
+                "principal_id": "agent:test",
+                "canonical_profile_id": CANONICAL_PROFILE_ID,
+                "schema": WORK_LEDGER_SCHEMA,
+                "work_id": "work:test",
+                "source": {
+                    "kind": "unit_test",
+                    "path": "work.rs",
+                    "line": 1
+                },
+                "source_system": "unit_test"
+            }),
+            &canonicalizer,
+        )
+        .unwrap();
+
+        assert_eq!(validate_work_ledger_profile_event(&event), Vec::<String>::new());
+    }
+
+    #[test]
+    fn work_verify_rejects_kernel_valid_profile_invalid_event() {
+        let temp = TempDir::new().unwrap();
+        let journal = temp.path().join("work.nrj");
+        let canonicalizer = canonicalizer().unwrap();
+        let event = signed_event(
+            json!({
+                "event_type": "work.observed",
+                "event_version": "0",
+                "occurred_at": "2026-05-30T12:00:00Z",
+                "principal_id": "agent:test",
+                "canonical_profile_id": CANONICAL_PROFILE_ID,
+                "schema": WORK_LEDGER_SCHEMA,
+                "work_id": "not-a-work-id",
+                "source_system": "unit_test"
+            }),
+            &canonicalizer,
+        )
+        .unwrap();
+        let mut writer = JournalWriter::open(
+            &journal,
+            WriteOptions {
+                sync: false,
+                create: true,
+                append: true,
+            },
+        )
+        .unwrap();
+        writer.append_event(&event).unwrap();
+        writer.finish().unwrap();
+
+        assert!(verify(&journal).is_err());
+        assert!(read_projection(&journal).is_err());
     }
 
     #[test]

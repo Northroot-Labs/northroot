@@ -1,6 +1,6 @@
-# Extending Northroot
+# Layering on Northroot
 
-How to extend the trust kernel with domain-specific event types, verification logic, and storage backends.
+How to layer profile semantics, consumer protocols, domain-specific verification logic, and storage backends over the trust kernel.
 
 ## Overview
 
@@ -9,10 +9,12 @@ The Northroot trust kernel provides minimal primitives:
 - Event identity computation
 - Journal format (`northroot-journal`)
 
-Extensions build on these primitives to add:
+Profile and consumer layers build on these primitives to add:
 - Domain-specific event schemas
 - Custom verification logic
 - Alternative storage backends
+
+The kernel may preserve and verify profile-bearing events. The kernel must not decide profile meaning.
 
 ---
 
@@ -204,18 +206,6 @@ let filtered = filter_events(&mut reader, |event| {
 
 ---
 
-## 5. Experimental Extensions
-
-The `wip/` directory contains experimental extensions that are not part of the core trust kernel:
-
-- `wip/store/` - Storage abstraction layer with traits (`StoreWriter`, `StoreReader`, `EventFilter`)
-- `wip/governance/` - Governance event schemas (checkpoint, attestation)
-- `wip/agent-domain/` - Agent domain event schemas
-
-These may be moved to separate repositories or promoted to core in the future. They demonstrate extension patterns but are not part of the stable API.
-
----
-
 ## Best Practices
 
 1. **Use kernel primitives**: Always use `compute_event_id` and `Canonicalizer` from the kernel
@@ -231,5 +221,5 @@ These may be moved to separate repositories or promoted to core in the future. T
 
 - [API Contract](api-contract.md) - Complete API reference
 - [Architecture](architecture.md) - System design overview
-- [Extensions](../reference/extensions.md) - Extension patterns and examples
-- [Testing Guide](testing.md) - How to test extensions
+- [Profiles and Consumer Protocols](../reference/profiles.md) - Layering patterns and examples
+- [Testing Guide](testing.md) - How to test profile and consumer layers

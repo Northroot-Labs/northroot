@@ -1,0 +1,12 @@
+{
+  "check_name": "clearlyops-proof-journal-dogfood",
+  "event_count": 6,
+  "invalid_event_count": 0,
+  "journal_path": ".northroot/adoption/proof-ledger.nrj",
+  "kernel_valid_event_count": 6,
+  "passed": true,
+  "profile_valid_event_count": 6,
+  "projection_rebuilt": true,
+  "repo": "clearlyops",
+  "schema": "northroot.v0_1.adoption_report.v0"
+}

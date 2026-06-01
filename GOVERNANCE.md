@@ -15,7 +15,7 @@ Specifically, it provides:
 	•	Append-only journal format (.nrj)
 	•	Offline, replayable verification primitives
 
-Note: Governance event schemas (checkpoint, attestation) are provided as examples in `wip/governance/` but are not part of the core trust kernel. The core operates on untyped `EventJson` and does not require specific event schemas.
+Note: Event schemas are not part of the core trust kernel. The core operates on untyped `EventJson` and does not require specific event schemas.
 
 It does not exist to:
 	•	Make decisions
@@ -188,7 +188,7 @@ The following must remain open and inspectable:
 	•	Journal format specification
 	•	Canonical primitive schemas (quantities, identifiers, digests)
 
-Note: Event schemas (including governance events like checkpoint and attestation) are domain-specific and may be defined by extensions or consuming applications. Example schemas are provided in `wip/governance/` but are not part of the core.
+Note: Event schemas are domain-specific and may be defined by profiles, layers, or consuming applications. They are not part of the core.
 
 Domain-specific concerns (authorization → execution lifecycle, policy evaluation) are external to the core trust kernel.
 

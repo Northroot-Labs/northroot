@@ -1,9 +1,9 @@
 [package]
 name = "northroot-canonical"
-version = "1.2.0"
+version = "0.1.0"
 edition = "2021"
 description = "Canonical data model primitives shared across Northroot artifacts."
-license = "MIT OR Apache-2.0"
+license = "MIT"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
@@ -17,4 +17,3 @@ base64 = "0.22"
 [dev-dependencies]
 serde_json = "1.0"
 hex = "0.4"
-

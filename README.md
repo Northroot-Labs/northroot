@@ -20,9 +20,11 @@ Northroot provides a minimal trust kernel for recording verifiable events. It st
 
 See [GOVERNANCE.md](GOVERNANCE.md) for the project's foundational principles.
 
-## Kernel Hardening Charter (v1)
+## v0.1 Kernel Charter
 
-This batch freezes the kernel scope and success criteria before any cross-repo expansion.
+Northroot v0.1 is a small, stable verifiable-event kernel. It is intentionally
+not a runtime, scheduler, policy engine, deployment stack, or application
+framework.
 
 ### Goals
 - Keep core primitives deterministic and offline-verifiable.
@@ -34,19 +36,6 @@ This batch freezes the kernel scope and success criteria before any cross-repo e
 - No orchestration logic, workflow execution, or policy engines.
 - No model, runtime, or budget decisioning logic.
 - No domain-specific business semantics in core crates.
-
-### Batch acceptance checkpoints
-- `charter_frozen`: goals/non-goals and boundaries are explicit.
-- `id_vocab_locked`: `record_id`, `content_id`, `event_id` usage is documented and schema-backed.
-- `event_contract_v1`: minimal verifiable economic event contract is versioned.
-- `journal_contract_v1`: minimal `.nrj` contract is explicit and testable.
-- `golden_gates_green`: deterministic gates (fmt/clippy/golden/schema) are green.
-- `agent_role_partition_defined`: eval-bootstrap and implementer responsibilities are separated.
-
-### Contract-spine authority references
-- `repos/docs/internal/workspace/CONTRACT_SPINE_DECISION_REGISTER_V1.md`
-- `repos/docs/internal/workspace/CONTRACT_SPINE_CI_GATE_ALIGNMENT_V1.md`
-- `repos/docs/internal/product/NORTHROOT_KERNEL_AND_ID_SEMANTICS_DIRECTION_NOTE.md`
 
 ## Quick Start
 
@@ -78,6 +67,13 @@ northroot list events.nrj
 northroot verify events.nrj
 ```
 
+Structural segmented journals and checkpoints are available through:
+
+```bash
+northroot journal verify-segments --dir .northroot/journals
+northroot journal checkpoint --dir .northroot/journals --out checkpoint.json
+```
+
 ## Documentation
 
 ### For Users
@@ -88,11 +84,13 @@ northroot verify events.nrj
 - [API Contract](docs/developer/api-contract.md) - Public API surface
 - [Architecture](docs/developer/architecture.md) - System design
 - [Testing Guide](docs/developer/testing.md) - QA harness and test patterns
-- [Extensions](docs/reference/extensions.md) - How to extend the kernel
+- [Profiles](docs/reference/profiles.md) - How to layer profile semantics over the kernel
 
 ### Reference
+- [v0.1 Stability Contract](docs/reference/v0.1-stability.md) - Stable kernel and incubating profile boundaries
 - [Core Specification](docs/reference/spec.md) - Protocol specification
 - [Journal Format](docs/reference/format.md) - On-disk format
+- [Segmented Journals](docs/reference/segmented-journals.md) - Structural segment manifests and checkpoints
 - [Canonicalization](docs/reference/canonicalization.md) - Canonical JSON rules
 - [Event Model](docs/reference/events.md) - Event structure
 
@@ -108,7 +106,6 @@ northroot/
 ├── fixtures/                  # Golden test vectors
 ├── schemas/
 │   └── canonical/             # Canonical primitive schemas
-├── wip/                       # Non-core code (governance, agent-domain, store)
 ├── docs/                      # Documentation
 └── GOVERNANCE.md              # Project constitution
 ```
@@ -120,7 +117,8 @@ The kernel provides:
 - **Event Identity**: `sha256(domain_separator || canonical_json(event))`
 - **Journal Format**: Portable, append-only container (.nrj)
 
-Everything else (typed schemas, domain verification, policy evaluation) is extension.
+Everything else (typed schemas, domain verification, policy evaluation) is a
+profile, layer, or consumer protocol over the kernel.
 
 ## Contributing
 
@@ -128,8 +126,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines, coding standa
 
 ## License
 
-Licensed under either of:
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE))
-- MIT License ([LICENSE-MIT](LICENSE-MIT))
-
-at your option.
+Licensed under the MIT License ([LICENSE](LICENSE)).

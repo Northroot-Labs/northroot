@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://northroot.dev/schemas/platform/v1/receipt.schema.json",
   "title": "Platform Receipt Profile Envelope (v1)",
-  "description": "Platform receipt profile over the generic Northroot proof envelope. This compatibility schema defines a minimal verifiable envelope; domain layers supply receipt semantics via extensions or profiles.",
+  "description": "Platform receipt profile over the generic Northroot proof envelope. This compatibility schema defines a minimal verifiable envelope; domain layers supply receipt semantics via profiles or consuming protocols.",
   "type": "object",
   "additionalProperties": true,
   "required": [

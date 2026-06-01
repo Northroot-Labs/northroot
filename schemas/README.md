@@ -2,10 +2,10 @@
 
 This directory contains the normative JSON Schemas for the Northroot protocol.
 
-The schemas are organized into **three layers**:
+The schemas are organized into **four layers**:
 
 1) **Canonical types** (foundational building blocks)  
-2) **Events** (protocol messages that are hashed, stored, and verified)  
+2) **Events** (reserved for future domain-agnostic event schemas)
 3) **Profiles** (optional constraint overlays for specific deployments or domains)
 4) **Platform** (org-level contracts that sit above the neutral kernel)
 
@@ -39,14 +39,14 @@ Suggested layout:
 ### `schemas/events/`
 **Purpose:** Reserved for future domain-agnostic event schemas.
 
-**Note:** As of Northroot 1.0, the trust kernel does not include event schemas. Governance event schemas (checkpoint, attestation) are maintained in `wip/governance/schemas/`. Domain-specific event schemas (authorization, execution, etc.) should be defined by consuming applications or extension layers.
+**Note:** As of Northroot v0.1, the trust kernel does not include event schemas. Domain-specific event schemas (authorization, execution, checkpoint, attestation, etc.) should be defined by consuming applications, profiles, or domain layers.
 
 **Audience:** Integrators and application developers.
 
 **Stability:** High. Changes are versioned and typically breaking when event
 semantics change.
 
-**Current state:** This directory is empty. Example schemas are in `wip/governance/` and `wip/agent-domain/`.
+**Current state:** This directory is empty by design for v0.1.
 
 ---
 
@@ -73,6 +73,14 @@ reserved for future use when domain-specific constraint overlays are needed.
 Suggested layout (when implemented):
 - `schemas/profiles/v1/ai_cost.schema.json`
 - `schemas/profiles/v1/finance.schema.json`
+
+### `schemas/extensions/`
+**Purpose:** Legacy/incubating profile schema path retained for compatibility
+with existing schema IDs. New stable profile work should prefer
+`schemas/profiles/` once promoted.
+
+**Stability:** Incubating. These schemas are not part of the v0.1 kernel
+contract.
 
 ---
 
@@ -105,8 +113,7 @@ The Northroot journal format (`.nrj`) stores events as JSON objects. The journal
 it stores raw JSON bytes. Schema validation happens during verification, not during
 journal I/O operations.
 
-Governance event schemas (checkpoint, attestation) are available in `crates/northroot-schemas/schemas/`.
-Domain-specific event schemas should be defined by consuming applications.
+Domain-specific event schemas should be defined by consuming applications, profiles, or domain layers.
 
 See [Journal Format](../docs/reference/format.md) for details on the on-disk representation.
 
@@ -171,17 +178,13 @@ requires a new schema version.
   definitions.
 - Profiles should use `allOf` overlays to constrain canonical types without
   changing representation.
-- The CLI should provide:
-  - `northroot validate <file> --schema <...>`
-  - `northroot inspect <file>` (digests + hygiene report)
+- Future profile tooling may provide schema validation commands, but those are
+  not part of the v0.1 kernel contract.
 
 ## Trust kernel schema reference
 
 - `schemas/canonical/v1/types.schema.json`  
   Canonical primitives (quantities, digests, hygiene reports, etc.) bundled with the trust kernel so operators always have the authoritative definitions on hand.
-- `crates/northroot-schemas/schemas/`  
-  Governance event schemas (checkpoint, attestation) that depend on the canonical types but are kept outside the core to preserve the kernel's minimal surface.
-
 ## Schema validation and journal format
 
 The journal format stores events as JSON objects without schema validation during
@@ -193,7 +196,7 @@ write operations. This design allows:
 
 When reading from a journal:
 1. Parse the JSON object from the journal frame
-2. Validate structure against the appropriate event schema (governance schemas in `crates/northroot-schemas/schemas/`, domain schemas as defined by application)
+2. Validate structure against the appropriate event schema as defined by the consuming application or profile
 3. Canonicalize according to the event's `canonical_profile_id`
 4. Verify `event_id` matches the computed digest
 
@@ -207,11 +210,8 @@ maintaining strong verification guarantees.
 - `canonical/v1/types.schema.json`  
   Canonical primitives (quantities, hygiene report, etc.) - part of trust kernel
 
-- `wip/governance/schemas/`  
-  Example governance event schemas (checkpoint, attestation) - not part of core
-
 - Domain-specific event schemas  
-  Should be defined by consuming applications or extension layers. The trust kernel provides canonicalization and event identity primitives but does not prescribe domain semantics.
+  Should be defined by consuming applications, profiles, or domain layers. The trust kernel provides canonicalization and event identity primitives but does not prescribe domain semantics.
 
 Optional (future):
 - `profiles/v1/*.schema.json`  

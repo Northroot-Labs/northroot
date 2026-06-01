@@ -30,8 +30,7 @@ northroot/
 │   └── northroot/            # CLI application (not in workspace)
 ├── schemas/
 │   └── canonical/            # Canonical primitive schemas
-├── docs/                      # Documentation
-└── wip/                       # Experimental code (not core)
+└── docs/                      # Documentation
 ```
 
 **Key constraint**: `apps/northroot/` is NOT in the workspace. Use `--manifest-path apps/northroot/Cargo.toml` or `cd apps/northroot` when building.
@@ -169,21 +168,18 @@ See [GOVERNANCE.md](GOVERNANCE.md) section 10 for explicit non-goals.
 ### Schema Documentation
 - Canonical schemas in `schemas/canonical/v1/`
 - Event schemas are domain-specific (not in core)
-- Governance event examples in `wip/governance/` (not core)
 
 ---
 
 ## Common Pitfalls
 
-### ❌ Don't Reference Non-Existent Crates
+### ❌ Don't Reference Non-Existent Crates or APIs
 - `northroot-core` - does not exist
-- `northroot-store` - experimental, in `wip/store/`
 - `northroot-cli` - package name is `northroot`, path is `apps/northroot/`
 
 ### ❌ Don't Reference Non-Existent Types
 - `Verifier`, `VerificationVerdict` - not in core
 - `AuthorizationEvent`, `ExecutionEvent` - domain-specific, not in core
-- `StoreWriter`, `StoreReader` - experimental, in `wip/store/`
 
 ### ✅ Use Actual Core APIs
 - `northroot-canonical`: `Canonicalizer`, `compute_event_id`, `verify_event_id`
@@ -255,7 +251,7 @@ cargo test --package northroot-canonical --doc
 
 **"cannot find type"**
 - Check if type exists in actual codebase
-- Don't reference types from `wip/` directories in core code
+- Don't reference profile/runtime types in core code
 
 **"doctest failed"**
 - Check if example requires files (use `no_run`)

@@ -1,7 +1,7 @@
 # Northroot API Contract
 
-Version: 1.0  
-Status: Stable  
+Version: 0.1
+Status: Stable kernel
 Scope: Trust kernel API surface
 
 ---
@@ -14,6 +14,7 @@ The kernel provides:
 - **Canonicalization**: Deterministic JSON canonicalization (RFC 8785 + Northroot rules)
 - **Event Identity**: Content-derived event identifiers
 - **Journal Format**: Portable, append-only event container
+- **Structural Journal Metadata**: rebuildable segment manifests and checkpoints
 
 ---
 
@@ -151,17 +152,21 @@ fn process_event() -> Result<(), Box<dyn std::error::Error>> {
 - **Offline**: No network dependencies
 - **Untyped**: Kernel operates on `EventJson = serde_json::Value`
 - **Schema-agnostic**: Journal format accepts any valid JSON event
+- **Single-writer**: v0.1 assumes one writer with many readers; write
+  coordination and multi-event transactions are outside the kernel
+- **Structural checkpoints only**: Checkpoints identify verified prefixes, not
+  semantic state
 
 ---
 
-## 7. Extension Points
+## 7. Profiles and Consumer Protocols
 
 The kernel does not provide:
 - Typed event schemas (domain layers add these)
-- Domain-specific verification (extensions implement this)
-- Storage abstractions (extensions can layer on top)
+- Domain-specific verification (profiles or consuming protocols implement this)
+- Storage abstractions (consumer layers can add these)
 
-See [Extensions](../reference/extensions.md) and [Extending Northroot](extending.md) for how to extend the kernel.
+See [Profiles and Consumer Protocols](../reference/profiles.md) and [Layering on Northroot](layering.md) for layering on the kernel.
 
 ---
 
@@ -200,6 +205,8 @@ The Northroot kernel API provides:
 1. **Canonicalization**: [`Canonicalizer::canonicalize()`](https://docs.rs/northroot-canonical/latest/northroot_canonical/struct.Canonicalizer.html#method.canonicalize)
 2. **Event Identity**: [`compute_event_id()`](https://docs.rs/northroot-canonical/latest/northroot_canonical/fn.compute_event_id.html), [`verify_event_id()`](https://docs.rs/northroot-canonical/latest/northroot_canonical/fn.verify_event_id.html)
 3. **Journal I/O**: [`JournalWriter`](https://docs.rs/northroot-journal/latest/northroot_journal/struct.JournalWriter.html), [`JournalReader`](https://docs.rs/northroot-journal/latest/northroot_journal/struct.JournalReader.html)
+4. **Structural Segments/Checkpoints**: `northroot journal verify-segments`,
+   `northroot journal manifest`, and `northroot journal checkpoint`
 
 All operations are deterministic, offline-capable, and operate on untyped JSON.
 
