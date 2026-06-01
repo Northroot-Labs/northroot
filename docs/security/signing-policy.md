@@ -86,12 +86,12 @@ Separately from Tier B PR attestations, Northroot uses **human-signed tags** as 
 
 ### Release Checkpoints (`v*` tags)
 
-- Create a signed tag like `v1.0.0` on the exact commit you want to freeze.
+- Create a signed tag like `v0.1.0` on the exact commit you want to freeze.
 - Pushing this tag triggers the release workflow to build and publish binaries.
 
 Example:
 ```bash
-VERSION="1.0.0"
+VERSION="0.1.0"
 git tag -s "v$VERSION" -m "Release v$VERSION"
 git push origin "v$VERSION"
 ```
@@ -213,4 +213,3 @@ For Tier B approval tags, use the process described above.
 - [Threat Model](threat-model.md) - Security analysis
 - [CONTRIBUTING.md](../../CONTRIBUTING.md) - General contribution guidelines
 - [GOVERNANCE.md](../../GOVERNANCE.md) - Project principles
-

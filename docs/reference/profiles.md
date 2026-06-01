@@ -1,6 +1,6 @@
-# Extensions
+# Profiles and Consumer Protocols
 
-This document describes how to extend Northroot with domain-specific event types and verification logic.
+This document describes how to layer profile semantics, consumer protocols, and domain-specific verification on top of Northroot.
 
 ## Overview
 
@@ -9,11 +9,13 @@ The Northroot trust kernel provides:
 - Journal container format (`northroot-journal`)
 - Event identity computation
 
-Domain layers extend the kernel by:
+Profile and consumer layers use the kernel by:
 - Defining event schemas
 - Adding typed event structures
 - Implementing domain-specific verification
 - Publishing cross-language fixtures
+
+The kernel may preserve and verify profile-bearing events. The kernel must not decide profile meaning.
 
 ---
 
@@ -47,7 +49,7 @@ Reference canonical types from `schemas/canonical/`:
 
 ### 1.3 Schema Location
 
-Store your schemas in your extension repository:
+Store your schemas in your consuming repository:
 - `schemas/events/v1/your_event.schema.json`
 - Reference canonical types via `$ref`
 
@@ -109,7 +111,7 @@ This verifies:
 - Event ID matches computed hash
 - Canonicalization is correct
 
-### 4.2 Domain Verification
+### 4.2 Profile or Domain Verification
 
 Add your own verification logic:
 
@@ -142,7 +144,7 @@ fn verify_your_domain_event(
 Create golden test fixtures that prove byte-level determinism:
 
 ```
-your-extension/fixtures/
+your-profile/fixtures/
   canonical/
     your_event_input.json
     your_event_canonical.hex
@@ -162,22 +164,22 @@ Provide a test suite that:
 
 ### 5.3 FFI/WASM Bindings
 
-If your extension needs cross-language determinism for verification logic:
+If your profile needs cross-language determinism for verification logic:
 - Implement verification in Rust
 - Provide FFI or WASM bindings
 - Document the interop contract
 
 ---
 
-## 6. Example Extensions
+## 6. Example Profiles and Consumer Protocols
 
-### 6.1 Governance Events
+Northroot v0.1 keeps profile schemas outside the kernel. Consuming repositories
+may define their own schemas, validators, admission gates, and projections as
+long as they treat kernel verification as byte/integrity verification only.
 
-See `wip/governance/` for checkpoint and attestation event schemas.
-
-### 6.2 Agent Domain
-
-See `wip/agent-domain/` for authorization and execution event schemas.
+The work-ledger profile is incubating and currently documented in
+[Work Ledger](work-ledger.md). It is useful for dogfooding but is not a stable
+kernel API.
 
 ---
 
@@ -187,13 +189,13 @@ See `wip/agent-domain/` for authorization and execution event schemas.
 2. **Reference canonical types**: Don't redefine Digest, Quantity, etc.
 3. **Publish fixtures**: Enable cross-language verification
 4. **Document interop**: Specify how other languages should implement your events
-5. **Separate concerns**: Kernel = bytes/hashes, Domain = semantics/validation
+5. **Separate concerns**: Kernel = bytes/hashes, profile = schema/validation, policy = admissibility
 
 ---
 
 ## 8. Summary
 
-Extensions add:
+Profiles and consumer protocols add:
 - Typed event schemas
 - Domain-specific verification
 - Cross-language fixtures
@@ -204,4 +206,3 @@ The kernel provides:
 - Journal format
 
 This separation keeps the kernel minimal while enabling rich domain semantics.
-

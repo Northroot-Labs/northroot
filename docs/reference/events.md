@@ -1,6 +1,6 @@
 # Event Model
 
-**Note**: This document describes the generic event structure. For the protocol specification (invariants, identity computation, verification model), see [Core Specification](spec.md). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md). For extension patterns, see [Extensions](extensions.md).
+**Note**: This document describes the generic event structure. For the protocol specification (invariants, identity computation, verification model), see [Core Specification](spec.md). For canonicalization rules, see [Canonicalization](canonicalization.md). For journal format, see [Journal Format](format.md). For profile and consumer-protocol patterns, see [Profiles and Consumer Protocols](profiles.md).
 
 ## 0. Purpose
 
@@ -11,7 +11,7 @@ Northroot is intentionally **neutral**:
 - It standardizes the **evidence format** and **verification rules**.
 - It does NOT mandate any specific policy language, enforcement engine, agent framework,
   orchestration model, or runtime semantics.
-- Domain-specific event types (authorization, execution, checkpoint, attestation, etc.) are defined by consuming applications or extension layers.
+- Domain-specific event types (authorization, execution, checkpoint, attestation, etc.) are defined by consuming applications, profiles, or domain layers.
 
 The trust kernel provides canonicalization and event identity primitives. Domain layers add typed schemas and semantic verification.
 
@@ -99,7 +99,7 @@ Domain-specific event types (authorization, execution, checkpoint, attestation, 
 - `chain_tip_height`: u64
 - Optional `merkle_root` and `window`
 
-But these fields are application-defined, not core primitives. See `wip/governance/` for example checkpoint/attestation schemas.
+But these fields are application-defined, not core primitives. A consuming profile may define them outside the kernel.
 
 ---
 

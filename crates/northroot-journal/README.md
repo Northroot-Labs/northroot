@@ -106,5 +106,4 @@ See the `tests/` directory for comprehensive examples:
 
 ## License
 
-Licensed under either of Apache-2.0 or MIT at your option.
-
+Licensed under the MIT License.

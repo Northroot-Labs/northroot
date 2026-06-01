@@ -29,10 +29,6 @@ Thank you for your interest in contributing to Northroot.
    just qa
    ```
 
-### Development Container
-
-For a consistent development environment, use the devcontainer. See [.devcontainer/README.md](.devcontainer/README.md) for setup instructions. The devcontainer and Codex environment both use `scripts/codex_setup.sh`.
-
 ### Codex Environment
 
 Repo-owned Codex setup lives in `.codex/environments/environment.toml` and calls `scripts/codex_setup.sh`. Use `scripts/codex_verify.sh` after setup or before handing off a branch to run the workspace checks, golden tests, doctests, schema validation, and the out-of-workspace CLI tests.
@@ -172,10 +168,10 @@ Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
 
 Example:
 ```
-feat: add event filtering by principal ID
+feat: add profile event validation
 
-Implements PrincipalFilter for StoreReader to enable filtering
-events by principal_id during replay.
+Adds a profile verifier that rejects schema-invalid events before projection
+rebuild.
 ```
 
 ## Questions?

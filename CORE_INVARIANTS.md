@@ -115,7 +115,7 @@ INV-7 — Journal is self-describing
 The journal format MUST include:
 - Explicit version markers
 - Frame boundaries that enable partial reads
-- Forward-compatible extension points
+- Forward-compatible frame and profile-routing fields
 
 Readers must be able to skip unknown frame types without breaking verification.
 

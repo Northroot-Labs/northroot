@@ -235,5 +235,5 @@ fn handle_errors() -> Result<(), Box<dyn std::error::Error>> {
 
 For more details, see:
 - [API Contract](../developer/api-contract.md) - Complete API reference
-- [Extending Northroot](../developer/extending.md) - How to extend the kernel
+- [Layering on Northroot](../developer/layering.md) - How to layer consumer protocols over the kernel
 - [Core Specification](../reference/spec.md) - Event structure and semantics

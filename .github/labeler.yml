@@ -17,9 +17,6 @@ chore:
           - 'justfile'
           - 'deny.toml'
           - 'rust-toolchain.toml'
-          - 'Dockerfile'
-          - '.dockerignore'
-          - '.devcontainer/**'
           - 'scripts/**'
           - 'docs/**/*.md'
           - '!docs/developer/api-contract.md'
@@ -34,4 +31,3 @@ style:
               - '**/*.rs'
           - any-glob-to-any-file:
               - '.rustfmt.toml'
-

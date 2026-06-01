@@ -1,9 +1,9 @@
 [package]
 name = "northroot-journal"
-version = "1.2.0"
+version = "0.1.0"
 edition = "2021"
 authors = ["Northroot Contributors"]
-license = "Apache-2.0 OR MIT"
+license = "MIT"
 description = "Append-only journal format for canonical Northroot events"
 
 [dependencies]
@@ -14,4 +14,3 @@ northroot-canonical = { path = "../northroot-canonical" }
 
 [dev-dependencies]
 tempfile = "3.8"
-

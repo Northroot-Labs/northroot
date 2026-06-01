@@ -80,7 +80,9 @@ Northroot is organized as a minimal trust kernel with two core crates:
 **Purpose**: Command-line interface for trust kernel operations.
 
 **Responsibilities**:
-- User-facing commands (`canonicalize`, `event-id`, `verify`, `list`)
+- Kernel commands (`canonicalize`, `event-id`, `append`, `list`, `verify`,
+  `verify-bundle`, `journal`)
+- Incubating dogfood/profile commands (`work`)
 - Output formatting
 - Error reporting
 
@@ -124,13 +126,17 @@ Northroot is organized as a minimal trust kernel with two core crates:
 
 ---
 
-## Extension Points
+## Profile and Layering Points
 
 - **Custom Event Schemas**: Applications define domain-specific event types
 - **Custom Verification**: Domain layers add semantic verification on top of core event identity checks
 - **Custom Storage**: Journal format is portable; applications can implement custom storage backends
+- **Structural Segmentation**: large event streams can use ordered `.nrj`
+  segments plus rebuildable manifests and checkpoints without adding projection
+  meaning
 
-See [Extensions](../reference/extensions.md) for details.
+See [Profiles and Consumer Protocols](../reference/profiles.md) and
+[Segmented Journals](../reference/segmented-journals.md) for details.
 
 ---
 
@@ -150,15 +156,10 @@ This dependency structure ensures:
 
 ## Domain-Specific Layers
 
-Domain-specific event types (authorization, execution, checkpoint, attestation, etc.) and verification logic are **not** part of the core trust kernel. They should be implemented as separate repositories or crates that consume the core primitives:
+Domain-specific event types (authorization, execution, semantic checkpoints, attestation, etc.) and verification logic are **not** part of the core trust kernel. They should be implemented as separate repositories or crates that consume the core primitives:
 
 - `northroot-canonical` for canonicalization and event identity
 - `northroot-journal` for storage
-
-See `wip/` for examples:
-- `wip/governance/` - Checkpoint and attestation schemas
-- `wip/agent-domain/` - Authorization and execution schemas
-- `wip/store/` - Storage abstraction layer
 
 ---
 
@@ -166,5 +167,6 @@ See `wip/` for examples:
 
 - [API Contract](api-contract.md) - Public API surface
 - [Core Specification](../reference/spec.md) - Protocol details
-- [Extensions](../reference/extensions.md) - How to extend the system
+- [Profiles and Consumer Protocols](../reference/profiles.md) - How to layer on the system
+- [Segmented Journals](../reference/segmented-journals.md) - Structural segment and checkpoint contract
 - [Core Invariants](../../CORE_INVARIANTS.md) - Non-negotiable kernel constraints
