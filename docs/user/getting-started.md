@@ -69,7 +69,7 @@ writer.finish()?;
 
 See [Integration Examples](integration-examples.md) for complete code samples.
 
-### Listing Events
+### Reading Events
 
 ```bash
 northroot read events.nrj
