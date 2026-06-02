@@ -31,7 +31,7 @@ python3 scripts/benchmark_journal_formats.py --scale 0.1
 ```
 
 The smoke run is also part of `scripts/codex_verify.sh`. It checks record
-counts, workload class counts, NRJ CLI readability, and truncation recovery
+counts, workload class counts, NRJ CLI verification, and truncation recovery
 signals. It does not fail on byte-size or timing differences.
 
 Use an explicit output directory for archival comparison:

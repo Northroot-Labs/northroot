@@ -80,9 +80,10 @@ Northroot is organized as a minimal trust kernel with two core crates:
 **Purpose**: Command-line interface for trust kernel operations.
 
 **Responsibilities**:
-- Kernel commands (`canonicalize`, `event-id`, `append`, `list`, `verify`,
-  `verify-bundle`, `journal`)
-- Incubating dogfood/profile commands (`work`)
+- Public kernel commands (`canonicalize`, `event-id`, `append`, `read`,
+  `verify`)
+- Incubating profile and structural helpers kept outside the public kernel
+  command set
 - Output formatting
 - Error reporting
 

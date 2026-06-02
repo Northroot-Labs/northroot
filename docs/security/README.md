@@ -22,7 +22,7 @@ projection correctness belong to profiles and consuming repositories.
 - Keep verification offline and deterministic.
 - Keep writes single-writer for v0.1.
 - Preserve bounded frame validation in `northroot-journal`.
-- Treat `list` as a dumb journal read, not a projection.
+- Treat `read` as a dumb journal read, not a projection or filtering surface.
 - Treat structural checkpoints as verified-prefix records, not semantic state.
 - Keep deployment, secret, runtime, and API-service guidance outside this repo until a separate product surface exists.
 
