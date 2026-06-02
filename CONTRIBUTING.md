@@ -33,6 +33,41 @@ Thank you for your interest in contributing to Northroot.
 
 Repo-owned Codex setup lives in `.codex/environments/environment.toml` and calls `scripts/codex_setup.sh`. Use `scripts/codex_verify.sh` after setup or before handing off a branch to run the workspace checks, golden tests, doctests, schema validation, and the out-of-workspace CLI tests.
 
+### Agent Worktree Sync
+
+Keep local `main` as a clean mirror of `origin/main`. Agent work should happen on task branches created from fetched remote truth, not on `main`.
+
+Agents may refresh remote branch refs without mutating local branches or working trees:
+
+```bash
+just fetch-refs
+```
+
+This fetches branch refs from the configured remote, prunes deleted remote-tracking branches, and does not fetch tags or accept ad hoc refspecs.
+
+Before resuming or editing a worktree, run:
+
+```bash
+just sync-check
+```
+
+The check uses the same scoped ref fetch by default, reports the current branch or detached commit, verifies the tree is clean, detects stale branches, and reports where local `main` is checked out.
+
+After a PR merges, update local `main` with:
+
+```bash
+just sync-main
+```
+
+This refuses to run if the `main` worktree has local changes or cannot fast-forward to `origin/main`. It never stashes, resets, or overwrites local edits.
+
+For new agent work, start from the remote-tracking branch:
+
+```bash
+just fetch-refs
+git worktree add -b codex/<task-name> <path> origin/main
+```
+
 ## Code Quality
 
 ### Pre-Commit Hooks

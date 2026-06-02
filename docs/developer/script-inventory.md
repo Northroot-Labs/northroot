@@ -19,6 +19,9 @@ These scripts are commit-worthy and part of the v0.1 readiness path:
 
 These scripts are repo-local helpers, not public API:
 
+- `scripts/fetch_remote_refs.sh` - safely refreshes remote branch refs without updating local branches, tags, or working trees.
+- `scripts/check_worktree_sync.sh` - preflight guard for clean, current agent worktrees.
+- `scripts/safe_sync_main.sh` - fast-forwards local `main` to `origin/main` only when clean and safe.
 - `scripts/install_git_hooks.sh` - installs local pre-commit hooks.
 - `scripts/benchmark_journal_formats.py` - keeps the custom journal decision observable by comparing `.nrj` against simpler alternatives.
 
