@@ -6,7 +6,7 @@ mod commands;
 mod output;
 mod path;
 
-use commands::{append, canonicalize, event_id, journal, list, verify, verify_bundle, work};
+use commands::{append, canonicalize, event_id, journal, read, verify, verify_bundle, work};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
@@ -28,8 +28,21 @@ enum Commands {
         /// Input JSON file (or stdin if not provided)
         input: Option<String>,
     },
-    /// List events in a journal
-    List {
+    /// Append an event to a journal
+    Append {
+        /// Path to journal file
+        journal: String,
+        /// Input JSON file (or stdin if not provided)
+        input: Option<String>,
+        /// Reject events with mismatched event_id (default: false)
+        #[arg(long)]
+        strict: bool,
+        /// Sync file to disk after append (default: false)
+        #[arg(long)]
+        sync: bool,
+    },
+    /// Read events from a journal
+    Read {
         /// Path to journal file
         journal: String,
         /// Output as JSON
@@ -60,6 +73,7 @@ enum Commands {
         max_size: Option<u64>,
     },
     /// Verify a portable evidence bundle
+    #[command(hide = true)]
     VerifyBundle {
         /// Path to bundle directory
         dir: String,
@@ -67,25 +81,14 @@ enum Commands {
         #[arg(long)]
         json: bool,
     },
-    /// Append an event to a journal
-    Append {
-        /// Path to journal file
-        journal: String,
-        /// Input JSON file (or stdin if not provided)
-        input: Option<String>,
-        /// Reject events with mismatched event_id (default: false)
-        #[arg(long)]
-        strict: bool,
-        /// Sync file to disk after append (default: false)
-        #[arg(long)]
-        sync: bool,
-    },
     /// Work ledger ingestion, projection, and verification
+    #[command(hide = true)]
     Work {
         #[command(subcommand)]
         command: work::WorkCommand,
     },
     /// Structural segmented journal and checkpoint operations
+    #[command(hide = true)]
     Journal {
         #[command(subcommand)]
         command: journal::JournalCommand,
@@ -98,12 +101,18 @@ fn main() {
     let result = match cli.command {
         Commands::Canonicalize { input } => canonicalize::run(input),
         Commands::EventId { input } => event_id::run(input),
-        Commands::List {
+        Commands::Append {
+            journal,
+            input,
+            strict,
+            sync,
+        } => append::run(journal, input, strict, sync),
+        Commands::Read {
             journal,
             json,
             max_events,
             max_size,
-        } => list::run(journal, json, max_events, max_size),
+        } => read::run(journal, json, max_events, max_size),
         Commands::Verify {
             journal,
             strict,
@@ -112,12 +121,6 @@ fn main() {
             max_size,
         } => verify::run(journal, strict, json, max_events, max_size),
         Commands::VerifyBundle { dir, json } => verify_bundle::run(dir, json),
-        Commands::Append {
-            journal,
-            input,
-            strict,
-            sync,
-        } => append::run(journal, input, strict, sync),
         Commands::Work { command } => work::run(command),
         Commands::Journal { command } => journal::run(command),
     };

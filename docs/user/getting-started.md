@@ -72,7 +72,7 @@ See [Integration Examples](integration-examples.md) for complete code samples.
 ### Listing Events
 
 ```bash
-northroot list events.nrj
+northroot read events.nrj
 ```
 
 ### Verifying Events

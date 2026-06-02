@@ -125,8 +125,8 @@ See [GOVERNANCE.md](GOVERNANCE.md) section 10 for explicit non-goals.
 
 ### `apps/northroot` (CLI)
 - Package is NOT in workspace (use `--manifest-path` or `cd` into directory)
-- Current commands: `canonicalize`, `event-id`, `list`, `verify`
-- Commands `get`, `inspect`, `append`, `gen` are planned but not yet implemented
+- Public kernel commands: `canonicalize`, `event-id`, `append`, `read`, `verify`
+- Incubating profile and structural helpers are not part of the public kernel command set
 
 ---
 

@@ -60,19 +60,18 @@ echo '{"b":2,"a":1}' | northroot canonicalize
 # Compute event_id for JSON
 echo '{"event_type":"test","event_version":"1",...}' | northroot event-id
 
-# List events in a journal
-northroot list events.nrj
+# Append an event to a journal
+northroot append events.nrj event.json
+
+# Read events from a journal
+northroot read events.nrj
 
 # Verify all events in a journal
 northroot verify events.nrj
 ```
 
-Structural segmented journals and checkpoints are available through:
-
-```bash
-northroot journal verify-segments --dir .northroot/journals
-northroot journal checkpoint --dir .northroot/journals --out checkpoint.json
-```
+The public kernel CLI command set is `canonicalize`, `event-id`, `append`,
+`read`, and `verify`.
 
 ## Documentation
 

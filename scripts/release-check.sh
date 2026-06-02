@@ -94,10 +94,10 @@ if [ -n "$BINARY_PATH" ] && [ -f "$BINARY_PATH" ]; then
         echo -e "${YELLOW}⚠${NC} --version flag not available (optional)"
     fi
     
-    # 7. Verify all commands are available
+    # 7. Verify public kernel commands are available
     echo ""
-    echo "Verifying CLI commands:"
-    commands=("canonicalize" "event-id" "append" "list" "verify" "verify-bundle" "journal" "work")
+    echo "Verifying public kernel CLI commands:"
+    commands=("canonicalize" "event-id" "append" "read" "verify")
     for cmd in "${commands[@]}"; do
         if "$BINARY_PATH" "$cmd" --help > /dev/null 2>&1; then
             echo -e "  ${GREEN}✓${NC} $cmd command available"
@@ -106,6 +106,14 @@ if [ -n "$BINARY_PATH" ] && [ -f "$BINARY_PATH" ]; then
             check_failed=1
         fi
     done
+
+    echo -n "Checking removed list command... "
+    if "$BINARY_PATH" list --help > /dev/null 2>&1; then
+        echo -e "${RED}✗${NC} list command is still available"
+        check_failed=1
+    else
+        echo -e "${GREEN}✓${NC}"
+    fi
 fi
 
 # Summary

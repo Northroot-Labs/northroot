@@ -31,8 +31,13 @@ REQUIRED_CLI_COMMANDS = [
     "canonicalize",
     "event-id",
     "append",
-    "list",
+    "read",
     "verify",
+]
+REMOVED_CLI_COMMANDS = [
+    "list",
+]
+HIDDEN_INCUBATING_CLI_COMMANDS = [
     "verify-bundle",
     "journal",
     "work",
@@ -248,10 +253,30 @@ def check_cli_commands() -> dict[str, Any]:
         variant = "".join(part.capitalize() for part in command.split("-"))
         if variant not in main_rs:
             missing.append(command)
+    removed_present = []
+    for command in REMOVED_CLI_COMMANDS:
+        variant = "".join(part.capitalize() for part in command.split("-"))
+        if variant in main_rs:
+            removed_present.append(command)
+    not_hidden = []
+    for command in HIDDEN_INCUBATING_CLI_COMMANDS:
+        variant = "".join(part.capitalize() for part in command.split("-"))
+        pattern = rf"#\[command\(hide = true\)\]\s+{variant}\s*\{{"
+        if not re.search(pattern, main_rs):
+            not_hidden.append(command)
+    findings = []
+    if missing:
+        findings.append(f"missing stable commands: {', '.join(missing)}")
+    if removed_present:
+        findings.append(f"removed commands still present: {', '.join(removed_present)}")
+    if not_hidden:
+        findings.append(f"incubating commands not hidden: {', '.join(not_hidden)}")
     return check(
         "cli_command_surface",
-        not missing,
-        "required CLI commands present" if not missing else f"missing: {', '.join(missing)}",
+        not findings,
+        "stable CLI commands present; incubating commands hidden"
+        if not findings
+        else "; ".join(findings),
     )
 
 

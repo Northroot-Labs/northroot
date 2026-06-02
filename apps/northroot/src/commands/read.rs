@@ -1,4 +1,4 @@
-//! List command implementation.
+//! Read command implementation.
 
 use crate::output;
 use crate::path;
