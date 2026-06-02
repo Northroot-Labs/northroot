@@ -26,6 +26,15 @@ install-hooks:
 codex-verify:
     bash scripts/codex_verify.sh
 
+fetch-refs:
+    bash scripts/fetch_remote_refs.sh
+
+sync-check:
+    bash scripts/check_worktree_sync.sh
+
+sync-main:
+    bash scripts/safe_sync_main.sh
+
 # Combined fast QA suite
 qa: fmt lint test golden schema
 
