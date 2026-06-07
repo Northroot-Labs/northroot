@@ -1,3 +1,7 @@
 [workspace]
-members = ["crates/northroot-canonical", "crates/northroot-journal"]
+members = [
+  "crates/northroot-canonical",
+  "crates/northroot-journal",
+  "crates/northroot-state-eval",
+]
 resolver = "2"

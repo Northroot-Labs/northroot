@@ -4,7 +4,17 @@ High-level system design and component relationships.
 
 ## Overview
 
-Northroot is organized as a minimal trust kernel with two core crates:
+Northroot is open governance and accountability infrastructure for verifiable
+economic activity. Its trust kernel provides canonical identity, append-only
+evidence journals, replay, and offline verification. Higher layers provide
+projection, evaluation, authority, receipts, and financial/accountability
+profiles without polluting the kernel.
+
+The current stable architecture is the trust kernel component. This repository
+is focused on making the core canonicalization and journal reference crates
+solid before moving on to state/eval core.
+
+The stable kernel is organized around two core crates and a standalone CLI:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -93,6 +103,27 @@ Northroot is organized as a minimal trust kernel with two core crates:
 
 ---
 
+## Incubating Components
+
+### `northroot-state-eval`
+
+**Purpose**: Product-agnostic projection and policy evaluation primitives over
+projected state.
+
+**Responsibilities**:
+- Byte-stream-friendly event prefix and cursor metadata
+- Projection identity wrappers
+- Three-valued predicate composition
+- Satisfaction and evaluation result shapes
+- `EvaluationDelta` derivation
+- Gate result shapes for callers that need pre-action or pre-append checks
+
+**Boundary**: This crate is not part of the v0.1 stable kernel surface. It does
+not own product policy authority, policy language dependencies, agent runtimes,
+queues, database adapters, provider SDKs, or network integrations.
+
+---
+
 ## Data Flow
 
 ### Event Recording
@@ -145,6 +176,7 @@ See [Profiles and Consumer Protocols](../reference/profiles.md) and
 
 - `northroot-canonical` - No dependencies on other Northroot crates
 - `northroot-journal` - Depends on `northroot-canonical`
+- `northroot-state-eval` - Incubating, product-agnostic state/eval primitives
 - `apps/northroot/` - Depends on `northroot-canonical`, `northroot-journal`
 
 This dependency structure ensures:
@@ -157,7 +189,11 @@ This dependency structure ensures:
 
 ## Domain-Specific Layers
 
-Domain-specific event types (authorization, execution, semantic checkpoints, attestation, etc.) and verification logic are **not** part of the core trust kernel. They should be implemented as separate repositories or crates that consume the core primitives:
+Domain-specific event types and higher-layer semantics (projection, evaluation,
+authority, receipts, financial/accountability profiles, authorization,
+execution, semantic checkpoints, attestation, etc.) are **not** part of the core
+trust kernel. They should be implemented as separate repositories or crates that
+consume the core primitives:
 
 - `northroot-canonical` for canonicalization and event identity
 - `northroot-journal` for storage

@@ -10,14 +10,21 @@ Scope: Verifiable events, canonical identities, journal storage
 
 ## 1. Purpose
 
-Northroot defines a minimal, neutral surface for recording verifiable events. The specification exists to deliver deterministic identity, append-only ordering, offline verification, and a foundation for audit-grade correctness without prescribing policy engines, runtimes, or storage backends.
+Northroot is open governance and accountability infrastructure for verifiable
+economic activity. This specification defines the trust kernel component: the
+minimal, neutral surface for recording verifiable events. It exists to deliver
+deterministic identity, append-only ordering, offline verification, and a
+foundation for audit-grade correctness without prescribing policy engines,
+runtimes, or storage backends.
 
 The trust kernel provides:
 - Canonicalization primitives (RFC 8785 + Northroot rules)
 - Event identity computation
 - Journal format (.nrj)
 
-Domain-specific event types (authorization, execution, checkpoint, attestation, etc.) are defined by consuming applications, profiles, or domain layers.
+Higher-layer concerns such as projection, evaluation, authority, receipts,
+financial/accountability profiles, authorization, execution, checkpoint, and
+attestation are defined by consuming applications, profiles, or domain layers.
 
 ---
 
