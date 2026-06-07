@@ -7,9 +7,15 @@ Status: Binding
 
 0. Purpose
 
-This project exists to build neutral, verifiable infrastructure for automated systems.
+Northroot exists to build open governance and accountability infrastructure for
+verifiable economic activity.
 
-Specifically, it provides:
+The trust kernel is one component of that system. It provides canonical
+identity, append-only evidence journals, replay, and offline verification.
+Higher layers provide projection, evaluation, authority, receipts, and
+financial/accountability profiles without polluting the kernel.
+
+This repository's current stable core provides:
 	•	Deterministic canonicalization (RFC 8785 + Northroot rules)
 	•	Event identity computation
 	•	Append-only journal format (.nrj)
@@ -24,7 +30,8 @@ It does not exist to:
 	•	Automate execution
 	•	Persuade users
 
-If a feature proposal blurs this boundary, it is out of scope.
+If a feature proposal blurs the kernel boundary, it is out of scope for the
+core.
 
 ⸻
 

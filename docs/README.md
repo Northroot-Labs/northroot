@@ -2,6 +2,16 @@
 
 This directory contains documentation organized by audience.
 
+Northroot is open governance and accountability infrastructure for verifiable
+economic activity. The current stable surface documented here is the trust
+kernel: canonical identity, append-only evidence journals, replay, and offline
+verification.
+
+Higher layers such as projection, evaluation, authority, receipts, and
+financial/accountability profiles are layered over the kernel. The current
+project focus remains the core canonicalization and journal reference crates
+before state/eval core moves into the stable surface.
+
 ## Documentation Structure
 
 ### For Users
@@ -20,6 +30,8 @@ This directory contains documentation organized by audience.
 
 ### Reference
 - [v0.1 Stability Contract](reference/v0.1-stability.md) - Stable kernel and incubating profile boundaries
+- [Economic Accountability North Star](reference/economic-accountability-north-star.md) - Governed economic-action direction without product semantics
+- [State Eval Core](reference/state-eval-core.md) - Incubating product-agnostic evaluation primitives
 - [Core Specification](reference/spec.md) - Protocol specification
 - [Journal Format](reference/format.md) - On-disk format
 - [Segmented Journals](reference/segmented-journals.md) - Structural segment manifests and checkpoints

@@ -1,30 +1,41 @@
-# Northroot Kernel
+# Northroot
 
-Trust kernel for deterministic, audit-grade evidence recording.
+Open governance and accountability infrastructure for verifiable economic
+activity.
 
 ## What is Northroot?
 
-Northroot provides a minimal trust kernel for recording verifiable events. It standardizes canonicalization, event identity computation, and portable evidence storage—without prescribing domain semantics or policy logic.
+Northroot is open governance and accountability infrastructure for verifiable
+economic activity.
 
-**Core capabilities:**
+Its trust kernel provides canonical identity, append-only evidence journals,
+replay, and offline verification.
+
+Higher layers provide projection, evaluation, authority, receipts, and
+financial/accountability profiles without polluting the kernel.
+
+This repository is currently focused on making the core canonicalization and
+journal reference crates solid before moving on to state/eval core.
+
+**Current stable kernel capabilities:**
 - Deterministic canonicalization (RFC 8785 + Northroot rules)
 - Content-derived event identity
 - Portable journal format (.nrj)
 - Offline verification
 
-**What Northroot does NOT do:**
+**What the kernel does NOT do:**
 - Make decisions or optimize outcomes
 - Execute actions or orchestrate workflows
 - Prescribe domain event schemas
-- Evaluate policy or enforce constraints
+- Evaluate policy, authority, or financial/accountability semantics
 
 See [GOVERNANCE.md](GOVERNANCE.md) for the project's foundational principles.
 
 ## v0.1 Kernel Charter
 
-Northroot v0.1 is a small, stable verifiable-event kernel. It is intentionally
-not a runtime, scheduler, policy engine, deployment stack, or application
-framework.
+Northroot v0.1 is the small, stable verifiable-event kernel component of the
+broader Northroot system. It is intentionally not a runtime, scheduler, policy
+engine, deployment stack, or application framework.
 
 ### Goals
 - Keep core primitives deterministic and offline-verifiable.
@@ -36,6 +47,8 @@ framework.
 - No orchestration logic, workflow execution, or policy engines.
 - No model, runtime, or budget decisioning logic.
 - No domain-specific business semantics in core crates.
+- No projection, evaluation, authority, receipt, or accounting profile semantics
+  in the stable kernel.
 
 ## Quick Start
 
@@ -84,9 +97,11 @@ The public kernel CLI command set is `canonicalize`, `event-id`, `append`,
 - [Architecture](docs/developer/architecture.md) - System design
 - [Testing Guide](docs/developer/testing.md) - QA harness and test patterns
 - [Profiles](docs/reference/profiles.md) - How to layer profile semantics over the kernel
+- [State Eval Core](docs/reference/state-eval-core.md) - Incubating product-agnostic evaluation primitives
 
 ### Reference
 - [v0.1 Stability Contract](docs/reference/v0.1-stability.md) - Stable kernel and incubating profile boundaries
+- [Economic Accountability North Star](docs/reference/economic-accountability-north-star.md) - Governed economic-action direction without product semantics
 - [Core Specification](docs/reference/spec.md) - Protocol specification
 - [Journal Format](docs/reference/format.md) - On-disk format
 - [Segmented Journals](docs/reference/segmented-journals.md) - Structural segment manifests and checkpoints
@@ -99,7 +114,8 @@ The public kernel CLI command set is `canonicalize`, `event-id`, `append`,
 northroot/
 ├── crates/
 │   ├── northroot-canonical/  # Canonicalization + event_id
-│   └── northroot-journal/    # .nrj container format
+│   ├── northroot-journal/    # .nrj container format
+│   └── northroot-state-eval/ # Incubating state/eval primitives
 ├── apps/
 │   └── northroot/            # CLI application
 ├── fixtures/                  # Golden test vectors
@@ -116,8 +132,9 @@ The kernel provides:
 - **Event Identity**: `sha256(domain_separator || canonical_json(event))`
 - **Journal Format**: Portable, append-only container (.nrj)
 
-Everything else (typed schemas, domain verification, policy evaluation) is a
-profile, layer, or consumer protocol over the kernel.
+Everything else (projection, evaluation, authority, receipts, financial and
+accountability profiles, typed schemas, domain verification, policy evaluation)
+is a profile, layer, or consumer protocol over the kernel.
 
 ## Contributing
 
