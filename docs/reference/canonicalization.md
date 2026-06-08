@@ -27,6 +27,19 @@ Northroot canonical JSON MUST follow **RFC 8785 (JSON Canonicalization Scheme)**
 - String escaping rules
 - UTF-8 encoding of canonical bytes
 
+### 1.1.1 CBOR deferral
+
+CBOR is intentionally deferred for the current kernel profile. The stable v0.1
+identity contract is canonical JSON plus the Northroot numeric and hygiene
+rules in this document.
+
+CBOR may be introduced later only as a separate canonical profile with its own
+fixtures and conformance tests. It must not silently replace the JSON profile or
+change existing `event_id` computation. A future CBOR profile must specify map
+ordering, duplicate-key behavior, numeric width rules, tag handling, float/NaN
+policy, and cross-language fixture vectors before it can be used for kernel
+identity.
+
 ### 1.2 Additional Northroot constraints
 
 1. **Duplicate object keys are forbidden**

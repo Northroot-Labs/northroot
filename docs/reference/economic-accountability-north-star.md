@@ -40,7 +40,72 @@ be verified:
 This makes agents persistent economic actors without making Northroot an agent
 framework.
 
-## Kernel Layers
+## Reproducible Node
+
+The open source unit is a reproducible Northroot node.
+
+A node is a persistent actor with local operational state, stable identity,
+append-only evidence journals, and the ability to exchange verifiable receipts
+and attestations with other actors. It should be reproducible from source,
+configuration, domain packs, journals, and receipts rather than dependent on a
+central SaaS database.
+
+This inverts the traditional centralized SaaS model:
+
+```text
+traditional SaaS:
+  vendor database -> product workflow -> customer-facing records
+
+Northroot node model:
+  user-controlled node -> portable receipts / attestations -> relay exchange
+```
+
+Relays move portable receipts and attestations between nodes. They are transport
+and discovery infrastructure, not authority sources. A relay may queue, route,
+or fan out records, but the receiving node must be able to verify identity,
+authority, evidence, journal position, and receipt integrity without trusting
+the relay as the system of record.
+
+This does not mean "no cloud." It means cloud services are optional coordination
+and operations layers rather than the primary custody model for customer data.
+A centralized service may eventually provide:
+
+- node registry and discovery;
+- billing and licensing;
+- managed sync;
+- managed backup;
+- hosted authentication or credential recovery;
+- relay operations;
+- update distribution;
+- support diagnostics over user-approved artifacts.
+
+Those services must not be required to reconstruct the node's authoritative
+state. The scale boundary is: cloud can make nodes easier to find, fund, sync,
+backup, authenticate, and operate, but the node remains the durable actor and
+portable receipts remain the exchange format. Build the single-node system
+end-to-end before promoting any centralized service to product infrastructure.
+
+The node may use SQLite as its operational database. SQLite is the default fit
+for durable local state, queues, projections, receipt indexes, and sync cursors.
+DuckDB may be added for analytics when columnar scans or larger analytical
+workloads justify it, but analytics must remain a derived view over journals,
+receipts, and projections.
+
+The product is the node plus domain packs:
+
+```text
+Northroot product =
+  reproducible node
+  + domain pack
+  + authority/evaluation profile
+  + receipt/attestation exchange
+```
+
+Domain packs define product-specific schemas, predicates, projections,
+accounting rules, UX, and adapters. They must not become hidden central policy
+or a requirement to trust a hosted database.
+
+## System Layers
 
 Build the system as small composable layers. Each layer should earn its place by
 enforcing a primitive that later layers cannot safely fake.
@@ -91,9 +156,18 @@ northroot-eval
   Satisfied / Unsatisfied / Indeterminate
   EvaluationDelta
 
+northroot-node
+  reproducible deployment unit
+  local operational state
+  receipt / attestation exchange
+  relay adapters
+  domain-pack loading
+
 northroot-conformance
   replay tests
   journal adapter tests
+  node reproducibility tests
+  receipt exchange tests
   identity tests
   authority-chain tests
   accounting-balance tests
@@ -232,6 +306,8 @@ Northroot does not own:
 - workflow engines
 - bank connectors
 - QuickBooks or accounting-system adapters
+- hosted SaaS databases as the system of record
+- relay authority over receipt truth
 - document parsing
 - entity resolution
 - reconciliation UX
@@ -251,6 +327,7 @@ Before adding a concept to Northroot, ask:
 4. Can it be verified without a vendor, cloud, or agent runtime?
 5. Does it enforce a hard invariant that downstream code cannot safely fake?
 6. Can it be expressed as identity, authority, journal, receipt, projection,
-   predicate, evaluation result, or accounting invariant?
+   predicate, evaluation result, accounting invariant, reproducible node
+   behavior, or domain-pack contract?
 
 If not, keep it outside the kernel.
