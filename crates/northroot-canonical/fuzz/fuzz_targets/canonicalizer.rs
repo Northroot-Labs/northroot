@@ -10,7 +10,7 @@ fuzz_target!(|data: &[u8]| {
     };
 
     // Test with valid profile (pattern: [A-Za-z0-9_-]{16,128})
-    let profile = ProfileId::new("test_profile_12345".to_string());
+    let profile = ProfileId::parse("test_profile_12345").expect("valid profile");
     let canonicalizer = Canonicalizer::new(profile);
 
     // Fuzz canonicalize - should handle any valid JSON
@@ -19,4 +19,3 @@ fuzz_target!(|data: &[u8]| {
     // Fuzz canonicalize_with_report - should always return report
     let _ = canonicalizer.canonicalize_with_report(&value);
 });
-

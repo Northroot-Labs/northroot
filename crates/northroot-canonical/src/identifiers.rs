@@ -1,7 +1,7 @@
 use crate::digest::Digest;
 use crate::validation::ValidationError;
 use regex::Regex;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// Opaque reference to content-addressed bytes.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -19,16 +19,11 @@ pub struct ContentRef {
 macro_rules! newtype {
     ($name:ident, $doc:expr, $pattern:expr) => {
         #[doc = $doc]
-        #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+        #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
         #[serde(transparent)]
         pub struct $name(String);
 
         impl $name {
-            /// Creates a new instance without validation; callers are responsible for conformity.
-            pub fn new(value: String) -> Self {
-                Self(value)
-            }
-
             /// Parses a validated identifier from a string.
             pub fn parse(value: impl Into<String>) -> Result<Self, ValidationError> {
                 let s = value.into();
@@ -42,9 +37,29 @@ macro_rules! newtype {
             }
         }
 
-        impl From<String> for $name {
-            fn from(value: String) -> Self {
-                Self(value)
+        impl<'de> Deserialize<'de> for $name {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                let value = String::deserialize(deserializer)?;
+                Self::parse(value).map_err(serde::de::Error::custom)
+            }
+        }
+
+        impl TryFrom<String> for $name {
+            type Error = ValidationError;
+
+            fn try_from(value: String) -> Result<Self, Self::Error> {
+                Self::parse(value)
+            }
+        }
+
+        impl TryFrom<&str> for $name {
+            type Error = ValidationError;
+
+            fn try_from(value: &str) -> Result<Self, Self::Error> {
+                Self::parse(value)
             }
         }
 
@@ -76,3 +91,28 @@ newtype!(
     "UTC RFC3339 timestamp with `Z` suffix.",
     r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,9})?Z$"
 );
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn serde_deserialization_validates_identifier_patterns() {
+        let profile: ProfileId = serde_json::from_str(r#""northroot-canonical-v1""#).unwrap();
+        assert_eq!(profile.as_ref(), "northroot-canonical-v1");
+
+        let invalid_profile = serde_json::from_str::<ProfileId>(r#""short""#);
+        assert!(invalid_profile.is_err());
+
+        let invalid_principal = serde_json::from_str::<PrincipalId>(r#""service:UPPER""#);
+        assert!(invalid_principal.is_err());
+    }
+
+    #[test]
+    fn try_from_rejects_nonconforming_identifiers() {
+        assert!(PrincipalId::try_from("service:valid_agent-1").is_ok());
+        assert!(PrincipalId::try_from("service:Invalid").is_err());
+        assert!(Timestamp::try_from("2024-01-01T00:00:00Z").is_ok());
+        assert!(Timestamp::try_from("2024-01-01 00:00:00").is_err());
+    }
+}

@@ -70,7 +70,7 @@ pub mod verification;
 pub mod writer;
 
 pub use errors::JournalError;
-pub use event::EventJson;
+pub use event::{EventJson, EventObject};
 pub use frame::{FrameKind, JournalHeader, RecordFrame};
 pub use reader::{JournalReader, ReadMode};
 pub use verification::verify_event_id;

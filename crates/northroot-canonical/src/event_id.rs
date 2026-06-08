@@ -62,9 +62,6 @@ pub fn compute_event_id<T: Serialize>(
         map.remove("event_id");
     }
 
-    // Stringify all JSON numbers to satisfy canonicalizer hygiene rules
-    stringify_numbers(&mut value);
-
     // Canonicalize the JSON value
     let result = canonicalizer.canonicalize(&value)?;
 
@@ -91,27 +88,6 @@ pub enum EventIdError {
     /// Digest construction failed.
     #[error("digest construction failed: {0}")]
     Digest(#[from] crate::ValidationError),
-}
-
-/// Recursively converts all JSON numbers into strings.
-fn stringify_numbers(value: &mut Value) {
-    match value {
-        Value::Number(n) => {
-            let s = n.to_string();
-            *value = Value::String(s);
-        }
-        Value::Array(arr) => {
-            for v in arr {
-                stringify_numbers(v);
-            }
-        }
-        Value::Object(map) => {
-            for v in map.values_mut() {
-                stringify_numbers(v);
-            }
-        }
-        _ => {}
-    }
 }
 
 /// Verifies that a claimed event_id matches the computed event_id.
@@ -151,4 +127,63 @@ pub fn verify_event_id<T: Serialize>(
 ) -> Result<bool, EventIdError> {
     let computed_id = compute_event_id(event, canonicalizer)?;
     Ok(claimed_id == &computed_id)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::ProfileId;
+    use serde_json::json;
+
+    fn canonicalizer() -> Canonicalizer {
+        Canonicalizer::new(ProfileId::parse("northroot-canonical-v1").unwrap())
+    }
+
+    #[test]
+    fn json_number_and_string_have_distinct_event_ids() {
+        let canonicalizer = canonicalizer();
+        let numeric_event = json!({
+            "event_type": "test",
+            "event_version": "1",
+            "value": 1
+        });
+        let string_event = json!({
+            "event_type": "test",
+            "event_version": "1",
+            "value": "1"
+        });
+
+        let numeric_id = compute_event_id(&numeric_event, &canonicalizer).unwrap();
+        let string_id = compute_event_id(&string_event, &canonicalizer).unwrap();
+
+        assert_ne!(numeric_id, string_id);
+    }
+
+    #[test]
+    fn nested_json_number_and_string_have_distinct_event_ids() {
+        let canonicalizer = canonicalizer();
+        let numeric_event = json!({
+            "event_type": "test",
+            "event_version": "1",
+            "payload": {
+                "items": [
+                    { "weight": 1.25 }
+                ]
+            }
+        });
+        let string_event = json!({
+            "event_type": "test",
+            "event_version": "1",
+            "payload": {
+                "items": [
+                    { "weight": "1.25" }
+                ]
+            }
+        });
+
+        let numeric_id = compute_event_id(&numeric_event, &canonicalizer).unwrap();
+        let string_id = compute_event_id(&string_event, &canonicalizer).unwrap();
+
+        assert_ne!(numeric_id, string_id);
+    }
 }

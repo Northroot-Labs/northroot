@@ -46,7 +46,7 @@ fn hygiene_report_matches_expected_shape() {
         status: HygieneStatus::Ok,
         warnings: vec![HygieneWarning::new("DuplicateKeys")],
         metrics: BTreeMap::new(),
-        profile_id: ProfileId::new("example_profile_0001".into()),
+        profile_id: ProfileId::parse("example_profile_0001").unwrap(),
     };
 
     let serialized = serde_json::to_value(&report).unwrap();
