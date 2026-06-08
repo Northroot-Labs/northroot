@@ -139,6 +139,8 @@ pub struct PredicateResult {
     pub evidence_refs: Vec<String>,
     /// Evidence references or condition identifiers that are missing.
     pub missing_evidence: Vec<String>,
+    /// Evidence references or condition identifiers with conflicts.
+    pub conflicting_evidence: Vec<String>,
     /// Digest of the projected state evaluated.
     pub state_digest: String,
     /// Event prefix covered by the projected state.
@@ -160,6 +162,7 @@ impl PredicateResult {
             reasons: Vec::new(),
             evidence_refs: Vec::new(),
             missing_evidence: Vec::new(),
+            conflicting_evidence: Vec::new(),
             state_digest: state_digest.into(),
             cursor,
         }
@@ -454,13 +457,7 @@ impl EvaluationDelta {
         let conflicting_evidence = evaluation
             .predicate_results
             .iter()
-            .flat_map(|result| {
-                result
-                    .reasons
-                    .iter()
-                    .filter(|reason| reason.contains("conflict"))
-                    .cloned()
-            })
+            .flat_map(|result| result.conflicting_evidence.iter().cloned())
             .collect::<Vec<_>>();
 
         Self {
@@ -636,6 +633,37 @@ mod tests {
         assert_eq!(
             delta.missing_evidence,
             vec!["evidence:buyer_template_present".to_string()]
+        );
+    }
+
+    #[test]
+    fn evaluation_delta_uses_structured_conflicting_evidence() {
+        let expr = PolicyExpr::PredicateRef("evidence_consistent".to_string());
+        let request = EvaluationRequest {
+            evaluation_id: "eval:conflict",
+            policy_id: "evidence_policy",
+            policy_version: "v1",
+            projection_id: "submission_state",
+            state_digest: "state:test",
+            cursor: &cursor(),
+            expr: &expr,
+        };
+        let evaluation = evaluate_policy(request, |id| {
+            let mut result = predicate(id, TruthValue::False);
+            result
+                .reasons
+                .push("no conflict in free-form prose".to_string());
+            result
+                .conflicting_evidence
+                .push("evidence:invoice-001".to_string());
+            Some(result)
+        })
+        .unwrap();
+
+        let delta = EvaluationDelta::from_evaluation("delta:conflict", &evaluation);
+        assert_eq!(
+            delta.conflicting_evidence,
+            vec!["evidence:invoice-001".to_string()]
         );
     }
 
