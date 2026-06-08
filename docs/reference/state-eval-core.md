@@ -54,6 +54,10 @@ Unknown -> Indeterminate
 `Pass` and `Fail` are product, CLI, test, or dashboard renderings. They are not
 the core semantic values.
 
+Predicate details such as missing evidence and conflicting evidence are carried
+as structured reference lists on `PredicateResult`; they are not inferred from
+human-readable reason strings.
+
 ## Gate and Outcome Paths
 
 The same predicate machinery can support two paths:
