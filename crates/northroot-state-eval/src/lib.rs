@@ -5,6 +5,7 @@
 //! small deterministic types and functions for:
 //!
 //! - identifying an ordered event prefix;
+//! - folding an ordered event prefix into projected state;
 //! - carrying projected state identity;
 //! - composing predicate results with three-valued logic;
 //! - deriving an evaluation delta from an evaluation tree;
@@ -67,6 +68,140 @@ pub struct ProjectedState<T> {
     pub value: T,
     /// Digest or identity of the projected state value.
     pub state_digest: String,
+}
+
+/// Request metadata for folding an ordered event prefix into projected state.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProjectionRequest<'a, T> {
+    /// Schema identifier for the projected state value.
+    pub schema_id: &'a str,
+    /// Projection function identifier.
+    pub projection_id: &'a str,
+    /// Projection implementation version.
+    pub projection_version: &'a str,
+    /// State value before applying the supplied prefix.
+    pub initial_state: T,
+    /// Event cursor before applying the supplied prefix.
+    pub initial_cursor: EventCursor,
+}
+
+/// Error returned when folding an event prefix into projected state.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ProjectionError<E> {
+    /// A frame belongs to a different stream than the prefix cursor.
+    StreamIdMismatch {
+        /// Stream identifier expected from the prefix cursor.
+        expected: String,
+        /// Stream identifier found on the frame.
+        found: String,
+    },
+    /// A frame ordinal did not continue the ordered event prefix.
+    NonContiguousOrdinal {
+        /// Ordinal expected after the previous cursor tip.
+        expected: u64,
+        /// Ordinal found on the frame.
+        found: u64,
+    },
+    /// Caller-supplied projection fold failed.
+    Fold(E),
+}
+
+impl<E: std::fmt::Display> std::fmt::Display for ProjectionError<E> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::StreamIdMismatch { expected, found } => {
+                write!(
+                    f,
+                    "frame stream mismatch: expected {expected}, found {found}"
+                )
+            }
+            Self::NonContiguousOrdinal { expected, found } => {
+                write!(
+                    f,
+                    "frame ordinal does not continue prefix: expected {expected}, found {found}"
+                )
+            }
+            Self::Fold(err) => write!(f, "projection fold failed: {err}"),
+        }
+    }
+}
+
+impl<E: std::error::Error + 'static> std::error::Error for ProjectionError<E> {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            Self::Fold(err) => Some(err),
+            Self::StreamIdMismatch { .. } | Self::NonContiguousOrdinal { .. } => None,
+        }
+    }
+}
+
+/// Fold an ordered event prefix into projected state.
+///
+/// Event decoding, domain semantics, and state digest computation are supplied
+/// by the caller. This function only enforces single-stream contiguous prefix
+/// order and preserves projection identity on the returned [`ProjectedState`].
+pub fn project_event_prefix<'a, T, E, F, D, I>(
+    request: ProjectionRequest<'_, T>,
+    frames: I,
+    mut fold: F,
+    state_digest: D,
+) -> Result<ProjectedState<T>, ProjectionError<E>>
+where
+    F: FnMut(T, &'a EventFrame) -> Result<T, E>,
+    D: FnOnce(&T, &EventCursor) -> String,
+    I: IntoIterator<Item = &'a EventFrame>,
+{
+    let ProjectionRequest {
+        schema_id,
+        projection_id,
+        projection_version,
+        initial_state,
+        initial_cursor,
+    } = request;
+
+    let mut state = initial_state;
+    let mut cursor = initial_cursor;
+
+    for frame in frames {
+        if frame.stream_id != cursor.stream_id {
+            return Err(ProjectionError::StreamIdMismatch {
+                expected: cursor.stream_id,
+                found: frame.stream_id.clone(),
+            });
+        }
+
+        let expected_ordinal =
+            cursor
+                .event_ordinal
+                .checked_add(1)
+                .ok_or(ProjectionError::NonContiguousOrdinal {
+                    expected: u64::MAX,
+                    found: frame.event_ordinal,
+                })?;
+        if frame.event_ordinal != expected_ordinal {
+            return Err(ProjectionError::NonContiguousOrdinal {
+                expected: expected_ordinal,
+                found: frame.event_ordinal,
+            });
+        }
+
+        state = fold(state, frame).map_err(ProjectionError::Fold)?;
+        cursor.event_ordinal = frame.event_ordinal;
+        cursor.byte_offset = frame.byte_offset;
+        cursor.event_id = None;
+        cursor.source_digest = frame.content_digest.clone();
+    }
+
+    let state_digest = state_digest(&state, &cursor);
+
+    Ok(ProjectedState {
+        schema_id: schema_id.to_string(),
+        projection_id: projection_id.to_string(),
+        projection_version: projection_version.to_string(),
+        cursor,
+        value: state,
+        state_digest,
+    })
 }
 
 /// Result of a predicate evaluated over projected state.
@@ -539,6 +674,114 @@ mod tests {
             result.reasons.push(format!("{id} unsatisfied"));
         }
         result
+    }
+
+    fn initial_cursor() -> EventCursor {
+        EventCursor {
+            stream_id: "stream:test".to_string(),
+            event_ordinal: 0,
+            byte_offset: None,
+            event_id: None,
+            source_digest: None,
+            order_basis: "single-stream-ordinal".to_string(),
+        }
+    }
+
+    fn frame(ordinal: u64, bytes: &[u8]) -> EventFrame {
+        EventFrame {
+            stream_id: "stream:test".to_string(),
+            event_ordinal: ordinal,
+            byte_offset: Some(ordinal * 10),
+            bytes: bytes.to_vec(),
+            content_digest: Some(format!("sha256:{ordinal}")),
+            proof_ref: Some(format!("nrj:test:{ordinal}")),
+        }
+    }
+
+    #[test]
+    fn projection_fold_builds_state_from_ordered_prefix() {
+        let frames = vec![frame(1, b"alpha"), frame(2, b"beta")];
+        let request = ProjectionRequest {
+            schema_id: "state.schema.v1",
+            projection_id: "byte_count",
+            projection_version: "1",
+            initial_state: 0usize,
+            initial_cursor: initial_cursor(),
+        };
+
+        let projected = project_event_prefix(
+            request,
+            &frames,
+            |count, frame| Ok::<_, std::convert::Infallible>(count + frame.bytes.len()),
+            |count, cursor| format!("count:{count}:ordinal:{}", cursor.event_ordinal),
+        )
+        .unwrap();
+
+        assert_eq!(projected.value, 9);
+        assert_eq!(projected.schema_id, "state.schema.v1");
+        assert_eq!(projected.projection_id, "byte_count");
+        assert_eq!(projected.projection_version, "1");
+        assert_eq!(projected.cursor.event_ordinal, 2);
+        assert_eq!(projected.cursor.byte_offset, Some(20));
+        assert_eq!(projected.cursor.source_digest, Some("sha256:2".to_string()));
+        assert_eq!(projected.state_digest, "count:9:ordinal:2");
+    }
+
+    #[test]
+    fn projection_fold_rejects_stream_mismatch() {
+        let mut frames = vec![frame(1, b"alpha")];
+        frames[0].stream_id = "stream:other".to_string();
+        let request = ProjectionRequest {
+            schema_id: "state.schema.v1",
+            projection_id: "byte_count",
+            projection_version: "1",
+            initial_state: 0usize,
+            initial_cursor: initial_cursor(),
+        };
+
+        let err = project_event_prefix(
+            request,
+            &frames,
+            |count, frame| Ok::<_, std::convert::Infallible>(count + frame.bytes.len()),
+            |count, _cursor| count.to_string(),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err,
+            ProjectionError::StreamIdMismatch {
+                expected: "stream:test".to_string(),
+                found: "stream:other".to_string(),
+            }
+        );
+    }
+
+    #[test]
+    fn projection_fold_rejects_non_contiguous_prefix() {
+        let frames = vec![frame(1, b"alpha"), frame(3, b"beta")];
+        let request = ProjectionRequest {
+            schema_id: "state.schema.v1",
+            projection_id: "byte_count",
+            projection_version: "1",
+            initial_state: 0usize,
+            initial_cursor: initial_cursor(),
+        };
+
+        let err = project_event_prefix(
+            request,
+            &frames,
+            |count, frame| Ok::<_, std::convert::Infallible>(count + frame.bytes.len()),
+            |count, _cursor| count.to_string(),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            err,
+            ProjectionError::NonContiguousOrdinal {
+                expected: 2,
+                found: 3,
+            }
+        );
     }
 
     #[test]

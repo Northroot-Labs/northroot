@@ -13,6 +13,8 @@ and evaluation result shapes over projected state.
 The crate provides:
 
 - `EventFrame` and `EventCursor` for byte-stream-friendly ordered prefixes;
+- `ProjectionRequest`, `ProjectionError`, and `project_event_prefix` for
+  deterministic projection folds over single-stream contiguous prefixes;
 - `ProjectedState<T>` for derived state identity;
 - `TruthValue` and `Satisfaction` for three-valued evaluation;
 - `PolicyExpr` for predicate composition;
@@ -30,6 +32,22 @@ It does not provide:
 - a database adapter;
 - telemetry or observability infrastructure;
 - provider SDKs or network integrations.
+
+## Projection Semantics
+
+Projection implementations are externally supplied. The crate owns only the
+calling convention and prefix guardrails:
+
+```text
+initial state + EventFrame[ordered contiguous prefix] -> ProjectedState<T>
+```
+
+`project_event_prefix` enforces that all frames belong to the same stream as
+the cursor and continue the prefix ordinal. It does not decode event bytes,
+interpret domain meaning, compute canonical event IDs, hash projected values,
+or store projection outputs. Callers supply the fold function and the projected
+state digest function so adapters can choose schemas, hash formats, and storage
+without adding product semantics to the core crate.
 
 ## Evaluation Semantics
 
