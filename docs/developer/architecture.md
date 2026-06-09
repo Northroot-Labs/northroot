@@ -5,10 +5,10 @@ High-level system design and component relationships.
 ## Overview
 
 Northroot is open governance and accountability infrastructure for verifiable
-economic activity. Its trust kernel provides canonical identity, append-only
+state transitions. Its trust kernel provides canonical identity, append-only
 evidence journals, replay, and offline verification. Higher layers provide
-projection, evaluation, authority, receipts, and financial/accountability
-profiles without polluting the kernel.
+projection, evaluation, authority, attestations, business receipts, and
+economic/accountability profiles without polluting the kernel.
 
 The current stable architecture is the trust kernel component. This repository
 is focused on making the core canonicalization and journal reference crates

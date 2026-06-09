@@ -11,20 +11,21 @@ Scope: Verifiable events, canonical identities, journal storage
 ## 1. Purpose
 
 Northroot is open governance and accountability infrastructure for verifiable
-economic activity. This specification defines the trust kernel component: the
+state transitions. This specification defines the trust kernel component: the
 minimal, neutral surface for recording verifiable events. It exists to deliver
 deterministic identity, append-only ordering, offline verification, and a
 foundation for audit-grade correctness without prescribing policy engines,
-runtimes, or storage backends.
+runtimes, storage backends, or domain transition semantics.
 
 The trust kernel provides:
 - Canonicalization primitives (RFC 8785 + Northroot rules)
 - Event identity computation
 - Journal format (.nrj)
 
-Higher-layer concerns such as projection, evaluation, authority, receipts,
-financial/accountability profiles, authorization, execution, checkpoint, and
-attestation are defined by consuming applications, profiles, or domain layers.
+Higher-layer concerns such as projection, evaluation, authority, attestations,
+business receipts, financial/accountability profiles, authorization, execution,
+checkpoint, and domain transition validation are defined by consuming
+applications, profiles, or domain layers.
 
 ---
 

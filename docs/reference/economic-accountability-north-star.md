@@ -2,25 +2,64 @@
 
 Status: north star
 Audience: Northroot maintainers, reviewers, downstream profile authors
-Scope: governed economic-action primitives layered over the trust kernel
+Scope: economic activity as a verifiable state-transition capability profile
 
-Northroot exists to make automated economic action accountable.
+Northroot exists to make state transitions verifiable. Governed economic
+activity is one high-value capability profile over that substrate.
 
 The kernel must remain small. It does not become a product, workflow engine,
 agent runtime, bookkeeping app, dashboard, or cloud platform. It provides the
-durable building blocks needed for governed financial automation:
+durable building blocks needed for verifiable transition infrastructure:
+
+- canonical identity
+- append-only evidence journals
+- replay and offline verification
+- deterministic projection inputs
+- portable attestations
+
+Economic profiles add the primitives needed for governed financial automation:
 
 - persistent economic actor identity
 - delegated authority
 - budget and scope bounds
-- append-only evidence and action journals
-- verifiable receipts
 - deterministic projections
 - policy/evaluation primitives
 - hard accounting invariants
+- business receipts
 
 Bookkeeping is one capability set over this governed core. It is not the core
 itself.
+
+## Verifiable State Transitions
+
+The system-level primitive is a verifiable state transition.
+
+A transition claim should be reconstructable from:
+
+```text
+prior state reference
+  + ordered event / evidence prefix
+  + projection rule
+  + predicate or invariant evaluation
+  + resulting state reference
+  + attestation
+```
+
+The kernel does not decide whether a transition is semantically valid. It
+verifies parse-safe canonical events, content-derived identity, journal
+membership, ordering, and replay inputs. State/eval layers verify projected
+claims over event prefixes. Domain packs define what a transition means.
+Authority profiles decide whether a transition may be admitted.
+
+An attestation is the system-level statement that a transition, evaluation, or
+evidence relation was observed and can be replayed or verified. A receipt is a
+business-facing attestation: useful for economic actions, approvals, execution,
+payments, reconciliation, work acceptance, or customer/vendor records.
+
+Relays exchange portable attestations and business receipts. They must not
+become the source of truth for state; the receiving node verifies the transition
+claim against its trusted identity, authority, evidence, journal, and projection
+rules.
 
 ## Thesis
 
@@ -34,8 +73,9 @@ be verified:
 5. The proposed action is within budget and risk bounds.
 6. Required evidence is present and content-addressed.
 7. Financial mutations preserve hard accounting invariants.
-8. Execution emits a receipt that can be replayed, verified, and linked back to
-   identity, authority, evidence, and journal position.
+8. Execution emits an attestation or business receipt that can be replayed,
+   verified, and linked back to identity, authority, evidence, and journal
+   position.
 
 This makes agents persistent economic actors without making Northroot an agent
 framework.
@@ -45,10 +85,10 @@ framework.
 The open source unit is a reproducible Northroot node.
 
 A node is a persistent actor with local operational state, stable identity,
-append-only evidence journals, and the ability to exchange verifiable receipts
-and attestations with other actors. It should be reproducible from source,
-configuration, domain packs, journals, and receipts rather than dependent on a
-central SaaS database.
+append-only evidence journals, and the ability to exchange verifiable
+attestations and business receipts with other actors. It should be reproducible
+from source, configuration, domain packs, journals, attestations, and receipts
+rather than dependent on a central SaaS database.
 
 This inverts the traditional centralized SaaS model:
 
@@ -57,14 +97,14 @@ traditional SaaS:
   vendor database -> product workflow -> customer-facing records
 
 Northroot node model:
-  user-controlled node -> portable receipts / attestations -> relay exchange
+  user-controlled node -> portable attestations / receipts -> relay exchange
 ```
 
-Relays move portable receipts and attestations between nodes. They are transport
-and discovery infrastructure, not authority sources. A relay may queue, route,
-or fan out records, but the receiving node must be able to verify identity,
-authority, evidence, journal position, and receipt integrity without trusting
-the relay as the system of record.
+Relays move portable attestations and business receipts between nodes. They are
+transport and discovery infrastructure, not authority sources. A relay may
+queue, route, or fan out records, but the receiving node must be able to verify
+identity, authority, evidence, journal position, transition claims, and
+attestation integrity without trusting the relay as the system of record.
 
 This does not mean "no cloud." It means cloud services are optional coordination
 and operations layers rather than the primary custody model for customer data.
@@ -82,14 +122,15 @@ A centralized service may eventually provide:
 Those services must not be required to reconstruct the node's authoritative
 state. The scale boundary is: cloud can make nodes easier to find, fund, sync,
 backup, authenticate, and operate, but the node remains the durable actor and
-portable receipts remain the exchange format. Build the single-node system
-end-to-end before promoting any centralized service to product infrastructure.
+portable attestations and receipts remain the exchange format. Build the
+single-node system end-to-end before promoting any centralized service to
+product infrastructure.
 
 The node may use SQLite as its operational database. SQLite is the default fit
-for durable local state, queues, projections, receipt indexes, and sync cursors.
-DuckDB may be added for analytics when columnar scans or larger analytical
-workloads justify it, but analytics must remain a derived view over journals,
-receipts, and projections.
+for durable local state, queues, projections, attestation indexes, receipt
+indexes, and sync cursors. DuckDB may be added for analytics when columnar scans
+or larger analytical workloads justify it, but analytics must remain a derived
+view over journals, attestations, receipts, and projections.
 
 The product is the node plus domain packs:
 
@@ -98,7 +139,7 @@ Northroot product =
   reproducible node
   + domain pack
   + authority/evaluation profile
-  + receipt/attestation exchange
+  + attestation/receipt exchange
 ```
 
 Domain packs define product-specific schemas, predicates, projections,
@@ -136,12 +177,17 @@ northroot-authority
   expiry
   delegation-chain verification
 
+northroot-attestations
+  transition attestations
+  evaluation attestations
+  evidence attestations
+  authority-chain references
+
 northroot-receipts
+  business-facing attestations
   action receipts
   approval receipts
   execution receipts
-  evidence receipts
-  authority-chain references
 
 northroot-accounting
   accounts
@@ -159,7 +205,7 @@ northroot-eval
 northroot-node
   reproducible deployment unit
   local operational state
-  receipt / attestation exchange
+  attestation / receipt exchange
   relay adapters
   domain-pack loading
 
@@ -167,7 +213,7 @@ northroot-conformance
   replay tests
   journal adapter tests
   node reproducibility tests
-  receipt exchange tests
+  attestation / receipt exchange tests
   identity tests
   authority-chain tests
   accounting-balance tests
@@ -175,20 +221,22 @@ northroot-conformance
 
 The order matters. Identity and authority should not be built before journal
 ordering and canonical identity are boring. Financial invariants should not be
-added before actor identity, authority, and receipts have a stable shape.
+added before actor identity, authority, attestations, and receipts have a stable
+shape.
 
 ## Authority Boundary
 
 Authority is not a profile label, runtime config value, or provider metadata.
 It is a governed state machine over registered actors, credentials, grants,
-delegations, scopes, budgets, revocations, and receipts.
+delegations, scopes, budgets, revocations, attestations, and receipts.
 
 The authority layer has gateway-like properties:
 
 - It evaluates proposed economic actions before execution.
 - It fails closed on unknown actors, missing grants, expired delegations, missing
   evidence, insufficient budget, or out-of-scope actions.
-- It emits verifiable decisions and receipts.
+- It emits verifiable decisions and attestations; economic profiles may render
+  those as business receipts.
 - It never treats execution as authority.
 - It never treats provider identity as authority.
 - It never lets an agent borrow a human identity without an explicit delegation
@@ -233,13 +281,14 @@ AgentProfile =
   + CredentialBindings
   + DelegatedAuthority
   + BudgetState
+  + AttestationHistory
   + ReceiptHistory
   + EvaluationState
 ```
 
 Profiles help downstream systems reason about persistent economic actors. They
 must be rebuildable from journaled identity, authority, budget, action, and
-receipt events.
+attestation or receipt events.
 
 ## Event Families
 
@@ -260,6 +309,7 @@ ActionApproved
 ActionRejected
 ActionExecuted
 ReceiptRecorded
+AttestationRecorded
 TransactionProposed
 TransactionPosted
 ReconciliationCompleted
@@ -289,7 +339,7 @@ Northroot can verify:
 - the action is in scope
 - the budget is sufficient
 - the transaction balances
-- the receipt links to evidence
+- the attestation or business receipt links to evidence
 - replay produces the same financial state
 
 This is enough to support aggressive bookkeeping automation later without
@@ -327,7 +377,7 @@ Before adding a concept to Northroot, ask:
 4. Can it be verified without a vendor, cloud, or agent runtime?
 5. Does it enforce a hard invariant that downstream code cannot safely fake?
 6. Can it be expressed as identity, authority, journal, receipt, projection,
-   predicate, evaluation result, accounting invariant, reproducible node
-   behavior, or domain-pack contract?
+   attestation, predicate, evaluation result, accounting invariant,
+   reproducible node behavior, or domain-pack contract?
 
 If not, keep it outside the kernel.

@@ -8,12 +8,16 @@ Status: Binding
 0. Purpose
 
 Northroot exists to build open governance and accountability infrastructure for
-verifiable economic activity.
+verifiable state transitions.
 
 The trust kernel is one component of that system. It provides canonical
 identity, append-only evidence journals, replay, and offline verification.
-Higher layers provide projection, evaluation, authority, receipts, and
-financial/accountability profiles without polluting the kernel.
+Higher layers provide projection, evaluation, authority, attestations, business
+receipts, and economic/accountability profiles without polluting the kernel.
+
+Economic activity is one high-value capability profile over this substrate. The
+kernel remains neutral: it verifies event identity, ordering, journal
+membership, and replay inputs; consuming layers define what a transition means.
 
 This repository's current stable core provides:
 	•	Deterministic canonicalization (RFC 8785 + Northroot rules)

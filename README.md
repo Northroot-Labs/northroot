@@ -1,18 +1,23 @@
 # Northroot
 
-Open governance and accountability infrastructure for verifiable economic
-activity.
+Open governance and accountability infrastructure for verifiable state
+transitions.
 
 ## What is Northroot?
 
 Northroot is open governance and accountability infrastructure for verifiable
-economic activity.
+state transitions.
 
 Its trust kernel provides canonical identity, append-only evidence journals,
 replay, and offline verification.
 
-Higher layers provide projection, evaluation, authority, receipts, and
-financial/accountability profiles without polluting the kernel.
+Higher layers provide projection, evaluation, authority, attestations,
+business receipts, and economic/accountability profiles without polluting the
+kernel.
+
+Economic activity is a primary capability profile over that substrate:
+financial actions, authority changes, reconciliations, receipt exchange, and
+accountability records expressed as replayable, attestable transitions.
 
 This repository is currently focused on making the core canonicalization and
 journal reference crates solid before moving on to state/eval core.
@@ -47,8 +52,8 @@ engine, deployment stack, or application framework.
 - No orchestration logic, workflow execution, or policy engines.
 - No model, runtime, or budget decisioning logic.
 - No domain-specific business semantics in core crates.
-- No projection, evaluation, authority, receipt, or accounting profile semantics
-  in the stable kernel.
+- No projection, evaluation, authority, attestation, receipt, or accounting
+  profile semantics in the stable kernel.
 
 ## Quick Start
 
@@ -101,7 +106,7 @@ The public kernel CLI command set is `canonicalize`, `event-id`, `append`,
 
 ### Reference
 - [v0.1 Stability Contract](docs/reference/v0.1-stability.md) - Stable kernel and incubating profile boundaries
-- [Economic Accountability North Star](docs/reference/economic-accountability-north-star.md) - Governed economic-action direction without product semantics
+- [Economic Accountability North Star](docs/reference/economic-accountability-north-star.md) - Economic activity as a verifiable state-transition capability profile
 - [Core Specification](docs/reference/spec.md) - Protocol specification
 - [Journal Format](docs/reference/format.md) - On-disk format
 - [Segmented Journals](docs/reference/segmented-journals.md) - Structural segment manifests and checkpoints
@@ -132,9 +137,10 @@ The kernel provides:
 - **Event Identity**: `sha256(domain_separator || canonical_json(event))`
 - **Journal Format**: Portable, append-only container (.nrj)
 
-Everything else (projection, evaluation, authority, receipts, financial and
-accountability profiles, typed schemas, domain verification, policy evaluation)
-is a profile, layer, or consumer protocol over the kernel.
+Everything else (projection, evaluation, authority, attestations, business
+receipts, financial and accountability profiles, typed schemas, domain
+verification, policy evaluation) is a profile, layer, or consumer protocol over
+the kernel.
 
 ## Contributing
 
