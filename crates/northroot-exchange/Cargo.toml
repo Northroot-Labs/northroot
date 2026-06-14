@@ -1,0 +1,13 @@
+[package]
+name = "northroot-exchange"
+version = "0.1.0"
+edition = "2021"
+description = "Exchange record profile for constrained handoff/result protocols."
+license = "MIT"
+
+[dependencies]
+northroot-record = { path = "../northroot-record" }
+thiserror = "1.0"
+
+[dev-dependencies]
+serde_json = "1.0"

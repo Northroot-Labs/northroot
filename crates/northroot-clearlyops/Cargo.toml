@@ -1,0 +1,18 @@
+[package]
+name = "northroot-clearlyops"
+version = "0.1.0"
+edition = "2021"
+description = "ClearlyOps ops-core record profile over Northroot contracts."
+license = "MIT"
+
+[dependencies]
+northroot-record = { path = "../northroot-record" }
+serde_json = "1.0"
+thiserror = "1.0"
+
+[dev-dependencies]
+northroot-exchange = { path = "../northroot-exchange" }
+northroot-execution = { path = "../northroot-execution" }
+northroot-governance = { path = "../northroot-governance" }
+northroot-node = { path = "../northroot-node" }
+tempfile = "3.8"

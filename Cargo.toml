@@ -1,7 +1,13 @@
 [workspace]
 members = [
   "crates/northroot-canonical",
+  "crates/northroot-clearlyops",
+  "crates/northroot-exchange",
+  "crates/northroot-execution",
+  "crates/northroot-governance",
   "crates/northroot-journal",
+  "crates/northroot-node",
+  "crates/northroot-record",
   "crates/northroot-state-eval",
 ]
 resolver = "2"

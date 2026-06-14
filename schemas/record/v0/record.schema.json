@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northroot.dev/schemas/record/v0/record.schema.json",
+  "title": "Northroot Record V0",
+  "type": "object",
+  "required": ["schema", "id", "role", "statement", "context", "refs", "payload"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "northroot.record.v0" },
+    "id": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+    "role": {
+      "type": "string",
+      "enum": ["command", "event", "attestation", "policy", "projection"]
+    },
+    "statement": {
+      "type": "object",
+      "required": ["subject", "predicate", "object"],
+      "additionalProperties": false,
+      "properties": {
+        "subject": { "type": "string", "minLength": 1 },
+        "predicate": { "type": "string", "minLength": 1 },
+        "object": { "type": "string", "minLength": 1 }
+      }
+    },
+    "context": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "node_id": { "type": "string", "minLength": 1 },
+        "time": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+        "intent": { "type": "string" },
+        "scope": {
+          "type": "object",
+          "required": ["workspace_id", "custody_class"],
+          "additionalProperties": false,
+          "properties": {
+            "workspace_id": { "type": "string", "minLength": 1 },
+            "custody_class": { "type": "string", "minLength": 1 }
+          }
+        },
+        "method": {
+          "type": "object",
+          "required": ["kind", "ref"],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": ["pure_function", "tool", "process", "connector", "human_action"]
+            },
+            "ref": { "type": "string", "minLength": 1 }
+          }
+        },
+        "authority": {
+          "type": "object",
+          "required": ["grant_ref"],
+          "additionalProperties": false,
+          "properties": {
+            "grant_ref": { "type": "string", "minLength": 1 }
+          }
+        },
+        "extra": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "refs": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "inputs": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^resource:.+" }
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^resource:.+" }
+        },
+        "evidence": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^attestation:.+" }
+        },
+        "causes": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^event:.+" }
+        }
+      }
+    },
+    "payload": true
+  }
+}
