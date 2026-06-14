@@ -1,0 +1,10 @@
+[package]
+name = "northroot-node"
+version = "0.1.0"
+edition = "2021"
+description = "Northroot node and workspace manifest conventions over record streams."
+license = "MIT"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+thiserror = "1.0"

@@ -1,0 +1,14 @@
+{
+  "schema": "northroot.profile.v0",
+  "profile_id": "northroot.exchange.v0",
+  "record_schema": "northroot.record.v0",
+  "predicates": [
+    "handoff.submitted",
+    "handoff.accepted",
+    "handoff.rejected",
+    "attestation.issued",
+    "result.retrieved"
+  ],
+  "requires_context": ["node_id", "time", "scope"],
+  "storage": "canonical-jsonl-segment"
+}

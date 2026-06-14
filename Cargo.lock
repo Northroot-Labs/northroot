@@ -163,12 +163,75 @@ dependencies = [
 ]
 
 [[package]]
+name = "northroot-clearlyops"
+version = "0.1.0"
+dependencies = [
+ "northroot-exchange",
+ "northroot-execution",
+ "northroot-governance",
+ "northroot-node",
+ "northroot-record",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
+name = "northroot-exchange"
+version = "0.1.0"
+dependencies = [
+ "northroot-record",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "northroot-execution"
+version = "0.1.0"
+dependencies = [
+ "northroot-record",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "northroot-governance"
+version = "0.1.0"
+dependencies = [
+ "northroot-record",
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
 name = "northroot-journal"
 version = "0.1.0"
 dependencies = [
  "northroot-canonical",
  "serde",
  "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
+name = "northroot-node"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror",
+]
+
+[[package]]
+name = "northroot-record"
+version = "0.1.0"
+dependencies = [
+ "northroot-canonical",
+ "serde",
+ "serde_json",
+ "sha2",
  "tempfile",
  "thiserror",
 ]

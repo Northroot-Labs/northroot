@@ -1,0 +1,16 @@
+[package]
+name = "northroot-record"
+version = "0.1.0"
+edition = "2021"
+description = "Tiny Northroot record contract, validators, and canonical JSONL segment journal."
+license = "MIT"
+
+[dependencies]
+northroot-canonical = { path = "../northroot-canonical" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha2 = "0.10"
+thiserror = "1.0"
+
+[dev-dependencies]
+tempfile = "3.8"

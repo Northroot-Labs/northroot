@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://northroot.dev/schemas/node/v0/workspace-manifest.schema.json",
+  "title": "Northroot Workspace Manifest V0",
+  "type": "object",
+  "required": ["schema", "workspace_id", "node_id", "custody_classes", "journal_path", "vault_path", "state_path"],
+  "additionalProperties": false,
+  "properties": {
+    "schema": { "const": "northroot.workspace-manifest.v0" },
+    "workspace_id": { "type": "string", "pattern": "^workspace:.+" },
+    "node_id": { "type": "string", "pattern": "^node:.+" },
+    "custody_classes": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "journal_path": { "type": "string", "pattern": "^journal(/.*)?$" },
+    "vault_path": { "type": "string", "pattern": "^vault(/.*)?$" },
+    "state_path": { "type": "string", "pattern": "^state(/.*)?$" }
+  }
+}
