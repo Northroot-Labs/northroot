@@ -171,6 +171,7 @@ mod tests {
         let command = with_id(Record {
             schema: RECORD_SCHEMA_V0.to_string(),
             id: String::new(),
+            profiles: Vec::new(),
             role: RecordRole::Command,
             statement: Statement {
                 subject: "entity:principal:codex".to_string(),
@@ -194,6 +195,7 @@ mod tests {
         let policy = with_id(Record {
             schema: RECORD_SCHEMA_V0.to_string(),
             id: String::new(),
+            profiles: Vec::new(),
             role: RecordRole::Policy,
             statement: Statement {
                 subject: "entity:governance:local".to_string(),

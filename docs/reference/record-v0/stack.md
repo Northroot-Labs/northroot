@@ -12,6 +12,44 @@ Core validates only boring guarantees: known schema and role, required statement
 
 Core does not evaluate policy, execute commands, interpret custody class meaning, or define application vocabularies.
 
+## Core Grammar
+
+Record IDs are public content identifiers in lowercase hex form:
+
+```text
+sha256:<64 lowercase hex characters>
+```
+
+The structured digest shape from `northroot-canonical` can still be useful in richer metadata, but `record.id` and record refs use the compact string form for stable logs, manifests, CLI output, and cross-system references.
+
+Typed refs use explicit prefixes:
+
+```text
+resource:<segment>[:<segment>]*
+attestation:<segment>[:<segment>]*
+event:sha256:<64 lowercase hex characters>
+```
+
+Name segments are lowercase ASCII alphanumeric strings with optional `_` or `-` after the first character. Predicate and profile IDs are dot-separated lowercase names. Profile IDs end in a version segment such as `v0`.
+
+Records may declare layered profiles with `profiles`, for example:
+
+```json
+["northroot.exchange.v0"]
+```
+
+Core validates profile ID grammar only. Profile resolution and interpretation belong above core.
+
+Timestamps are UTC second timestamps:
+
+```text
+YYYY-MM-DDTHH:MM:SSZ
+```
+
+The validator rejects impossible calendar dates and out-of-range clock values. Leap seconds are not accepted in Core V0.
+
+Payload is opaque JSON owned by profiles/applications. Core requires it to be canonicalizable by `northroot-canonical`; callers that parse untrusted JSON should use strict parsing so duplicate object keys are rejected before conversion to `serde_json::Value`.
+
 ## Layer Order
 
 1. `northroot-record`: record schema, canonical hash, validator, canonical JSONL segment journal, segment seals.

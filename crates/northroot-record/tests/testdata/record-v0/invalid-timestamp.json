@@ -1,0 +1,16 @@
+{
+  "schema": "northroot.record.v0",
+  "id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "role": "event",
+  "statement": {
+    "subject": "entity:principal:codex",
+    "predicate": "handoff.accepted",
+    "object": "resource:handoff:seed-report"
+  },
+  "context": {
+    "node_id": "node:apd_croptrak_2026",
+    "time": "2026-02-30T18:00:00Z"
+  },
+  "refs": {},
+  "payload": {}
+}

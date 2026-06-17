@@ -1,0 +1,18 @@
+{
+  "schema": "northroot.record.v0",
+  "id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "role": "command",
+  "statement": {
+    "subject": "entity:principal:codex",
+    "predicate": "resource.classified",
+    "object": "resource:document:seed-report"
+  },
+  "context": {
+    "method": {
+      "kind": "tool",
+      "ref": "process:classify-document"
+    }
+  },
+  "refs": {},
+  "payload": {}
+}
