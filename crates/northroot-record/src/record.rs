@@ -28,6 +28,12 @@ pub struct Record {
     pub schema: String,
     /// Content identifier in `sha256:<hex>` form.
     pub id: String,
+    /// Declared profile identifiers layered over the core record.
+    ///
+    /// Core validates profile identifier grammar only. Profile resolution and
+    /// interpretation belong to profile/governance/application layers.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub profiles: Vec<String>,
     /// Record role.
     pub role: RecordRole,
     /// Subject-predicate-object statement.
@@ -54,6 +60,7 @@ impl Record {
         Self {
             schema: RECORD_SCHEMA_V0.to_string(),
             id: String::new(),
+            profiles: Vec::new(),
             role,
             statement,
             context,

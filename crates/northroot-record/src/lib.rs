@@ -12,7 +12,10 @@ mod journal;
 mod record;
 mod validate;
 
-pub use id::{compute_record_id, record_canonical_bytes, verify_record_id, RecordIdError};
+pub use id::{
+    compute_record_id, is_content_id, record_canonical_bytes, verify_record_id, ContentId,
+    RecordIdError,
+};
 pub use journal::{
     seal_segment, verify_segment_seal, JournalError, JsonlSegmentReader, JsonlSegmentWriter,
     SegmentEntry, SegmentSeal,

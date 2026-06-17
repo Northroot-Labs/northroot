@@ -5,9 +5,38 @@
   "type": "object",
   "required": ["schema", "id", "role", "statement", "context", "refs", "payload"],
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": { "role": { "const": "event" } },
+        "required": ["role"]
+      },
+      "then": {
+        "properties": {
+          "context": { "required": ["node_id", "time"] }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "role": { "const": "attestation" } },
+        "required": ["role"]
+      },
+      "then": {
+        "properties": {
+          "context": { "required": ["node_id", "time"] }
+        }
+      }
+    }
+  ],
   "properties": {
     "schema": { "const": "northroot.record.v0" },
-    "id": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+    "id": { "$ref": "#/$defs/content_id" },
+    "profiles": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/profile_id" },
+      "uniqueItems": true
+    },
     "role": {
       "type": "string",
       "enum": ["command", "event", "attestation", "policy", "projection"]
@@ -17,37 +46,97 @@
       "required": ["subject", "predicate", "object"],
       "additionalProperties": false,
       "properties": {
-        "subject": { "type": "string", "minLength": 1 },
-        "predicate": { "type": "string", "minLength": 1 },
-        "object": { "type": "string", "minLength": 1 }
+        "subject": { "$ref": "#/$defs/statement_ref" },
+        "predicate": { "$ref": "#/$defs/predicate" },
+        "object": { "$ref": "#/$defs/statement_ref" }
       }
     },
     "context": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "node_id": { "type": "string", "minLength": 1 },
-        "time": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
-        "intent": { "type": "string" },
+        "node_id": { "$ref": "#/$defs/node_id" },
+        "time": { "$ref": "#/$defs/utc_second" },
+        "intent": { "$ref": "#/$defs/name_segment" },
         "scope": {
           "type": "object",
           "required": ["workspace_id", "custody_class"],
           "additionalProperties": false,
           "properties": {
-            "workspace_id": { "type": "string", "minLength": 1 },
-            "custody_class": { "type": "string", "minLength": 1 }
+            "workspace_id": { "$ref": "#/$defs/workspace_id" },
+            "custody_class": { "$ref": "#/$defs/name_segment" }
           }
         },
         "method": {
           "type": "object",
           "required": ["kind", "ref"],
           "additionalProperties": false,
+          "allOf": [
+            {
+              "if": {
+                "properties": { "kind": { "const": "pure_function" } },
+                "required": ["kind"]
+              },
+              "then": {
+                "properties": {
+                  "ref": { "pattern": "^pure_function:[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$" }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": { "kind": { "const": "tool" } },
+                "required": ["kind"]
+              },
+              "then": {
+                "properties": {
+                  "ref": { "pattern": "^tool:[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$" }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": { "kind": { "const": "process" } },
+                "required": ["kind"]
+              },
+              "then": {
+                "properties": {
+                  "ref": { "pattern": "^process:[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$" }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": { "kind": { "const": "connector" } },
+                "required": ["kind"]
+              },
+              "then": {
+                "properties": {
+                  "ref": { "pattern": "^connector:[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$" }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": { "kind": { "const": "human_action" } },
+                "required": ["kind"]
+              },
+              "then": {
+                "properties": {
+                  "ref": { "pattern": "^human_action:[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$" }
+                }
+              }
+            }
+          ],
           "properties": {
             "kind": {
               "type": "string",
               "enum": ["pure_function", "tool", "process", "connector", "human_action"]
             },
-            "ref": { "type": "string", "minLength": 1 }
+            "ref": {
+              "type": "string",
+              "pattern": "^(pure_function|tool|process|connector|human_action):[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$"
+            }
           }
         },
         "authority": {
@@ -55,11 +144,12 @@
           "required": ["grant_ref"],
           "additionalProperties": false,
           "properties": {
-            "grant_ref": { "type": "string", "minLength": 1 }
+            "grant_ref": { "$ref": "#/$defs/resource_ref" }
           }
         },
         "extra": {
           "type": "object",
+          "propertyNames": { "$ref": "#/$defs/predicate" },
           "additionalProperties": { "type": "string" }
         }
       }
@@ -70,22 +160,68 @@
       "properties": {
         "inputs": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^resource:.+" }
+          "items": { "$ref": "#/$defs/resource_ref" }
         },
         "outputs": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^resource:.+" }
+          "items": { "$ref": "#/$defs/resource_ref" }
         },
         "evidence": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^attestation:.+" }
+          "items": { "$ref": "#/$defs/attestation_ref" }
         },
         "causes": {
           "type": "array",
-          "items": { "type": "string", "pattern": "^event:.+" }
+          "items": { "$ref": "#/$defs/event_ref" }
         }
       }
     },
     "payload": true
+  },
+  "$defs": {
+    "content_id": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "name_segment": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*$"
+    },
+    "profile_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*(?:\\.[a-z0-9][a-z0-9_-]*)*\\.v[0-9]+$"
+    },
+    "predicate": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]*(?:\\.[a-z0-9][a-z0-9_-]*)+$"
+    },
+    "node_id": {
+      "type": "string",
+      "pattern": "^node:[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$"
+    },
+    "workspace_id": {
+      "type": "string",
+      "pattern": "^workspace:[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$"
+    },
+    "resource_ref": {
+      "type": "string",
+      "pattern": "^resource:[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$"
+    },
+    "attestation_ref": {
+      "type": "string",
+      "pattern": "^attestation:[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$"
+    },
+    "event_ref": {
+      "type": "string",
+      "pattern": "^event:sha256:[0-9a-f]{64}$"
+    },
+    "statement_ref": {
+      "type": "string",
+      "pattern": "^(?:entity|resource|attestation|node|workspace|policy|projection|tool|process|connector|grant|value):[a-z0-9][a-z0-9_-]*(?::[a-z0-9][a-z0-9_-]*)*$|^event:sha256:[0-9a-f]{64}$"
+    },
+    "utc_second": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    }
   }
 }

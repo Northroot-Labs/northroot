@@ -1,0 +1,36 @@
+{
+  "schema": "northroot.record.v0",
+  "id": "sha256:517ee79d82213c14837af9f650c2007beb5bc4171b4034f39ea4bbebfd853455",
+  "profiles": ["northroot.exchange.v0"],
+  "role": "event",
+  "statement": {
+    "subject": "entity:principal:codex",
+    "predicate": "handoff.accepted",
+    "object": "resource:handoff:seed-report"
+  },
+  "context": {
+    "node_id": "node:apd_croptrak_2026",
+    "time": "2026-06-14T18:00:00Z",
+    "intent": "prepare_client_delivery",
+    "scope": {
+      "workspace_id": "workspace:clientops-local",
+      "custody_class": "client_sensitive"
+    },
+    "method": {
+      "kind": "tool",
+      "ref": "tool:classify-document"
+    },
+    "authority": {
+      "grant_ref": "resource:grant:abc"
+    }
+  },
+  "refs": {
+    "inputs": ["resource:document:seed-report"],
+    "outputs": ["resource:handoff:accepted"],
+    "evidence": ["attestation:policy-decision-123"],
+    "causes": ["event:sha256:1111111111111111111111111111111111111111111111111111111111111111"]
+  },
+  "payload": {
+    "status": "accepted"
+  }
+}

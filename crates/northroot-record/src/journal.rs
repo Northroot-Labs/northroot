@@ -271,6 +271,8 @@ mod tests {
     use serde_json::json;
 
     fn event_record() -> Record {
+        let cause_id =
+            "event:sha256:1111111111111111111111111111111111111111111111111111111111111111";
         let mut record = Record::new(
             RecordRole::Event,
             Statement {
@@ -287,7 +289,7 @@ mod tests {
                 inputs: vec!["resource:document:seed-report".to_string()],
                 outputs: vec!["resource:classification:xyz".to_string()],
                 evidence: vec!["attestation:policy-decision-123".to_string()],
-                causes: vec!["event:sha256:abc".to_string()],
+                causes: vec![cause_id.to_string()],
             },
             json!({}),
         );
