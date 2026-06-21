@@ -17,11 +17,23 @@ golden:
 schema:
     python3 scripts/validate_schemas.py
 
+kernel-boundary:
+    python3 scripts/validate_kernel_boundary.py
+
 cli-test:
     cargo test --manifest-path apps/northroot/Cargo.toml
 
 install-hooks:
     bash scripts/install_git_hooks.sh
+
+setup:
+    bash scripts/dev_setup.sh
+
+verify:
+    bash scripts/verify.sh
+
+codex-setup:
+    bash scripts/codex_setup.sh
 
 codex-verify:
     bash scripts/codex_verify.sh
@@ -36,7 +48,7 @@ sync-main:
     bash scripts/safe_sync_main.sh
 
 # Combined fast QA suite
-qa: fmt lint test golden schema
+qa: fmt lint test golden schema kernel-boundary
 
 # Coverage (requires cargo-llvm-cov)
 coverage:

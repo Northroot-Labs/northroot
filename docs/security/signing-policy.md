@@ -45,8 +45,12 @@ Changes that can alter correctness of proofs, receipts, invariants, or security 
 
 **Tier B Paths:**
 - `schemas/**`
+- `Cargo.toml`
+- `kernel-boundary.json`
+- `scripts/validate_kernel_boundary.py`
+- `docs/developer/kernel-boundary.md`
 - `crates/northroot-canonical/**`
-- `crates/northroot-journal/src/verification.rs`
+- `crates/northroot-journal/**`
 - `.github/workflows/**`
 - `.github/signature-policy.yml` (self-protected: defines the policy)
 - `Cargo.lock`

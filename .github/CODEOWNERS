@@ -3,11 +3,13 @@
 # See docs/security/signing-policy.md for details
 
 schemas/**                                      @sebastianteacutter
+Cargo.toml                                      @sebastianteacutter
+kernel-boundary.json                            @sebastianteacutter
+scripts/validate_kernel_boundary.py             @sebastianteacutter
+docs/developer/kernel-boundary.md               @sebastianteacutter
 crates/northroot-canonical/**                   @sebastianteacutter
-crates/northroot-core/src/verification.rs       @sebastianteacutter
-crates/northroot-journal/src/verification.rs    @sebastianteacutter
+crates/northroot-journal/**                     @sebastianteacutter
 .github/workflows/**                            @sebastianteacutter
 .github/signature-policy.yml                    @sebastianteacutter
 Cargo.lock                                      @sebastianteacutter
 deny.toml                                       @sebastianteacutter
-

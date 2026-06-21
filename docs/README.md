@@ -3,56 +3,59 @@
 This directory contains documentation organized by audience.
 
 Northroot is open governance and accountability infrastructure for verifiable
-state transitions. The current stable surface documented here is the trust
-kernel: canonical identity, append-only evidence journals, replay, and offline
-verification.
-
-Higher layers such as projection, evaluation, authority, attestations, business
-receipts, and economic/accountability profiles are layered over the kernel. The
-current project focus remains the core canonicalization and journal reference
-crates before state/eval core moves into the stable surface.
+state transitions. The stable kernel is canonical identity plus `.nrj` journal
+verification. Current repository code also includes record streams, node and
+workspace manifests, governance/execution/exchange profile helpers, a sanitized
+ag-domain crate, and the promoted `northroot.durability` Python package.
 
 ## Documentation Structure
 
 ### For Users
-- [Getting Started](user/getting-started.md) - Tutorial and examples
-- [Integration Examples](user/integration-examples.md) - Code samples for integration
+
+- [Getting Started](user/getting-started.md) - tutorial and examples
+- [Integration Examples](user/integration-examples.md) - code samples for integration
 
 ### For Developers
-- [API Contract](developer/api-contract.md) - Public API surface
-- [Architecture](developer/architecture.md) - System design and components
+
+- [Environment and Setup](developer/environment.md) - neutral setup and verification entrypoints
+- [API Contract](developer/api-contract.md) - public API surface
+- [Architecture](developer/architecture.md) - system design and components
 - [Testing Guide](developer/testing.md) - QA harness and test patterns
-- [Layering on Northroot](developer/layering.md) - Profile, consumer protocol, custom backend, and filter patterns
-- [Script Inventory](developer/script-inventory.md) - Commit-worthy release scripts and local helper boundaries
+- [Layering on Northroot](developer/layering.md) - profile, consumer protocol, custom backend, and filter patterns
+- [Script Inventory](developer/script-inventory.md) - release scripts, setup scripts, and helper boundaries
 
 ### Security
-- [Security Documentation](security/README.md) - v0.1 kernel security posture and audit notes
+
+- [Security Documentation](security/README.md) - kernel security posture and audit notes
 
 ### Reference
-- [v0.1 Stability Contract](reference/v0.1-stability.md) - Stable kernel and incubating profile boundaries
-- [Economic Accountability North Star](reference/economic-accountability-north-star.md) - Economic activity as a verifiable state-transition capability profile
-- [State Eval Core](reference/state-eval-core.md) - Incubating product-agnostic evaluation primitives
-- [Core Specification](reference/spec.md) - Protocol specification
-- [Journal Format](reference/format.md) - On-disk format
-- [Segmented Journals](reference/segmented-journals.md) - Structural segment manifests and checkpoints
-- [Canonicalization](reference/canonicalization.md) - Canonical JSON rules
-- [Event Model](reference/events.md) - Event types and structure
-- [Profiles](reference/profiles.md) - Consumer protocols over the kernel
-- [Incubating Substrate Policy and Reference Contracts](reference/incubating-substrate-policy-refs-v0.md) - Portable refs, policy envelopes, and lifecycle records without private policy authority
+
+- [v0.1 Stability Contract](reference/v0.1-stability.md) - stable kernel and incubating profile boundaries
+- [Record V0 Stack](reference/record-v0/stack.md) - neutral records over `.nrj` plus JSONL interchange
+- [Economic Accountability North Star](reference/economic-accountability-north-star.md)
+- [State Eval Core](reference/state-eval-core.md)
+- [Core Specification](reference/spec.md)
+- [Journal Format](reference/format.md)
+- [Segmented Journals](reference/segmented-journals.md)
+- [Canonicalization](reference/canonicalization.md)
+- [Event Model](reference/events.md)
+- [Profiles](reference/profiles.md)
+- [Incubating Substrate Policy and Reference Contracts](reference/incubating-substrate-policy-refs-v0.md)
 
 ### QA
-- [QA Harness](qa/harness.md) - Quality assurance and testing
+
+- [QA Harness](qa/harness.md) - quality assurance and testing
 
 ## Quick Links
 
-- [Project README](../README.md) - Project overview
-- [Contributing Guide](../CONTRIBUTING.md) - Development guidelines
-- [Governance](../GOVERNANCE.md) - Project principles
-- [Core Invariants](../CORE_INVARIANTS.md) - Non-negotiable kernel constraints
+- [Project README](../README.md)
+- [Contributing Guide](../CONTRIBUTING.md)
+- [Governance](../GOVERNANCE.md)
+- [Core Invariants](../CORE_INVARIANTS.md)
 
 ## Documentation Principles
 
-- **Clarity**: Documentation should be clear and accessible
-- **Completeness**: All public APIs should be documented
-- **Accuracy**: Documentation must match implementation
-- **Examples**: Include practical examples where helpful
+- **Accuracy**: docs must match the implementation and current crate layout.
+- **Boundary clarity**: public kernel, incubating capability, and private deployment language must stay separate.
+- **Environment neutrality**: setup docs should work for humans, CI, containers, and agents without requiring Codex.
+- **Examples**: include practical examples where helpful, but keep private adapters and real operational data out of public docs.

@@ -1,155 +1,82 @@
 # Quality & Testing Harness
 
-This document describes the QA harness for maintaining code quality and catching regressions. The harness is designed to be runnable by both humans and agents, with fast pre-push checks and scheduled deep checks.
-
-For guidance on **writing tests**, see [Testing Guide](../developer/testing.md). This document focuses on **running tests** and the QA infrastructure.
+The QA harness is runnable by humans, CI runners, containers, and agents. Codex
+uses the same neutral scripts through compatibility wrappers.
 
 ## Quick Start
 
-Run the fast QA suite before pushing:
+Fast checks before a PR:
 
 ```bash
 just qa
 ```
 
-This runs: format check, clippy, tests, and golden tests.
+Full handoff gate:
+
+```bash
+bash scripts/verify.sh
+```
 
 ## Available Commands
 
-### Fast Checks (Pre-Push)
+- `just setup` - run `scripts/dev_setup.sh`
+- `just verify` - run `scripts/verify.sh`
+- `just fmt` - check formatting
+- `just lint` - run clippy with warnings as errors
+- `just test` - run Rust workspace tests
+- `just golden` - run canonical golden tests
+- `just schema` - validate JSON schemas
+- `just cli-test` - run standalone CLI tests
+- `just qa` - fast combined gate
+- `just docs` - build Rust docs
+- `just docs-test` - run doctests
 
-- `just fmt` - Check code formatting
-- `just lint` - Run clippy with warnings-as-errors
-- `just test` - Run all tests
-- `just golden` - Run golden tests for canonicalization
-- `just qa` - Run all fast checks (fmt + lint + test + golden)
+Codex compatibility targets remain available: `just codex-setup` and
+`just codex-verify`.
 
-### Deep Checks (Scheduled/Nightly)
+## Deep Checks
 
-- `just coverage` - Generate coverage report (requires `cargo-llvm-cov`)
-- `just audit` - Run security audits (requires `cargo-deny` and `cargo-audit`)
-- `just miri` - Run Miri for undefined behavior detection (requires nightly)
-- `just fuzz target <name>` - Run fuzz target (requires `cargo-fuzz`)
-- `just docs` - Build documentation
-- `just nightly` - Run full nightly suite (all checks)
+- `just coverage` - requires `cargo-llvm-cov`
+- `just audit` - requires `cargo-deny` and `cargo-audit`
+- `just miri` - requires nightly toolchain
+- `just fuzz target <name>` - requires `cargo-fuzz`
+- `just nightly` - slow local suite
 
 ## CI Workflows
 
-### Fast Lane (`ci.yml`)
-
-Runs on every push and pull request:
-
-- Format check
-- Clippy (warnings-as-errors)
-- All tests
-- Golden tests
-
-**Expected runtime:** < 5 minutes
-
-### Nightly Lane (`nightly.yml`)
-
-Runs daily at 2 AM UTC (or manually via `workflow_dispatch`):
-
-- Coverage report (HTML + LCOV artifacts)
-- Security audits (`cargo-deny` + `cargo-audit`)
-- Miri on critical crates (`northroot-canonical`, `northroot-journal`)
-- Fuzzing (time-boxed to 60s per target)
-
-**Expected runtime:** 15-30 minutes
-
-Artifacts are uploaded for:
-- Coverage HTML (30 day retention)
-- Coverage LCOV (30 day retention)
-- Miri logs on failure (7 day retention)
-- Fuzz findings on failure (30 day retention)
-
-## Fuzz Targets
-
-Fuzz targets are located in `crates/northroot-canonical/fuzz/`:
-
-- `canonicalizer` - Fuzzes JSON canonicalization with arbitrary inputs
-- `validation` - Fuzzes identifier and quantity parsing
-
-To run locally:
-
-```bash
-cd crates/northroot-canonical
-cargo fuzz run canonicalizer -- -max_total_time=60
-cargo fuzz run validation -- -max_total_time=60
-```
-
-## Adding New Checks
-
-1. **Fast checks**: Add command to `justfile`, include in `qa` target, add to `ci.yml`
-2. **Deep checks**: Add command to `justfile`, add to `nightly.yml` with appropriate artifact uploads
-3. **Fuzz targets**: Add new target in `crates/northroot-canonical/fuzz/fuzz_targets/`, update `nightly.yml` fuzz job
-
-## For Agents
-
-- Always run `just qa` before pushing code
-- Reserve slow checks (miri, fuzz, coverage) for scheduled runs
-- If a check fails, fix the issue before proceeding
-- Warnings are treated as errors in CI (`-D warnings`)
-
-## Runtime Budgets
-
-- Fast checks: < 5 minutes (must pass on PR)
-- Coverage: < 10 minutes (nightly only)
-- Miri: < 15 minutes per crate (nightly only)
-- Fuzz: 60 seconds per target (nightly only, continue-on-error)
+Fast CI runs formatting, clippy, workspace tests, golden tests, schema
+validation, docs, CLI tests, and repository verification. Nightly CI runs
+coverage, audit, miri, fuzzing, and seeded redaction variations.
 
 ## Dependencies
 
-### Using DevContainer (Recommended)
-
-All required tools are installed by `scripts/codex_setup.sh`.
-
-### Manual Installation
-
-Install required tools:
+Neutral setup:
 
 ```bash
-# Coverage
-cargo install cargo-llvm-cov --locked
+bash scripts/dev_setup.sh
+```
 
-# Security
+Optional deep-check tools:
+
+```bash
+NORTHROOT_DEEP_TOOLS=1 bash scripts/dev_setup.sh
+```
+
+Manual installs are still fine:
+
+```bash
+cargo install cargo-llvm-cov --locked
 cargo install cargo-deny --locked
 cargo install cargo-audit --locked
-
-# Fuzzing
 cargo install cargo-fuzz --locked
-
-# Miri (nightly)
 rustup toolchain install nightly
 rustup component add miri --toolchain nightly
-
-# Command runner
-curl --proto '=https' --tlsv1.2 -sSf https://just.systems/install.sh | bash -s -- --to /usr/local/bin
 ```
-
-## Test Coverage
-
-Generate coverage reports:
-
-```bash
-just coverage
-```
-
-Coverage HTML is generated in `coverage/html/`.
-
-## Continuous Integration
-
-- **Fast checks** run on every push (format, lint, tests, golden)
-- **Deep checks** run nightly (coverage, security, fuzzing)
-
-See `.github/workflows/` for CI configuration.
-
-For guidance on writing tests, see [Testing Guide](../developer/testing.md).
 
 ## Troubleshooting
 
-- **Format fails**: Run `cargo fmt --all` to auto-fix
-- **Clippy fails**: Review warnings, fix or allow with justification
-- **Golden tests fail**: Review changes, update golden files if intentional
-- **Miri fails**: Investigate undefined behavior, fix memory safety issues
-- **Fuzz finds crash**: Minimize input, add regression test, fix bug
+- **Format fails**: run `cargo fmt --all`.
+- **Clippy fails**: fix warnings; CI treats warnings as errors.
+- **Golden tests fail**: confirm the canonicalization change is intentional before updating fixtures.
+- **Private artifact check passes unexpectedly**: public/private durability policy regressed; inspect `northroot.durability.policy`.
+- **Verification changes the tree**: remove generated caches or update the script to clean them before final status comparison.

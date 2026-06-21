@@ -1,209 +1,123 @@
 # Northroot Architecture
 
-High-level system design and component relationships.
+Northroot is organized as a small trust kernel with explicit layers above it.
+The kernel owns canonical bytes, event identity, and `.nrj` verification. Higher
+layers may structure records, manifests, state/eval inputs, or sanitized domain
+profiles, but they do not change kernel identity rules.
 
-## Overview
+## Layer Map
 
-Northroot is open governance and accountability infrastructure for verifiable
-state transitions. Its trust kernel provides canonical identity, append-only
-evidence journals, replay, and offline verification. Higher layers provide
-projection, evaluation, authority, attestations, business receipts, and
-economic/accountability profiles without polluting the kernel.
+```text
+apps/northroot                 standalone CLI, outside Cargo workspace
+packages/northroot-durability  Python package: northroot.durability
 
-The current stable architecture is the trust kernel component. This repository
-is focused on making the core canonicalization and journal reference crates
-solid before moving on to state/eval core.
-
-The stable kernel is organized around two core crates and a standalone CLI:
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                   apps/northroot                        │
-│              (CLI application)                          │
-└────────────────────┬────────────────────────────────────┘
-                     │
-        ┌────────────┴────────────┐
-        │                          │
-┌───────▼────────┐      ┌─────────▼──────────┐
-│ northroot-     │      │  northroot-        │
-│ journal        │      │  canonical        │
-│ (Journal       │      │  (Canonicalization│
-│  format)       │      │   & event_id)     │
-└───────┬────────┘      └────────────────────┘
-        │
-        └───────────────┐
-                        │
-                  (depends on)
+crates/northroot-ag            sanitized ag-domain example over records
+crates/northroot-exchange      constrained handoff/result profile
+crates/northroot-execution     execution method registry contracts
+crates/northroot-governance    policy-record matching over records
+crates/northroot-state-eval    product-agnostic state/eval shapes
+crates/northroot-node          node/workspace manifest conventions
+crates/northroot-record        neutral records and .nrj record streams
+crates/northroot-journal       stable .nrj journal format
+crates/northroot-canonical     stable canonical bytes and event IDs
 ```
 
-## Core Components
+Dependency direction is upward. `northroot-canonical` must not depend on other
+Northroot crates. `northroot-journal` depends on canonicalization. Record and
+profile crates compose those lower layers.
+
+## Stable Kernel
 
 ### `northroot-canonical`
 
-**Purpose**: Deterministic canonicalization and event identity computation.
+Purpose: deterministic canonicalization and event identity.
 
-**Responsibilities**:
-- Canonical JSON serialization (RFC 8785 + Northroot rules)
-- Strict JSON parsing that rejects duplicate object keys before they collapse
-- Quantity encoding (Dec, Int, Rat, F64)
-- Identifier validation (PrincipalId, ProfileId, Timestamp, Digest)
-- Event ID computation (`compute_event_id`)
-- Hygiene reporting
+Responsibilities:
 
-**Key Types**:
-- `Canonicalizer` - Produces canonical bytes
-- `Digest` - Content-addressed identifiers
-- `Quantity` - Lossless numeric types
-- `parse_json_strict` - Parses untyped JSON while rejecting duplicate keys
-- `compute_event_id` - Computes event identity from canonical bytes
-
-**Dependencies**: None (foundational crate)
-
----
+- canonical JSON serialization using RFC 8785 plus Northroot rules
+- strict JSON parsing that rejects duplicate object keys before collapse
+- digest, identifier, timestamp, and quantity primitives
+- event ID computation and verification
+- hygiene reporting
 
 ### `northroot-journal`
 
-**Purpose**: Append-only journal file format (.nrj).
+Purpose: portable append-only `.nrj` streams.
 
-**Responsibilities**:
-- Journal file format specification
-- Frame encoding/decoding
-- Reader/writer implementations
-- Resilience handling (strict vs permissive modes)
-- Event ID verification (using `northroot-canonical`)
+Responsibilities:
 
-**Key Types**:
-- `JournalWriter` - Writes journal files
-- `JournalReader` - Reads journal files
-- `JournalHeader` - File header structure
-- `RecordFrame` - Frame encoding
-- `EventJson` - Alias for `serde_json::Value` (untyped events)
+- journal header and frame encoding
+- strict and permissive read modes
+- writer/reader APIs
+- event identity verification over journal payloads
+- truncation and resilience behavior
 
-**Dependencies**: `northroot-canonical`
+## Record and Substrate Layers
 
----
+### `northroot-record`
 
-## Applications
+Neutral record contract over `.nrj` streams. It validates record grammar,
+content-derived IDs, record stream wrappers, JSONL segment export/import, and
+segment seals. It does not interpret profile meaning.
 
-### `apps/northroot/`
+### `northroot-node`
 
-**Purpose**: Command-line interface for trust kernel operations.
-
-**Responsibilities**:
-- Public kernel commands (`canonicalize`, `event-id`, `append`, `read`,
-  `verify`)
-- Incubating profile and structural helpers kept outside the public kernel
-  command set
-- Output formatting
-- Error reporting
-
-**Dependencies**: `northroot-canonical`, `northroot-journal`
-
-**Note**: This is a standalone application that uses path dependencies to the kernel crates.
-
----
-
-## Incubating Components
+Node and workspace manifest conventions. Node means accountable context;
+workspace means materialized operational environment.
 
 ### `northroot-state-eval`
 
-**Purpose**: Product-agnostic projection and policy evaluation primitives over
-projected state.
+Product-agnostic state/eval data shapes: projection identity, ordered event
+prefixes, three-valued predicates, evaluation deltas, and gate result shapes.
+It is not a product policy engine.
 
-**Responsibilities**:
-- Byte-stream-friendly event prefix and cursor metadata
-- Projection identity wrappers
-- Three-valued predicate composition
-- Satisfaction and evaluation result shapes
-- `EvaluationDelta` derivation
-- Gate result shapes for callers that need pre-action or pre-append checks
+## Capability and Profile Layers
 
-**Boundary**: This crate is not part of the v0.1 stable kernel surface. It does
-not own product policy authority, policy language dependencies, agent runtimes,
-queues, database adapters, provider SDKs, or network integrations.
+- `northroot-governance`: matches policy records against command records.
+- `northroot-execution`: validates execution method registry records.
+- `northroot-exchange`: constrained handoff/result record profile.
+- `northroot-ag`: sanitized agricultural vocabulary and profile example over records.
 
----
+These crates are open capability examples. Real SaaS adapters, client workflows,
+private deployments, and operational runbooks stay outside this public repo.
 
-## Data Flow
+## Promoted Packages
 
-### Event Recording
+`packages/northroot-durability` exposes the Python namespace
+`northroot.durability` for public-safe durability policy, naming, manifests, and
+public/private commit checks. It is not part of the Rust kernel and is tested by
+Python commands in `scripts/verify.sh`.
 
-```
-1. Application creates event (JSON object)
-2. northroot-canonical computes event_id from canonical bytes
-3. northroot-journal appends event to journal file
-4. Journal writes frame to disk
-```
+## CLI Application
 
-### Event Verification
+`apps/northroot` is a standalone CLI with path dependencies into the workspace
+crates. It is intentionally not a Cargo workspace member.
 
-```
-1. northroot-journal reads frame from disk
-2. Strictly parse event JSON object (untyped, duplicate keys rejected)
-3. Confirm event payload is an object with a digest-shaped event_id
-4. northroot-canonical verifies event_id matches canonical bytes
-5. Optional: domain-specific verification (external to core)
-```
+Public normal-help commands:
 
----
+- `canonicalize`
+- `event-id`
+- `append`
+- `read`
+- `verify`
+
+Hidden operator/development command groups include bundle verification, work
+ledger dogfood, structural journal helpers, and record stream import/export.
+Those are support surfaces, not stable kernel semantics.
 
 ## Design Principles
 
-1. **Separation of Concerns**: Each crate has a single, clear responsibility
-2. **Domain-Agnostic Kernel**: Core provides primitives only; domain semantics are external
-3. **Determinism**: All core operations are deterministic and offline-capable
-4. **Neutrality**: Core does not execute actions or make decisions
-5. **Verifiability**: All events can be verified offline using canonicalization and event identity
-6. **Untyped Core**: Kernel operates on `EventJson = serde_json::Value`; domain layers add types
-
----
-
-## Profile and Layering Points
-
-- **Custom Event Schemas**: Applications define domain-specific event types
-- **Custom Verification**: Domain layers add semantic verification on top of core event identity checks
-- **Custom Storage**: Journal format is portable; applications can implement custom storage backends
-- **Structural Segmentation**: large event streams can use ordered `.nrj`
-  segments plus rebuildable manifests and checkpoints without adding projection
-  meaning
-
-See [Profiles and Consumer Protocols](../reference/profiles.md) and
-[Segmented Journals](../reference/segmented-journals.md) for details.
-
----
-
-## Dependencies
-
-- `northroot-canonical` - No dependencies on other Northroot crates
-- `northroot-journal` - Depends on `northroot-canonical`
-- `northroot-state-eval` - Incubating, product-agnostic state/eval primitives
-- `apps/northroot/` - Depends on `northroot-canonical`, `northroot-journal`
-
-This dependency structure ensures:
-- Lower-level crates remain independent
-- Higher-level components compose functionality
-- No circular dependencies
-- Domain-specific concerns are external to the trust kernel
-
----
-
-## Domain-Specific Layers
-
-Domain-specific event types and higher-layer semantics (projection, evaluation,
-authority, receipts, financial/accountability profiles, authorization,
-execution, semantic checkpoints, attestation, etc.) are **not** part of the core
-trust kernel. They should be implemented as separate repositories or crates that
-consume the core primitives:
-
-- `northroot-canonical` for canonicalization and event identity
-- `northroot-journal` for storage
-
----
+1. **Separation of concerns**: each crate has a narrow responsibility.
+2. **Domain-agnostic kernel**: core validates identity and structure, not business meaning.
+3. **Determinism**: verification must be offline and repeatable.
+4. **Neutrality**: Northroot records what happened and what was allowed; it does not decide what should happen.
+5. **Public/private split**: sanitized schemas and tooling can be public; private deployments and SaaS adapters stay private.
 
 ## Related Documentation
 
-- [API Contract](api-contract.md) - Public API surface
-- [Core Specification](../reference/spec.md) - Protocol details
-- [Profiles and Consumer Protocols](../reference/profiles.md) - How to layer on the system
-- [Segmented Journals](../reference/segmented-journals.md) - Structural segment and checkpoint contract
-- [Core Invariants](../../CORE_INVARIANTS.md) - Non-negotiable kernel constraints
+- [API Contract](api-contract.md)
+- [Environment and Setup](environment.md)
+- [Core Specification](../reference/spec.md)
+- [Record V0 Stack](../reference/record-v0/stack.md)
+- [Profiles and Consumer Protocols](../reference/profiles.md)
+- [Core Invariants](../../CORE_INVARIANTS.md)

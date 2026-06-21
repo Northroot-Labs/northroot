@@ -1,164 +1,141 @@
 # Northroot
 
-Open governance and accountability infrastructure for verifiable state
-transitions.
+Open governance and accountability infrastructure for verifiable state transitions.
 
-## What is Northroot?
+## What Is Northroot?
 
-Northroot is open governance and accountability infrastructure for verifiable
-state transitions.
+Northroot is a small verifiable-state substrate plus promoted capabilities that
+build on it. The kernel provides canonical identity, append-only `.nrj` streams,
+strict JSON hygiene, replay, and offline verification. Higher layers add record
+contracts, node/workspace manifests, governance matching, execution method
+registries, exchange handoffs, and sanitized domain examples without changing
+kernel identity rules.
 
-Its trust kernel provides canonical identity, append-only evidence journals,
-replay, and offline verification. Higher-level SDKs can expose boring JSON and
-JSONL workflows while the kernel stores and verifies the authoritative stream in
-`.nrj`.
+The repository is intentionally split by layer:
 
-Higher layers provide projection, evaluation, authority, attestations,
-business receipts, and economic/accountability profiles without polluting the
-kernel.
+- **Stable kernel crates**: deterministic canonicalization and `.nrj` journal I/O.
+- **Record/substrate crates**: neutral records, node/workspace manifests, and
+  state/eval helpers over verified streams.
+- **Capability/profile crates**: governance, execution, exchange, and sanitized
+  ag-domain examples.
+- **Promoted packages**: importable non-Rust capabilities such as
+  `northroot.durability`.
+- **Standalone CLI**: operator-facing commands in `apps/northroot`.
 
-Economic activity is a primary capability profile over that substrate:
-financial actions, authority changes, reconciliations, receipt exchange, and
-accountability records expressed as replayable, attestable transitions.
-
-This repository is currently focused on making the core canonicalization and
-journal reference crates solid before moving on to state/eval core.
-
-**Current stable kernel capabilities:**
-- Deterministic canonicalization (RFC 8785 + Northroot rules)
-- Content-derived event identity
-- Portable journal format (.nrj)
-- Offline verification
-- JSONL-friendly export/import surfaces over verified journal streams
-
-**What the kernel does NOT do:**
-- Make decisions or optimize outcomes
-- Execute actions or orchestrate workflows
-- Prescribe domain event schemas
-- Evaluate policy, authority, or financial/accountability semantics
-
-See [GOVERNANCE.md](GOVERNANCE.md) for the project's foundational principles.
-
-## v0.1 Kernel Charter
-
-Northroot v0.1 is the small, stable verifiable-event kernel component of the
-broader Northroot system. It is intentionally not a runtime, scheduler, policy
-engine, deployment stack, or application framework.
-
-### Goals
-- Keep core primitives deterministic and offline-verifiable.
-- Standardize identity semantics for verifiable evidence.
-- Keep `.nrj` as a portable append-only audit container.
-- Publish minimal contracts that downstream repos can adopt without pulling orchestration into core.
-
-### Non-goals
-- No orchestration logic, workflow execution, or policy engines.
-- No model, runtime, or budget decisioning logic.
-- No domain-specific business semantics in core crates.
-- No projection, evaluation, authority, attestation, receipt, or accounting
-  profile semantics in the stable kernel.
+The public kernel proves what was recorded and whether it verifies. It does not
+choose outcomes, execute workflows, or define private product semantics.
 
 ## Quick Start
 
-### Building
-
 ```bash
-# Build kernel crates
+# Optional one-time setup for humans, CI images, and agents.
+bash scripts/dev_setup.sh
+
+# Build Rust workspace crates.
 cargo build --workspace
 
-# Build CLI application
-cd apps/northroot && cargo build --release
+# Build the standalone CLI.
+cargo build --release --manifest-path apps/northroot/Cargo.toml
+
+# Run the normal fast gate.
+just qa
+
+# Run the full repository verification gate.
+bash scripts/verify.sh
 ```
 
-The CLI binary will be at `apps/northroot/target/release/northroot`.
-
-### Using the CLI
+Legacy Codex entrypoints still exist as wrappers:
 
 ```bash
-# Canonicalize JSON input
-echo '{"b":2,"a":1}' | northroot canonicalize
+bash scripts/codex_setup.sh
+bash scripts/codex_verify.sh
+```
 
-# Compute event_id for JSON
-echo '{"event_type":"test","event_version":"1",...}' | northroot event-id
+The CLI binary is produced under `apps/northroot/target/release/northroot`.
 
-# Append an event to a journal
+## CLI Surface
+
+Public kernel commands shown in normal help:
+
+```bash
+northroot canonicalize input.json
+northroot event-id event.json
 northroot append events.nrj event.json
-
-# Read events from a journal
 northroot read events.nrj
-
-# Verify all events in a journal
 northroot verify events.nrj
 ```
 
-The public kernel CLI command set is `canonicalize`, `event-id`, `append`,
-`read`, and `verify`.
-
-## Documentation
-
-### For Users
-- [Getting Started](docs/user/getting-started.md) - Tutorial and examples
-- [Integration Examples](docs/user/integration-examples.md) - Code samples
-
-### For Developers
-- [API Contract](docs/developer/api-contract.md) - Public API surface
-- [Architecture](docs/developer/architecture.md) - System design
-- [Testing Guide](docs/developer/testing.md) - QA harness and test patterns
-- [Profiles](docs/reference/profiles.md) - How to layer profile semantics over the kernel
-- [State Eval Core](docs/reference/state-eval-core.md) - Incubating product-agnostic evaluation primitives
-
-### Reference
-- [v0.1 Stability Contract](docs/reference/v0.1-stability.md) - Stable kernel and incubating profile boundaries
-- [Economic Accountability North Star](docs/reference/economic-accountability-north-star.md) - Economic activity as a verifiable state-transition capability profile
-- [Core Specification](docs/reference/spec.md) - Protocol specification
-- [Journal Format](docs/reference/format.md) - On-disk format
-- [Segmented Journals](docs/reference/segmented-journals.md) - Structural segment manifests and checkpoints
-- [Canonicalization](docs/reference/canonicalization.md) - Canonical JSON rules
-- [Event Model](docs/reference/events.md) - Event structure
+Hidden operator/development command groups also exist for record streams,
+structural journal helpers, work-ledger dogfood, and bundle verification. Those
+commands are incubating support surfaces, not stable kernel semantics.
 
 ## Project Structure
 
-```
+```text
 northroot/
 ├── crates/
-│   ├── northroot-canonical/  # Canonicalization + event_id
-│   ├── northroot-journal/    # .nrj container format
-│   └── northroot-state-eval/ # Incubating state/eval primitives
+│   ├── northroot-canonical/   # canonical JSON, identifiers, event IDs
+│   ├── northroot-journal/     # .nrj append/read/verify format
+│   ├── northroot-record/      # neutral record contract and .nrj record streams
+│   ├── northroot-node/        # node/workspace manifest conventions
+│   ├── northroot-state-eval/  # product-agnostic state/eval primitives
+│   ├── northroot-governance/  # policy-record matching over records
+│   ├── northroot-execution/   # execution method registry contracts
+│   ├── northroot-exchange/    # constrained handoff/result profile
+│   └── northroot-ag/          # sanitized ag-domain example over records
 ├── packages/
-│   └── northroot-durability/ # Promoted Python package: northroot.durability
+│   └── northroot-durability/  # Python package: northroot.durability
 ├── apps/
-│   └── northroot/            # CLI application
-├── fixtures/                  # Golden test vectors
-├── schemas/
-│   └── canonical/             # Canonical primitive schemas
-├── docs/                      # Documentation
-└── GOVERNANCE.md              # Project constitution
+│   └── northroot/             # standalone CLI; not a workspace member
+├── schemas/                   # public JSON schemas
+├── docs/                      # user, developer, reference, QA docs
+└── GOVERNANCE.md              # project constitution
 ```
+
+## Layer Boundaries
+
+Stable kernel:
+
+- `northroot-canonical`
+- `northroot-journal`
+- public CLI commands: `canonicalize`, `event-id`, `append`, `read`, `verify`
+
+Promoted or incubating layers over the kernel:
+
+- `northroot-record`, `northroot-node`, `northroot-state-eval`
+- `northroot-governance`, `northroot-execution`, `northroot-exchange`, `northroot-ag`
+- `northroot-durability`
+- hidden CLI support commands
+
+Private deployments, SaaS adapters, client workflows, real receipts, local
+machine custody, and operational evidence do not belong in this public repo.
+They belong in private/internal repos or the governed Northroot-Labs refinery.
+
+## Documentation
+
+- [Getting Started](docs/user/getting-started.md)
+- [Architecture](docs/developer/architecture.md)
+- [API Contract](docs/developer/api-contract.md)
+- [Environment and Setup](docs/developer/environment.md)
+- [Testing Guide](docs/developer/testing.md)
+- [QA Harness](docs/qa/harness.md)
+- [Record V0 Stack](docs/reference/record-v0/stack.md)
+- [v0.1 Stability Contract](docs/reference/v0.1-stability.md)
+- [Governance](GOVERNANCE.md)
 
 ## Promoted Packages
 
-Promoted packages live under `packages/` when they are importable Northroot capabilities but not kernel crates. They may be incubating, but they belong here once other projects should import them through the `northroot.*` namespace. Lab custody, local machine state, and promotion evidence stay in the Northroot-Labs refinery.
+Promoted packages live under `packages/` when they are importable Northroot
+capabilities but not kernel crates. They may be incubating, but they belong here
+once other projects should import them through the `northroot.*` namespace. Lab
+custody, local machine state, and promotion evidence stay in the Northroot-Labs
+refinery.
 
 Current package:
 
-- `northroot-durability`: Python distribution exposing `northroot.durability` for public-safe durability policy, naming, manifests, and public/private commit checks.
-
-## Trust Kernel
-
-The kernel provides:
-- **Canonicalization**: RFC 8785 + Northroot hygiene rules
-- **Event Identity**: `sha256(domain_separator || canonical_json(event))`
-- **Journal Format**: Portable, append-only container (.nrj)
-- **JSONL Interchange**: Line-oriented exports and fixtures over verified streams
-
-Everything else (projection, evaluation, authority, attestations, business
-receipts, financial and accountability profiles, typed schemas, domain
-verification, policy evaluation) is a profile, layer, or consumer protocol over
-the kernel.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development guidelines, coding standards, and contribution process.
+- `northroot-durability`: Python distribution exposing `northroot.durability`
+  for public-safe durability policy, naming, manifests, and public/private
+  commit checks.
 
 ## License
 

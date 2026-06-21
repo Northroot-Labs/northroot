@@ -91,8 +91,8 @@ jobs:
       - name: Run CLI tests
         run: cargo test --manifest-path apps/northroot/Cargo.toml
 
-  codex-verify:
-    name: Codex Verification
+  verify:
+    name: Repository Verification
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -100,5 +100,5 @@ jobs:
         with:
           toolchain: "1.91.0"
           components: clippy, rustfmt
-      - name: Run Codex verification
-        run: bash scripts/codex_verify.sh
+      - name: Run repository verification
+        run: bash scripts/verify.sh
