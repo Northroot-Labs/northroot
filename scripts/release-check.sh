@@ -48,10 +48,13 @@ run_check "unit and integration tests" cargo test --all --all-features || true
 # 4. CLI-specific tests
 run_check "CLI package tests" cargo test --manifest-path apps/northroot/Cargo.toml || true
 
-# 5. v0.1 readiness report
+# 5. Kernel boundary
+run_check "kernel boundary" python3 scripts/validate_kernel_boundary.py || true
+
+# 6. v0.1 readiness report
 run_check "v0.1 readiness report" python3 scripts/v01_readiness.py --json || true
 
-# 6. Build release binary
+# 7. Build release binary
 echo -n "Building release binary... "
 if cargo build --release --manifest-path apps/northroot/Cargo.toml > /tmp/northroot-release-check.log 2>&1; then
     echo -e "${GREEN}✓${NC}"
@@ -84,7 +87,7 @@ else
     BINARY_PATH=""
 fi
 
-# 6. Version check (if version flag exists)
+# 8. Version check (if version flag exists)
 if [ -n "$BINARY_PATH" ] && [ -f "$BINARY_PATH" ]; then
     echo -n "Checking CLI version... "
     if "$BINARY_PATH" --version > /dev/null 2>&1; then
@@ -94,7 +97,7 @@ if [ -n "$BINARY_PATH" ] && [ -f "$BINARY_PATH" ]; then
         echo -e "${YELLOW}⚠${NC} --version flag not available (optional)"
     fi
     
-    # 7. Verify public kernel commands are available
+    # 9. Verify public kernel commands are available
     echo ""
     echo "Verifying public kernel CLI commands:"
     commands=("canonicalize" "event-id" "append" "read" "verify")

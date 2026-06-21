@@ -6,211 +6,157 @@ Thank you for your interest in contributing to Northroot.
 
 ### Prerequisites
 
-- Rust (see `rust-toolchain.toml` for required version)
-- `just` command runner (optional, for convenience commands)
+- Rust from `rust-toolchain.toml`
+- Python 3 for schema and package validators
+- `just` command runner, optional but recommended
 
 ### Quick Start
 
-1. Clone the repository
-2. Bootstrap the Codex/development environment:
-   ```bash
-   bash scripts/codex_setup.sh
-   ```
-3. Build the project:
-   ```bash
-   cargo build
-   ```
-4. Run tests:
-   ```bash
-   just test
-   ```
-5. Run QA checks:
-   ```bash
-   just qa
-   ```
+```bash
+git clone <repository-url>
+cd northroot
+bash scripts/dev_setup.sh
+cargo build --workspace
+cargo build --manifest-path apps/northroot/Cargo.toml
+just qa
+```
 
-### Codex Environment
+Run the full handoff gate before publishing or handing off a branch:
 
-Repo-owned Codex setup lives in `.codex/environments/environment.toml` and calls `scripts/codex_setup.sh`. Use `scripts/codex_verify.sh` after setup or before handing off a branch to run the workspace checks, golden tests, doctests, schema validation, and the out-of-workspace CLI tests.
+```bash
+bash scripts/verify.sh
+```
 
-### Agent Worktree Sync
+Codex users may still use the compatibility wrappers:
 
-Keep local `main` as a clean mirror of `origin/main`. Agent work should happen on task branches created from fetched remote truth, not on `main`.
+```bash
+bash scripts/codex_setup.sh
+bash scripts/codex_verify.sh
+```
 
-Agents may refresh remote branch refs without mutating local branches or working trees:
+Codex is not the only supported development environment. New setup docs and CI
+should use the neutral `scripts/dev_setup.sh`, `scripts/verify.sh`, and
+`NORTHROOT_*` environment variables. See
+[Environment and Setup](docs/developer/environment.md).
+
+## Worktree Sync
+
+Keep local `main` as a clean mirror of `origin/main`. Task work should happen on
+branches created from fetched remote truth, not directly on `main`.
 
 ```bash
 just fetch-refs
-```
-
-This fetches branch refs from the configured remote, prunes deleted remote-tracking branches, and does not fetch tags or accept ad hoc refspecs.
-
-Before resuming or editing a worktree, run:
-
-```bash
 just sync-check
-```
-
-The check uses the same scoped ref fetch by default, reports the current branch or detached commit, verifies the tree is clean, detects stale branches, and reports where local `main` is checked out.
-
-After a PR merges, update local `main` with:
-
-```bash
 just sync-main
 ```
 
-This refuses to run if the `main` worktree has local changes or cannot fast-forward to `origin/main`. It never stashes, resets, or overwrites local edits.
-
-For new agent work, start from the remote-tracking branch:
+For new agent or automation work:
 
 ```bash
 just fetch-refs
 git worktree add -b codex/<task-name> <path> origin/main
 ```
 
+The `codex/` branch prefix is a convention for Codex-authored work, not a
+requirement for human contributors.
+
 ## Code Quality
 
-### Pre-Commit Hooks
-
-A pre-commit hook can be installed with:
+Install hooks:
 
 ```bash
 bash scripts/install_git_hooks.sh
 ```
 
-`scripts/codex_setup.sh` installs it by default. Set `NORTHROOT_CODEX_INSTALL_HOOKS=0` to skip hook installation in a disposable environment.
+`dev_setup.sh` installs hooks by default. Disable that with:
 
-The hook runs critical CI checks before allowing commits:
-
-- Format check (`cargo fmt --all --check`)
-- Clippy linting (`cargo clippy --all-targets --all-features -- -D warnings`)
-- All tests (`cargo test --all --all-features`)
-- Golden tests (`cargo test --package northroot-canonical --test golden`)
-- Documentation doctests (`cargo test --workspace --doc`)
-- Schema validation (`python3 scripts/validate_schemas.py`)
-
-If any check fails, the commit is blocked. Fix the issues and try again.
-
-To bypass the hook (not recommended):
 ```bash
-git commit --no-verify
+NORTHROOT_INSTALL_HOOKS=0 bash scripts/dev_setup.sh
 ```
 
-### Pre-Push Checks
+The pre-commit hook runs:
 
-Always run the fast QA suite before pushing:
+- format check: `cargo fmt --all --check`
+- clippy: `cargo clippy --all-targets --all-features -- -D warnings`
+- workspace tests: `cargo test --all --all-features`
+- canonical golden tests
+- doctests
+- schema validation
+
+To bypass the hook, use `git commit --no-verify` only for intentional tooling or
+enforcement changes after running equivalent checks.
+
+## Pre-Push Checks
+
+Fast gate:
 
 ```bash
 just qa
 ```
 
-This runs:
-- Format check (`just fmt`)
-- Linting (`just lint`)
-- Tests (`just test`)
-- Golden tests (`just golden`)
-- Schema validation (`just schema`)
+Full gate:
 
-Use `just codex-verify` for the full Codex handoff suite, including doctests and CLI tests.
+```bash
+bash scripts/verify.sh
+```
 
-### Coding Standards
+The full gate includes CLI tests, release/readiness validators, fixture checks,
+and promoted Python package checks.
 
-- **Formatting**: Code must be formatted with `cargo fmt`
-- **Linting**: Warnings are treated as errors (`-D warnings`)
-- **Tests**: All public APIs must have tests
-- **Documentation**: Public items must be documented
+## Branch Protection
 
-### Branch Protection
+`main` is protected:
 
-`main` is protected (GitHub Enterprise, tier A):
 - PR required; no direct pushes.
-- 1 approval required.
-- Required status checks: `fmt`, `clippy`, `golden` (`test` runs on push only).
-- Force push and branch deletion blocked.
-
-### Code Review Process
-
-1. Create a branch from `main`
-2. Make changes following the project's principles (see [GOVERNANCE.md](GOVERNANCE.md))
-3. Ensure all tests pass and QA checks succeed
-4. Open a pull request with a clear description
-5. Address review feedback
-6. For Tier B changes (high-risk paths), see [Signing Policy](docs/security/signing-policy.md) for human attestation requirements
+- Required checks include formatting, clippy, tests, golden tests, schemas, docs,
+  CLI tests, and repository verification.
+- High-risk paths may require human attestation; see
+  [Signing Policy](docs/security/signing-policy.md).
 
 ## Project Principles
 
-Northroot follows strict principles defined in [GOVERNANCE.md](GOVERNANCE.md):
+Northroot follows [GOVERNANCE.md](GOVERNANCE.md):
 
-- **Neutrality**: We prove what was allowed and what happened, not what should have happened
-- **Determinism**: All core logic must be deterministic and replayable offline
-- **Separation**: Core does not execute actions or make decisions
-- **Verifiability**: Proof envelopes / verifiable events are the primary artifact for audit
+- **Neutrality**: prove what was allowed and what happened, not what should have happened.
+- **Determinism**: verification must be deterministic and replayable offline.
+- **Separation**: kernel crates do not execute actions or make decisions.
+- **Verifiability**: Proof envelopes / verifiable events are the primary artifact for audit.
 
 Any contribution that violates these principles will be rejected.
 
+## Public vs Private Capability Boundary
+
+Open capabilities may include sanitized schemas, validators, domain vocabulary,
+and generic contracts. Private deployments, SaaS adapters, client workflows,
+operational runbooks, secrets, receipts, and real machine custody state do not
+belong in this public repo.
+
 ## Testing
 
-### Unit Tests
-
 ```bash
-cargo test
+cargo test --workspace
+cargo test --manifest-path apps/northroot/Cargo.toml
+PYTHONPATH=packages/northroot-durability/src python3 -m unittest discover packages/northroot-durability/tests
 ```
 
-### Integration Tests
-
-```bash
-cargo test --test integration
-```
-
-### Golden Tests
-
-Golden tests verify canonicalization stability:
-
-```bash
-just golden
-```
-
-### Deep Checks (Nightly)
-
-For comprehensive checks (coverage, security audits, fuzzing):
-
-```bash
-just nightly
-```
-
-See [docs/developer/testing.md](docs/developer/testing.md) for detailed testing guidelines.
+See [Testing Guide](docs/developer/testing.md) and [QA Harness](docs/qa/harness.md).
 
 ## Documentation
 
-- Code documentation: Use standard Rust doc comments
-- User documentation: Update relevant files in `docs/user/`
-- API documentation: Update `docs/developer/api-contract.md` for breaking changes
-- Reference documentation: Update `docs/reference/` for specification changes
+- User docs: `docs/user/`
+- Developer docs: `docs/developer/`
+- Reference docs: `docs/reference/`
+- Security docs: `docs/security/`
+- API surface: `docs/developer/api-contract.md`
+
+Update docs whenever APIs, commands, crates, packages, or setup flows change.
 
 ## Commit Messages
 
-Follow conventional commit format:
+Use concise conventional-style messages when practical:
 
-```
-<type>: <description>
-
-[optional body]
-
-[optional footer]
-```
-
-Types: `feat`, `fix`, `docs`, `test`, `refactor`, `chore`
-
-Example:
-```
+```text
 feat: add profile event validation
-
-Adds a profile verifier that rejects schema-invalid events before projection
-rebuild.
+fix: reject duplicate record keys before import
+docs: refresh setup guide
 ```
-
-## Questions?
-
-- Check existing documentation in `docs/`
-- Review [GOVERNANCE.md](GOVERNANCE.md) for project principles
-- Open an issue for clarification

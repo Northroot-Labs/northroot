@@ -1,314 +1,159 @@
 # Agent Guidelines for Northroot
 
-**Purpose**: Guidelines for AI agents working on the Northroot codebase  
-**Audience**: AI coding assistants, automated tools, contributors  
+**Purpose**: Guidelines for AI agents and automated tools working on Northroot.
+**Audience**: AI coding assistants, local automation, CI helpers, and human reviewers.
 **Status**: Active
-
----
 
 ## Core Principles
 
-Before making any changes, understand:
+Before making changes, understand:
 
-1. **Neutrality**: The core proves what was allowed and what happened, not what should have happened
-2. **Determinism**: All core logic must be deterministic and replayable offline
-3. **Separation**: Core does not execute actions or make decisions
-4. **Verifiability**: Proof envelopes / verifiable events are the primary artifact for audit
+1. **Neutrality**: Northroot proves what was allowed and what happened, not what should have happened.
+2. **Determinism**: Verification logic must be deterministic and replayable offline.
+3. **Separation**: Kernel crates do not execute actions or make decisions.
+4. **Verifiability**: Proof envelopes / verifiable events are the primary artifact for audit.
 
-See [GOVERNANCE.md](GOVERNANCE.md) for the complete project constitution.
+See [GOVERNANCE.md](GOVERNANCE.md) for the complete constitution.
 
----
+## Current Repository Shape
 
-## Project Structure
-
+```text
+crates/northroot-canonical   stable kernel: canonical bytes and event IDs
+crates/northroot-journal     stable kernel: .nrj append/read/verify
+crates/northroot-record      neutral record contract and .nrj record streams
+crates/northroot-node        node/workspace manifest conventions
+crates/northroot-state-eval  product-agnostic state/eval primitives
+crates/northroot-governance  policy-record matching over records
+crates/northroot-execution   execution method registry contracts
+crates/northroot-exchange    constrained handoff/result profile
+crates/northroot-ag          sanitized ag-domain example over records
+packages/northroot-durability  Python package: northroot.durability
+apps/northroot               standalone CLI; not a workspace member
 ```
-northroot/
-├── crates/
-│   ├── northroot-canonical/  # Canonicalization + event_id (core)
-│   └── northroot-journal/    # Journal format (core)
-├── apps/
-│   └── northroot/            # CLI application (not in workspace)
-├── schemas/
-│   └── canonical/            # Canonical primitive schemas
-└── docs/                      # Documentation
-```
 
-**Key constraint**: `apps/northroot/` is NOT in the workspace. Use `--manifest-path apps/northroot/Cargo.toml` or `cd apps/northroot` when building.
+`apps/northroot` is intentionally outside the Cargo workspace. Build or test it
+with `--manifest-path apps/northroot/Cargo.toml` or by changing into that
+directory.
 
----
+## Environment Entry Points
 
-## Pre-Commit Requirements
+Use neutral scripts by default:
 
-A pre-commit hook (`.git/hooks/pre-commit`) runs automatically and blocks commits if:
-
-- ❌ Code formatting fails (`cargo fmt --all --check`)
-- ❌ Clippy warnings exist (`cargo clippy --all-targets --all-features -- -D warnings`)
-- ❌ Tests fail (`cargo test --all --all-features`)
-- ❌ Golden tests fail (`cargo test --package northroot-canonical --test golden`)
-- ❌ Doctests fail (`cargo test --workspace --doc`)
-
-**Always run checks locally before committing:**
 ```bash
-# Fast checks
+bash scripts/dev_setup.sh
+bash scripts/verify.sh
+```
+
+Codex compatibility wrappers still exist:
+
+```bash
+bash scripts/codex_setup.sh
+bash scripts/codex_verify.sh
+```
+
+Do not make new tooling depend on Codex-specific paths or environment names
+unless the feature is explicitly a Codex importer. Prefer `NORTHROOT_*`
+configuration names; legacy `NORTHROOT_CODEX_*` names are compatibility only.
+
+## Before Editing
+
+1. Confirm the current branch and working tree with `git status --short --branch`.
+2. Pull or rebase only when the worktree is clean and the user asked for it.
+3. Read the relevant crate docs and tests before changing behavior.
+4. Keep public/open code sanitized: no client data, local paths, real receipts,
+   secrets, raw tool state, or deployment-specific adapter details.
+
+## Required Checks
+
+For normal changes:
+
+```bash
 cargo fmt --all --check
 cargo clippy --all-targets --all-features -- -D warnings
-cargo test --all --all-features
-
-# Or use justfile
-just qa
+cargo test --workspace
+cargo test --manifest-path apps/northroot/Cargo.toml
+python3 scripts/validate_schemas.py
+python3 scripts/validate_kernel_boundary.py
 ```
 
----
+For handoff or commits touching verification, schemas, records, CLI behavior, or
+promoted packages:
 
-## Code Quality Standards
+```bash
+bash scripts/verify.sh
+```
 
-### Formatting
-- **Always** run `cargo fmt --all` before committing
-- Formatting is enforced in CI and pre-commit hooks
+The pre-commit hook runs formatting, clippy, workspace tests, golden tests,
+doctests, and schema validation. Do not bypass it unless the change is an
+intentional enforcement/tooling update and you have run equivalent checks.
 
-### Linting
-- Warnings are treated as errors (`-D warnings`)
-- Fix or justify all clippy warnings
-- Never suppress warnings without justification
+## Allowed Work
 
-### Documentation
-- All public items must be documented (`#![deny(missing_docs)]`)
-- Include examples in rustdoc comments
-- Mark file I/O examples as `no_run` (they require actual files)
+- Fix bugs and improve code quality.
+- Add tests, fixtures, and documentation that match current code.
+- Refactor within existing layer boundaries.
+- Add sanitized open capabilities, schemas, and validators.
+- Improve setup and verification as environment-neutral tooling.
 
-### Testing
-- All public APIs must have tests
-- Golden tests must pass (canonicalization stability)
-- Doctests must compile and run
-- Integration tests for journal operations
+## Prohibited Work
 
----
+- Add AI provider dependencies or agent frameworks to the kernel.
+- Make kernel crates execute workflows, pick outcomes, or enforce product policy.
+- Put private deployments, SaaS adapters, client workflows, secrets, receipts, or
+  real machine custody data in this public repo.
+- Collapse profile/domain semantics into `northroot-canonical` or
+  `northroot-journal`.
+- Invent crates or public APIs in docs without implementing them.
 
-## What Agents Can Do
+## Layer Constraints
 
-✅ **Allowed:**
-- Fix bugs and improve code quality
-- Add tests and documentation
-- Refactor for clarity (preserving behavior)
-- Update documentation to match code
-- Implement planned features following GOVERNANCE.md
-- Optimize performance (without changing semantics)
+### Stable Kernel
 
----
+Machine-enforced boundary: `kernel-boundary.json` plus `scripts/validate_kernel_boundary.py` define the stable kernel crates and fail if kernel crates depend upward.
 
-## What Agents Must Not Do
+- `northroot-canonical`: deterministic canonical JSON, strict parsing, digest and identifier types.
+- `northroot-journal`: portable `.nrj` frame format and event identity verification.
 
-❌ **Prohibited:**
-- Add agent planners, workflow engines, or decision recommenders
-- Implement policy evaluation or enforcement in core
-- Add AI provider dependencies or agent frameworks
-- Make the core execute actions or modify external state
-- Add "smart" defaults that influence decisions
-- Break determinism or offline verification
-- Violate neutrality principles
+These crates must stay deterministic, offline-capable, and free of domain semantics.
 
-See [GOVERNANCE.md](GOVERNANCE.md) section 10 for explicit non-goals.
+### Record/Substrate Layers
 
----
+- `northroot-record`: validates neutral records and wraps them in `.nrj` streams.
+- `northroot-node`: validates node/workspace manifest conventions.
+- `northroot-state-eval`: provides product-agnostic state/eval shapes.
 
-## Crate-Specific Constraints
+These layers may structure higher-level facts but must not own private product authority.
 
-### `northroot-canonical`
-- See `crates/northroot-canonical/AGENTS.md` for detailed constraints
-- Must remain schema-aligned with `schemas/canonical/v1/types.schema.json`
-- Canonicalization must be deterministic and platform-independent
+### Capability/Profile Layers
 
-### `northroot-journal`
-- Journal format is append-only and tamper-evident
-- Must support strict and permissive read modes
-- Frame encoding must be stable and portable
+- `northroot-governance`, `northroot-execution`, `northroot-exchange`, and
+  `northroot-ag` are sanitized capability/profile examples over records.
+- Keep real SaaS adapters and client deployments private.
 
-### `apps/northroot` (CLI)
-- Package is NOT in workspace (use `--manifest-path` or `cd` into directory)
-- Public kernel commands: `canonicalize`, `event-id`, `append`, `read`, `verify`
-- Incubating profile and structural helpers are not part of the public kernel command set
+### Promoted Packages
 
----
+- `packages/northroot-durability` exposes `northroot.durability`.
+- Python package tests are not covered by Cargo; run them with:
 
-## Testing Requirements
-
-### Before Committing
-1. Run `cargo fmt --all` to format code
-2. Run `cargo clippy --all-targets --all-features -- -D warnings`
-3. Run `cargo test --all --all-features`
-4. Run `cargo test --package northroot-canonical --test golden`
-5. Run `cargo test --workspace --doc`
-
-### Golden Tests
-- Located in `crates/northroot-canonical/tests/golden.rs`
-- Verify canonical byte stability
-- Update with `UPDATE_GOLDEN=1 cargo test --test golden` if intentional
-
-### Doctests
-- All rustdoc examples must compile
-- File I/O examples should use `no_run` attribute
-- Examples must use actual APIs (no non-existent types)
-
----
-
-## Documentation Standards
-
-### Code Documentation
-- Use rustdoc comments (`///` for items, `//!` for modules)
-- Include examples in public API docs
-- Cross-reference related types using `[`Type`]` syntax
-- Link to reference docs: `[Format Reference](../../../docs/reference/format.md)`
-
-### Markdown Documentation
-- Keep API signatures in rustdoc (auto-generated)
-- Manual docs focus on concepts, patterns, and usage
-- Update docs when APIs change
-- Verify all code examples compile
-
-### Schema Documentation
-- Canonical schemas in `schemas/canonical/v1/`
-- Event schemas are domain-specific (not in core)
-
----
+```bash
+PYTHONPATH=packages/northroot-durability/src python3 -m unittest discover packages/northroot-durability/tests
+```
 
 ## Common Pitfalls
 
-### ❌ Don't Reference Non-Existent Crates or APIs
-- `northroot-core` - does not exist
-- `northroot-cli` - package name is `northroot`, path is `apps/northroot/`
+- `northroot-core` does not currently exist. Do not document it as real.
+- `apps/northroot` is not a workspace member.
+- Normal CLI help shows only public kernel commands; hidden support commands are incubating.
+- `northroot-ag` is sanitized open domain tooling. A real client or SaaS adapter is private.
+- Codex session ingestion is one importer, not the only supported environment model.
 
-### ❌ Don't Reference Non-Existent Types
-- `Verifier`, `VerificationVerdict` - not in core
-- `AuthorizationEvent`, `ExecutionEvent` - domain-specific, not in core
+## Useful Commands
 
-### ✅ Use Actual Core APIs
-- `northroot-canonical`: `Canonicalizer`, `compute_event_id`, `verify_event_id`
-- `northroot-journal`: `JournalWriter`, `JournalReader`, `verify_event_id`
-- See [API Contract](docs/developer/api-contract.md) for complete reference
-
----
-
-## Building and Testing
-
-### Workspace Crates
 ```bash
-# Build all workspace crates
 cargo build --workspace
-
-# Test all workspace crates
 cargo test --workspace
-
-# Build specific crate
-cargo build --package northroot-canonical
-cargo build --package northroot-journal
+cargo test --manifest-path apps/northroot/Cargo.toml
+cargo doc --workspace --no-deps
+just qa
+bash scripts/verify.sh
 ```
-
-### CLI Application (Not in Workspace)
-```bash
-# Build CLI
-cd apps/northroot
-cargo build --release
-
-# Or from workspace root
-cargo build --release --manifest-path apps/northroot/Cargo.toml
-
-# Test CLI
-cd apps/northroot
-cargo test
-```
-
----
-
-## Documentation Generation
-
-### Generate Rustdoc
-```bash
-# Generate docs for all crates
-cargo doc --workspace --no-deps --open
-
-# Generate docs for specific crate
-cargo doc --package northroot-canonical --open
-```
-
-### Verify Doctests
-```bash
-# Run all doctests
-cargo test --workspace --doc
-
-# Run doctests for specific crate
-cargo test --package northroot-canonical --doc
-```
-
----
-
-## Error Handling
-
-### Common Errors
-
-**"package ID specification did not match"**
-- CLI package is not in workspace
-- Use `--manifest-path apps/northroot/Cargo.toml` or `cd apps/northroot`
-
-**"cannot find type"**
-- Check if type exists in actual codebase
-- Don't reference profile/runtime types in core code
-
-**"doctest failed"**
-- Check if example requires files (use `no_run`)
-- Verify example uses actual APIs
-- Ensure all imports are correct
-
----
-
-## Key Documents
-
-- [GOVERNANCE.md](GOVERNANCE.md) - Project constitution and principles
-- [CORE_INVARIANTS.md](CORE_INVARIANTS.md) - Non-negotiable kernel constraints
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Development guidelines
-- [API Contract](docs/developer/api-contract.md) - Public API reference
-- [Architecture](docs/developer/architecture.md) - System design
-- [Testing Guide](docs/developer/testing.md) - Testing patterns
-
----
-
-## Quick Reference
-
-### Run All Checks
-```bash
-just qa  # Format, lint, test, golden
-```
-
-### Build Everything
-```bash
-cargo build --workspace
-cd apps/northroot && cargo build --release
-```
-
-### Test Everything
-```bash
-cargo test --all --all-features
-cargo test --workspace --doc
-cd apps/northroot && cargo test
-```
-
-### Format Code
-```bash
-cargo fmt --all
-```
-
-### Fix Lints
-```bash
-cargo clippy --all-targets --all-features --fix -- -D warnings
-```
-
----
-
-## Remember
-
-- **Neutrality is non-negotiable** - core does not decide or execute
-- **Determinism is required** - all operations must be replayable offline
-- **Documentation must match code** - update docs when APIs change
-- **Tests must pass** - pre-commit hook blocks failures
-- **Use actual APIs** - don't reference non-existent crates or types
-
-When in doubt, check the actual codebase before making assumptions.

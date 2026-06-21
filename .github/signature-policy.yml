@@ -4,9 +4,12 @@ version: 1
 # These paths affect security, proof validity, invariants, or supply chain
 tier_b_paths:
   - "schemas/**"
+  - "Cargo.toml"
+  - "kernel-boundary.json"
+  - "scripts/validate_kernel_boundary.py"
+  - "docs/developer/kernel-boundary.md"
   - "crates/northroot-canonical/**"
-  - "crates/northroot-core/src/verification.rs"
-  - "crates/northroot-journal/src/verification.rs"
+  - "crates/northroot-journal/**"
   - ".github/workflows/**"
   - ".github/signature-policy.yml" # Self-protection: this file defines the policy
   - "Cargo.lock"

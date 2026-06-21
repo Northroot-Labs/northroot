@@ -116,22 +116,29 @@ This verifies:
 Add your own verification logic:
 
 ```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum DomainVerdict {
+    Ok,
+    InvalidIdentity,
+    DomainViolation,
+}
+
 fn verify_your_domain_event(
     event: &YourEvent,
     canonicalizer: &Canonicalizer,
-) -> Result<VerificationVerdict, Error> {
-    // 1. Verify event_id (kernel)
+) -> Result<DomainVerdict, Error> {
+    // 1. Verify event_id with kernel primitives.
     let computed_id = compute_event_id(event, canonicalizer)?;
     if event.event_id != computed_id {
-        return Ok(VerificationVerdict::Invalid);
+        return Ok(DomainVerdict::InvalidIdentity);
     }
 
-    // 2. Domain-specific checks
+    // 2. Add profile/domain checks above the kernel.
     if !your_domain_validation(event) {
-        return Ok(VerificationVerdict::Violation);
+        return Ok(DomainVerdict::DomainViolation);
     }
 
-    Ok(VerificationVerdict::Ok)
+    Ok(DomainVerdict::Ok)
 }
 ```
 

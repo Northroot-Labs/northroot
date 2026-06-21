@@ -2,4 +2,4 @@ version = 1
 name = "northroot"
 
 [setup]
-script = "bash scripts/codex_setup.sh"
+script = "bash scripts/dev_setup.sh"

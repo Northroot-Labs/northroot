@@ -1,0 +1,96 @@
+{
+  "schema": "northroot.kernel_boundary.v0",
+  "stable_kernel": {
+    "description": "Only these crates are the stable Northroot trust kernel.",
+    "crates": [
+      {
+        "name": "northroot-canonical",
+        "path": "crates/northroot-canonical",
+        "allowed_northroot_dependencies": [],
+        "owns": [
+          "deterministic canonical JSON",
+          "strict parsing before key collapse",
+          "content digests and event IDs",
+          "kernel identifier primitives"
+        ]
+      },
+      {
+        "name": "northroot-journal",
+        "path": "crates/northroot-journal",
+        "allowed_northroot_dependencies": [
+          "northroot-canonical"
+        ],
+        "owns": [
+          ".nrj append-only journal format",
+          "journal reader and writer APIs",
+          "event identity verification over journal payloads"
+        ]
+      }
+    ],
+    "must_not_own": [
+      "domain semantics",
+      "product policy authority",
+      "workflow orchestration",
+      "agent runtimes",
+      "private deployments",
+      "SaaS adapters",
+      "client operations"
+    ]
+  },
+  "non_kernel_layers": {
+    "record_substrate": [
+      {
+        "name": "northroot-record",
+        "path": "crates/northroot-record"
+      },
+      {
+        "name": "northroot-node",
+        "path": "crates/northroot-node"
+      },
+      {
+        "name": "northroot-state-eval",
+        "path": "crates/northroot-state-eval"
+      }
+    ],
+    "capability_profiles": [
+      {
+        "name": "northroot-governance",
+        "path": "crates/northroot-governance"
+      },
+      {
+        "name": "northroot-execution",
+        "path": "crates/northroot-execution"
+      },
+      {
+        "name": "northroot-exchange",
+        "path": "crates/northroot-exchange"
+      },
+      {
+        "name": "northroot-ag",
+        "path": "crates/northroot-ag"
+      }
+    ],
+    "applications": [
+      {
+        "name": "northroot",
+        "path": "apps/northroot",
+        "workspace_member": false
+      }
+    ],
+    "packages": [
+      {
+        "name": "northroot-durability",
+        "path": "packages/northroot-durability",
+        "namespace": "northroot.durability"
+      }
+    ]
+  },
+  "protected_boundary_paths": [
+    "Cargo.toml",
+    "kernel-boundary.json",
+    "scripts/validate_kernel_boundary.py",
+    "docs/developer/kernel-boundary.md",
+    "crates/northroot-canonical/**",
+    "crates/northroot-journal/**"
+  ]
+}
