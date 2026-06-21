@@ -1,8 +1,8 @@
 [package]
-name = "northroot-clearlyops"
+name = "northroot-ag"
 version = "0.1.0"
 edition = "2021"
-description = "ClearlyOps ops-core record profile over Northroot contracts."
+description = "Sanitized agricultural profile example over Northroot records."
 license = "MIT"
 
 [dependencies]
@@ -14,5 +14,7 @@ thiserror = "1.0"
 northroot-exchange = { path = "../northroot-exchange" }
 northroot-execution = { path = "../northroot-execution" }
 northroot-governance = { path = "../northroot-governance" }
+northroot-journal = { path = "../northroot-journal" }
 northroot-node = { path = "../northroot-node" }
+northroot-record = { path = "../northroot-record" }
 tempfile = "3.8"

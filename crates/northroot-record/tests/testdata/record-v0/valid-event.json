@@ -1,6 +1,6 @@
 {
   "schema": "northroot.record.v0",
-  "id": "sha256:517ee79d82213c14837af9f650c2007beb5bc4171b4034f39ea4bbebfd853455",
+  "id": "sha256:3c31dc1de4b7804923a2635d6d6bb29f28e5a835697793247315961de19f1590",
   "profiles": ["northroot.exchange.v0"],
   "role": "event",
   "statement": {
@@ -9,12 +9,12 @@
     "object": "resource:handoff:seed-report"
   },
   "context": {
-    "node_id": "node:apd_croptrak_2026",
+    "node_id": "node:ag_demo_2026",
     "time": "2026-06-14T18:00:00Z",
-    "intent": "prepare_client_delivery",
+    "intent": "prepare_field_review",
     "scope": {
-      "workspace_id": "workspace:clientops-local",
-      "custody_class": "client_sensitive"
+      "workspace_id": "workspace:ag-demo",
+      "custody_class": "restricted"
     },
     "method": {
       "kind": "tool",

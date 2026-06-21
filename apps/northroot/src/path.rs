@@ -95,35 +95,9 @@ pub fn sanitize_path_for_error(path: &std::path::Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::CwdGuard;
     use std::fs;
-    use std::path::{Path, PathBuf};
-    use std::sync::{Mutex, MutexGuard};
     use tempfile::TempDir;
-
-    static CWD_LOCK: Mutex<()> = Mutex::new(());
-
-    struct DirGuard {
-        original: PathBuf,
-        _lock: MutexGuard<'static, ()>,
-    }
-
-    impl DirGuard {
-        fn enter(path: &Path) -> Self {
-            let lock = CWD_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
-            let original = std::env::current_dir().unwrap();
-            std::env::set_current_dir(path).unwrap();
-            Self {
-                original,
-                _lock: lock,
-            }
-        }
-    }
-
-    impl Drop for DirGuard {
-        fn drop(&mut self) {
-            let _ = std::env::set_current_dir(&self.original);
-        }
-    }
 
     #[test]
     fn test_absolute_path() {
@@ -142,7 +116,7 @@ mod tests {
         let journal_path = temp.path().join("test.nrj");
         fs::File::create(&journal_path).unwrap();
 
-        let _guard = DirGuard::enter(temp.path());
+        let _guard = CwdGuard::enter(temp.path());
 
         let result = validate_journal_path("test.nrj", false);
         assert!(result.is_ok());
@@ -155,7 +129,7 @@ mod tests {
         let journal_path = temp.path().join("test.nrj");
         fs::File::create(&journal_path).unwrap();
 
-        let _guard = DirGuard::enter(temp.path());
+        let _guard = CwdGuard::enter(temp.path());
 
         let result = validate_journal_path("../test.nrj", false);
         // This should either resolve to a different path or fail

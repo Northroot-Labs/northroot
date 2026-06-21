@@ -5,8 +5,10 @@ use clap::{Parser, Subcommand};
 mod commands;
 mod output;
 mod path;
+#[cfg(test)]
+mod test_support;
 
-use commands::{append, canonicalize, event_id, journal, read, verify, verify_bundle, work};
+use commands::{append, canonicalize, event_id, journal, read, record, verify, verify_bundle, work};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
@@ -93,6 +95,12 @@ enum Commands {
         #[command(subcommand)]
         command: journal::JournalCommand,
     },
+    /// Record stream import/export operations
+    #[command(hide = true)]
+    Record {
+        #[command(subcommand)]
+        command: record::RecordCommand,
+    },
 }
 
 fn main() {
@@ -123,6 +131,7 @@ fn main() {
         Commands::VerifyBundle { dir, json } => verify_bundle::run(dir, json),
         Commands::Work { command } => work::run(command),
         Commands::Journal { command } => journal::run(command),
+        Commands::Record { command } => record::run(command),
     };
 
     if let Err(e) = result {

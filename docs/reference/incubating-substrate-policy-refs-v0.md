@@ -6,7 +6,7 @@ Owner: Northroot substrate maintainers
 ## Purpose
 
 This note records the first narrow substrate extraction from NRX,
-`northroot-runtime`, `northroot-agent`, and ClearlyOps convergence work. It
+`northroot-runtime`, and `northroot-agent` convergence work. It
 adds portable refs, policy envelopes, and lifecycle records as platform
 contracts without turning Northroot into a scheduler, provider adapter, or
 private policy authority.
@@ -32,7 +32,7 @@ Northroot must not decide:
 - how a task is scheduled, retried, billed, or accepted.
 
 Private policy authority remains in `northroot-foundation`. Product execution
-and customer/domain semantics remain in downstream repos such as ClearlyOps.
+and customer/domain semantics remain in downstream repos.
 
 ## Contract Set
 
@@ -68,7 +68,7 @@ or routing decisions. In particular:
 
 - No queue, scheduler, worker runtime, hosted service, or provider SDK.
 - No private Northroot Labs policy authority.
-- No tenant, workspace, APD, CropTrak, customer, billing, or product
+- No tenant, workspace, customer, billing, or product
   projection semantics.
 - No live credential, provider account, or approval workflow implementation.
 

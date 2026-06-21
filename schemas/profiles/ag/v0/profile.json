@@ -1,0 +1,12 @@
+{
+  "schema": "northroot.profile.v0",
+  "profile_id": "northroot.ag.ops-core.v0",
+  "record_schema": "northroot.record.v0",
+  "predicates": [
+    "ag.seed_eval.completed",
+    "ag.field_review.prepared",
+    "ag.artifact.classified"
+  ],
+  "custody_classes": ["public", "internal", "restricted", "regulated"],
+  "domain_types": ["crop_plan", "seed_eval", "field_observation"]
+}

@@ -1,7 +1,7 @@
 {
   "schema": "northroot.record.v0",
   "id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
-  "profiles": ["ClearlyOps Seed Eval"],
+  "profiles": ["Ag Seed Eval"],
   "role": "command",
   "statement": {
     "subject": "entity:principal:codex",

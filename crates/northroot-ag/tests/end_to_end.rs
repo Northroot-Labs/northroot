@@ -1,14 +1,15 @@
-use northroot_clearlyops::{validate_clearlyops_record, AG_SEED_EVAL_COMPLETED};
+use northroot_ag::{validate_ag_record, AG_SEED_EVAL_COMPLETED};
 use northroot_exchange::{validate_exchange_record, HANDOFF_SUBMITTED};
 use northroot_execution::{MethodDescriptor, MethodRegistry};
 use northroot_governance::matching_policies;
+use northroot_journal::WriteOptions;
 use northroot_node::{
     NodeManifest, WorkspaceManifest, NODE_MANIFEST_SCHEMA_V0, WORKSPACE_MANIFEST_SCHEMA_V0,
 };
 use northroot_record::{
-    compute_record_id, seal_segment, validate_record, verify_segment_seal, Context,
-    JsonlSegmentReader, JsonlSegmentWriter, Method, MethodKind, Record, RecordRefs, RecordRole,
-    Scope, Statement,
+    compute_record_id, export_nrj_records_to_jsonl_segment, import_jsonl_segment_to_nrj_records,
+    validate_record, verify_jsonl_segment, verify_nrj_record_stream, Context, Method, MethodKind,
+    NrjRecordWriter, Record, RecordRefs, RecordRole, Scope, Statement,
 };
 use serde_json::json;
 
@@ -21,7 +22,7 @@ fn with_id(mut record: Record) -> Record {
 fn record_stack_supports_end_to_end_without_core_domain_semantics() {
     let node = NodeManifest {
         schema: NODE_MANIFEST_SCHEMA_V0.to_string(),
-        node_id: "node:apd_croptrak_2026".to_string(),
+        node_id: "node:ag_demo_2026".to_string(),
         resource_namespace: "resource:".to_string(),
         entity_namespace: "entity:".to_string(),
         journal_path: "journal/".to_string(),
@@ -32,29 +33,29 @@ fn record_stack_supports_end_to_end_without_core_domain_semantics() {
 
     let workspace = WorkspaceManifest {
         schema: WORKSPACE_MANIFEST_SCHEMA_V0.to_string(),
-        workspace_id: "workspace:clientops-local".to_string(),
+        workspace_id: "workspace:ag-demo".to_string(),
         node_id: node.node_id.clone(),
-        custody_classes: vec!["client_sensitive".to_string()],
-        journal_path: "journal/clientops-local".to_string(),
-        vault_path: "vault/clientops-local".to_string(),
-        state_path: "state/clientops-local".to_string(),
+        custody_classes: vec!["restricted".to_string()],
+        journal_path: "journal/ag-demo".to_string(),
+        vault_path: "vault/ag-demo".to_string(),
+        state_path: "state/ag-demo".to_string(),
     };
     workspace.validate().unwrap();
 
     let command = with_id(Record::new(
         RecordRole::Command,
         Statement {
-            subject: "entity:principal:codex".to_string(),
+            subject: "entity:principal:operator".to_string(),
             predicate: HANDOFF_SUBMITTED.to_string(),
-            object: "resource:handoff:seed-report".to_string(),
+            object: "resource:handoff:agronomy-report".to_string(),
         },
         Context {
             node_id: Some(node.node_id),
             time: Some("2026-06-14T18:00:00Z".to_string()),
-            intent: Some("prepare_client_delivery".to_string()),
+            intent: Some("prepare_field_review".to_string()),
             scope: Some(Scope {
                 workspace_id: workspace.workspace_id,
-                custody_class: "client_sensitive".to_string(),
+                custody_class: "restricted".to_string(),
             }),
             method: Some(Method {
                 kind: MethodKind::Tool,
@@ -63,7 +64,7 @@ fn record_stack_supports_end_to_end_without_core_domain_semantics() {
             ..Context::default()
         },
         RecordRefs {
-            inputs: vec!["resource:document:seed-report".to_string()],
+            inputs: vec!["resource:document:agronomy-report".to_string()],
             ..RecordRefs::default()
         },
         json!({}),
@@ -76,14 +77,14 @@ fn record_stack_supports_end_to_end_without_core_domain_semantics() {
         Statement {
             subject: "entity:governance:local".to_string(),
             predicate: "policy.applies".to_string(),
-            object: "resource:policy:client-export-review".to_string(),
+            object: "resource:policy:field-review".to_string(),
         },
         Context::default(),
         RecordRefs::default(),
         json!({
             "match": {
                 "predicate": HANDOFF_SUBMITTED,
-                "custody_class": "client_sensitive",
+                "custody_class": "restricted",
                 "method_kind": "tool"
             },
             "effect": "requires_review"
@@ -98,7 +99,7 @@ fn record_stack_supports_end_to_end_without_core_domain_semantics() {
         .register(MethodDescriptor {
             kind: MethodKind::Tool,
             ref_: "tool:classify-document".to_string(),
-            provider: "clientops-local".to_string(),
+            provider: "ag-demo-local".to_string(),
         })
         .unwrap();
     registry.validate_record_method(&command).unwrap();
@@ -106,47 +107,73 @@ fn record_stack_supports_end_to_end_without_core_domain_semantics() {
     let result = with_id(Record::new(
         RecordRole::Event,
         Statement {
-            subject: "entity:principal:codex".to_string(),
+            subject: "entity:principal:operator".to_string(),
             predicate: AG_SEED_EVAL_COMPLETED.to_string(),
-            object: "resource:seed_eval:apd-2026".to_string(),
+            object: "resource:seed_eval:trial-2026".to_string(),
         },
         Context {
-            node_id: Some("node:apd_croptrak_2026".to_string()),
+            node_id: Some("node:ag_demo_2026".to_string()),
             time: Some("2026-06-14T18:05:00Z".to_string()),
             scope: Some(Scope {
-                workspace_id: "workspace:clientops-local".to_string(),
-                custody_class: "client_sensitive".to_string(),
+                workspace_id: "workspace:ag-demo".to_string(),
+                custody_class: "restricted".to_string(),
             }),
             ..Context::default()
         },
         RecordRefs {
-            inputs: vec!["resource:document:seed-report".to_string()],
-            outputs: vec!["resource:seed_eval:apd-2026".to_string()],
+            inputs: vec!["resource:document:agronomy-report".to_string()],
+            outputs: vec!["resource:seed_eval:trial-2026".to_string()],
             causes: vec![format!("event:{}", command.id)],
             ..RecordRefs::default()
         },
         json!({"domain_type": "seed_eval"}),
     ));
     validate_record(&result).unwrap();
-    validate_clearlyops_record(&result).unwrap();
+    validate_ag_record(&result).unwrap();
 
     let dir = tempfile::tempdir().unwrap();
-    let segment_path = dir.path().join("records.jsonl");
-    let mut writer = JsonlSegmentWriter::create(&segment_path, 1).unwrap();
+    let nrj_path = dir.path().join("records.nrj");
+    let segment_path = dir.path().join("records-export.jsonl");
+    let mut writer = NrjRecordWriter::open(&nrj_path, WriteOptions::default()).unwrap();
     writer.append(command).unwrap();
     writer.append(policy).unwrap();
     writer.append(result).unwrap();
-    writer.flush().unwrap();
+    writer.finish().unwrap();
 
-    let seal = seal_segment(&segment_path).unwrap();
+    let nrj_summary = verify_nrj_record_stream(&nrj_path).unwrap();
+    assert_eq!(nrj_summary.record_count, 3);
+    assert_eq!(nrj_summary.first_seq, Some(1));
+    assert_eq!(nrj_summary.last_seq, Some(3));
+
+    let seal = export_nrj_records_to_jsonl_segment(&nrj_path, &segment_path).unwrap();
     assert_eq!(seal.first_seq, 1);
     assert_eq!(seal.last_seq, 3);
     assert_eq!(seal.record_count, 3);
-    verify_segment_seal(&segment_path).unwrap();
+    assert_eq!(
+        seal.source_journal_ref.as_deref(),
+        Some(nrj_path.to_str().unwrap())
+    );
 
-    let mut reader = JsonlSegmentReader::open(&segment_path).unwrap();
-    assert_eq!(reader.read_next().unwrap().unwrap().seq, 1);
-    assert_eq!(reader.read_next().unwrap().unwrap().seq, 2);
-    assert_eq!(reader.read_next().unwrap().unwrap().seq, 3);
-    assert!(reader.read_next().unwrap().is_none());
+    let jsonl_verification = verify_jsonl_segment(&segment_path, true).unwrap();
+    assert!(jsonl_verification.valid);
+    assert_eq!(jsonl_verification.source.valid, Some(true));
+
+    let imported_nrj_path = dir.path().join("records-imported.nrj");
+    let import_summary = import_jsonl_segment_to_nrj_records(
+        &segment_path,
+        &imported_nrj_path,
+        WriteOptions::default(),
+    )
+    .unwrap();
+    assert_eq!(import_summary.imported_record_count, 3);
+    assert_eq!(import_summary.input_first_seq, Some(1));
+    assert_eq!(import_summary.input_last_seq, Some(3));
+    assert_eq!(import_summary.output_first_seq, Some(1));
+    assert_eq!(import_summary.output_last_seq, Some(3));
+    assert_eq!(
+        verify_nrj_record_stream(&imported_nrj_path)
+            .unwrap()
+            .record_count,
+        3
+    );
 }
