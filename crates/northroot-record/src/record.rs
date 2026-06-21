@@ -23,6 +23,7 @@ pub enum RecordRole {
 
 /// Northroot Core V0 record.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Record {
     /// Schema identifier. Must be [`RECORD_SCHEMA_V0`].
     pub schema: String,
@@ -72,6 +73,7 @@ impl Record {
 
 /// Subject-predicate-object statement.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Statement {
     /// Entity or resource being described.
     pub subject: String,
@@ -83,6 +85,7 @@ pub struct Statement {
 
 /// Context carried by a record.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Context {
     /// Node identifier. Required for event and attestation records.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -109,6 +112,7 @@ pub struct Context {
 
 /// Workspace and custody scope convention.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Scope {
     /// Workspace identifier.
     pub workspace_id: String,
@@ -118,6 +122,7 @@ pub struct Scope {
 
 /// Execution method descriptor carried as record context.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Method {
     /// Method kind.
     pub kind: MethodKind,
@@ -144,6 +149,7 @@ pub enum MethodKind {
 
 /// Authority reference carried as context.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Authority {
     /// Grant reference.
     pub grant_ref: String,
@@ -151,6 +157,7 @@ pub struct Authority {
 
 /// Typed references associated with a record.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RecordRefs {
     /// Input resources.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

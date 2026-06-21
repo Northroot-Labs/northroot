@@ -16,6 +16,7 @@ const JSONL_SEGMENT_REPRESENTATION: &str = "canonical-jsonl-segment";
 
 /// One record stream entry.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SegmentEntry {
     /// Contiguous sequence number within the stream.
     pub seq: u64,
@@ -25,6 +26,7 @@ pub struct SegmentEntry {
 
 /// Seal metadata for an immutable JSONL interchange segment.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SegmentSeal {
     /// Seal schema identifier.
     pub schema: String,
@@ -319,14 +321,13 @@ pub fn export_nrj_records_to_jsonl_segment(
     let nrj_path = nrj_path.as_ref();
     let segment_path = segment_path.as_ref();
     let mut reader = NrjRecordReader::open(nrj_path, ReadMode::Strict)?;
-    let mut entries = Vec::new();
-    while let Some(entry) = reader.read_next()? {
-        entries.push(entry);
-    }
-
-    let first_seq = entries.first().map(|entry| entry.seq).unwrap_or(0);
+    let first_entry = reader.read_next()?;
+    let first_seq = first_entry.as_ref().map(|entry| entry.seq).unwrap_or(0);
     let mut writer = JsonlSegmentWriter::create(segment_path, first_seq)?;
-    for entry in entries {
+    if let Some(entry) = first_entry {
+        writer.append(entry.record)?;
+    }
+    while let Some(entry) = reader.read_next()? {
         writer.append(entry.record)?;
     }
     writer.flush()?;
@@ -1059,6 +1060,48 @@ mod tests {
         assert!(matches!(
             verify_segment_seal(&path),
             Err(JournalError::InvalidSegmentSeal(_))
+        ));
+    }
+
+    #[test]
+    fn jsonl_segment_reader_rejects_unknown_entry_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("records.jsonl");
+        let mut entry = json!({
+            "seq": 1,
+            "record": event_record(),
+        });
+        entry["unexpected"] = json!("ignored before strict serde");
+        fs::write(
+            &path,
+            format!("{}\n", serde_json::to_string(&entry).unwrap()),
+        )
+        .unwrap();
+
+        let mut reader = JsonlSegmentReader::open(&path).unwrap();
+        assert!(matches!(reader.read_next(), Err(JournalError::Json(_))));
+    }
+
+    #[test]
+    fn segment_seal_verification_rejects_unknown_seal_fields() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("records.jsonl");
+        let mut writer = JsonlSegmentWriter::create(&path, 1).unwrap();
+        writer.append(event_record()).unwrap();
+        writer.flush().unwrap();
+
+        let seal = seal_segment(&path).unwrap();
+        let mut seal_value = serde_json::to_value(&seal).unwrap();
+        seal_value["unexpected"] = json!("ignored before strict serde");
+        fs::write(
+            seal_path_for(&path),
+            serde_json::to_string_pretty(&seal_value).unwrap(),
+        )
+        .unwrap();
+
+        assert!(matches!(
+            verify_segment_seal(&path),
+            Err(JournalError::Json(_))
         ));
     }
 }

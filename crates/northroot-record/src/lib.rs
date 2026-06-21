@@ -27,9 +27,13 @@
 //!     Statement {
 //!         subject: "entity:node:local".to_string(),
 //!         predicate: "artifact.observed".to_string(),
-//!         object: "artifact:seed".to_string(),
+//!         object: "resource:artifact:seed".to_string(),
 //!     },
-//!     Context::default(),
+//!     Context {
+//!         node_id: Some("node:local".to_string()),
+//!         time: Some("2026-06-14T18:00:00Z".to_string()),
+//!         ..Context::default()
+//!     },
 //!     RecordRefs::default(),
 //!     json!({ "size": 42 }),
 //! );

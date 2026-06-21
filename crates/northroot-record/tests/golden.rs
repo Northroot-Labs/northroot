@@ -66,3 +66,28 @@ fn invalid_timestamp_fixture_rejects_impossible_calendar_date() {
         Err(ValidationError::InvalidTimestamp(value)) if value == "2026-02-30T18:00:00Z"
     ));
 }
+
+#[test]
+fn record_deserialization_rejects_unknown_fields() {
+    let fixture = include_str!("testdata/record-v0/valid-event.json");
+    let mut value: serde_json::Value = serde_json::from_str(fixture).unwrap();
+    value["unexpected"] = serde_json::json!("ignored before strict serde");
+
+    assert!(serde_json::from_value::<Record>(value).is_err());
+}
+
+#[test]
+fn nested_record_deserialization_rejects_unknown_fields() {
+    let fixture = include_str!("testdata/record-v0/valid-event.json");
+    let mut value: serde_json::Value = serde_json::from_str(fixture).unwrap();
+    value["statement"]["unexpected"] = serde_json::json!("ignored before strict serde");
+    assert!(serde_json::from_value::<Record>(value).is_err());
+
+    let mut value: serde_json::Value = serde_json::from_str(fixture).unwrap();
+    value["context"]["unexpected"] = serde_json::json!("ignored before strict serde");
+    assert!(serde_json::from_value::<Record>(value).is_err());
+
+    let mut value: serde_json::Value = serde_json::from_str(fixture).unwrap();
+    value["refs"]["unexpected"] = serde_json::json!("ignored before strict serde");
+    assert!(serde_json::from_value::<Record>(value).is_err());
+}
