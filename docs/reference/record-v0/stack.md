@@ -8,7 +8,7 @@ Northroot Core V0 is a tiny record contract:
 - `Refs`
 - `Payload`
 
-Core validates only boring guarantees: known schema and role, required statement fields, event/attestation context, typed refs, canonical JSON payloads, content-derived IDs, append-only JSONL record segments, contiguous sequence numbers, and immutable segment seals.
+Core validates only boring guarantees: known schema and role, required statement fields, event/attestation context, typed refs, canonical JSON payloads, content-derived IDs, `.nrj`-backed append streams, contiguous sequence numbers, and immutable JSONL export segment seals.
 
 Core does not evaluate policy, execute commands, interpret custody class meaning, or define application vocabularies.
 
@@ -52,24 +52,52 @@ Payload is opaque JSON owned by profiles/applications. Core requires it to be ca
 
 ## Layer Order
 
-1. `northroot-record`: record schema, canonical hash, validator, canonical JSONL segment journal, segment seals.
+1. `northroot-record`: record schema, canonical hash, validator, `.nrj` record stream wrapper, canonical JSONL segment export, segment seals.
 2. `northroot-node`: node/workspace manifests and storage namespace conventions.
 3. `northroot-governance`: policy records matched against command records.
 4. `northroot-execution`: execution method registry validation.
 5. `northroot-exchange`: constrained handoff/result record profile.
-6. `northroot-clearlyops`: ClearlyOps/ClientOps vocabulary over records.
+6. `northroot-ag`: sanitized agricultural profile example over records.
 
-## Journal Format
+## Log And Segment Formats
 
-Record segments are canonical JSON Lines files. Each line is:
+Authoritative record streams use `.nrj`. Each record is wrapped in a kernel
+event with `event_type = "northroot.record.appended"`, a contiguous `seq`, and
+the validated `record` payload. The `.nrj` layer owns frame parsing, strict JSON
+readback, event identity checks, truncation behavior, and append mechanics.
+
+JSONL segments are the portable representation over that stream. They exist for
+SDK fixtures, debugging, interchange, audit bundles, and boring line-oriented
+tooling. Each line is:
 
 ```json
 {"record":{ "...": "..." },"seq":1}
 ```
 
-Seals are adjacent JSON files named `<segment>.seal.json` with a SHA-256 digest over the exact segment bytes. A sealed segment is immutable: appending to the segment changes the digest and fails verification.
+Seals are adjacent JSON files named `<segment>.seal.json` with a SHA-256 digest
+over the exact segment bytes. Seal metadata is parsed with the same strict JSON
+hygiene as segment entries, so duplicate object keys are rejected before any seal
+field is trusted. When a segment is exported from `.nrj`, the seal also records
+the source journal reference and exact source journal digest. A sealed segment is
+immutable: appending to the segment changes the digest and fails verification.
 
-The record stack does not use the custom `.nrj` frame format.
+JSONL is not a shadow source of truth when an `.nrj` source exists. It is either
+a declared export from a source journal or a standalone interchange segment that
+must be sealed and verified before becoming authoritative Northroot state.
+
+The incubating CLI mirrors that boundary:
+
+```sh
+northroot record verify-nrj --journal records.nrj
+northroot record import-jsonl --input records.jsonl --journal records.nrj
+northroot record export-jsonl --journal records.nrj --out records-export.jsonl
+northroot record verify-jsonl --input records-export.jsonl --require-source
+```
+
+Those commands are intentionally operator-facing wrappers over the kernel stream:
+tooling can stay line-oriented while verification still flows through `.nrj`.
+Import verifies the adjacent `<segment>.seal.json` before any record is appended
+to the target stream.
 
 ## Extension Rule
 

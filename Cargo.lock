@@ -149,6 +149,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f52b00d39961fc5b2736ea853c9cc86238e165017a493d1d5c8eac6bdc4cc273"
 
 [[package]]
+name = "northroot-ag"
+version = "0.1.0"
+dependencies = [
+ "northroot-exchange",
+ "northroot-execution",
+ "northroot-governance",
+ "northroot-journal",
+ "northroot-node",
+ "northroot-record",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "northroot-canonical"
 version = "0.1.0"
 dependencies = [
@@ -159,20 +174,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "thiserror",
-]
-
-[[package]]
-name = "northroot-clearlyops"
-version = "0.1.0"
-dependencies = [
- "northroot-exchange",
- "northroot-execution",
- "northroot-governance",
- "northroot-node",
- "northroot-record",
- "serde_json",
- "tempfile",
  "thiserror",
 ]
 
@@ -229,6 +230,7 @@ name = "northroot-record"
 version = "0.1.0"
 dependencies = [
  "northroot-canonical",
+ "northroot-journal",
  "serde",
  "serde_json",
  "sha2",

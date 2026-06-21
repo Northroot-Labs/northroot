@@ -134,11 +134,11 @@ mod tests {
                 object: "resource:handoff:seed-report".to_string(),
             },
             Context {
-                node_id: Some("node:apd_croptrak_2026".to_string()),
+                node_id: Some("node:ag_demo_2026".to_string()),
                 time: Some("2026-06-14T18:00:00Z".to_string()),
                 scope: Some(Scope {
-                    workspace_id: "workspace:clientops-local".to_string(),
-                    custody_class: "client_sensitive".to_string(),
+                    workspace_id: "workspace:ag-demo".to_string(),
+                    custody_class: "restricted".to_string(),
                 }),
                 ..Context::default()
             },

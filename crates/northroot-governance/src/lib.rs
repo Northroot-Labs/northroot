@@ -180,8 +180,8 @@ mod tests {
             },
             context: Context {
                 scope: Some(Scope {
-                    workspace_id: "workspace:clientops-local".to_string(),
-                    custody_class: "client_sensitive".to_string(),
+                    workspace_id: "workspace:ag-demo".to_string(),
+                    custody_class: "restricted".to_string(),
                 }),
                 method: Some(Method {
                     kind: MethodKind::Tool,
@@ -207,7 +207,7 @@ mod tests {
             payload: json!({
                 "match": {
                     "predicate": "resource.classified",
-                    "custody_class": "client_sensitive",
+                    "custody_class": "restricted",
                     "method_kind": "tool"
                 },
                 "effect": "requires_review"

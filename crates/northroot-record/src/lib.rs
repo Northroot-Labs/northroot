@@ -4,6 +4,61 @@
 //! `Record`, `Statement`, `Context`, `Refs`, and `Payload`.
 //! It deliberately avoids domain policy, execution behavior, or application
 //! vocabulary. Profiles and applications constrain records in higher crates.
+//!
+//! ## Authoritative `.nrj`, boring JSONL interchange
+//!
+//! Applications should define ordinary record payloads. The SDK can persist
+//! those records to an authoritative `.nrj` stream and export sealed JSONL
+//! segments for line-oriented tools, review, fixtures, and interchange.
+//!
+//! ```no_run
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use northroot_journal::WriteOptions;
+//! use northroot_record::{
+//!     compute_record_id, export_nrj_records_to_jsonl_segment,
+//!     import_jsonl_segment_to_nrj_records, verify_jsonl_segment,
+//!     verify_nrj_record_stream, Context, NrjRecordWriter, Record, RecordRefs,
+//!     RecordRole, Statement,
+//! };
+//! use serde_json::json;
+//!
+//! let mut record = Record::new(
+//!     RecordRole::Event,
+//!     Statement {
+//!         subject: "entity:node:local".to_string(),
+//!         predicate: "artifact.observed".to_string(),
+//!         object: "artifact:seed".to_string(),
+//!     },
+//!     Context::default(),
+//!     RecordRefs::default(),
+//!     json!({ "size": 42 }),
+//! );
+//! record.id = compute_record_id(&record)?;
+//!
+//! let nrj_path = std::env::temp_dir().join("northroot-records.nrj");
+//! let jsonl_path = std::env::temp_dir().join("northroot-records.jsonl");
+//! let imported_path = std::env::temp_dir().join("northroot-records-imported.nrj");
+//!
+//! let mut writer = NrjRecordWriter::open(&nrj_path, WriteOptions::default())?;
+//! writer.append(record)?;
+//! writer.finish()?;
+//!
+//! let summary = verify_nrj_record_stream(&nrj_path)?;
+//! assert_eq!(summary.record_count, 1);
+//!
+//! export_nrj_records_to_jsonl_segment(&nrj_path, &jsonl_path)?;
+//! let verification = verify_jsonl_segment(&jsonl_path, true)?;
+//! assert!(verification.valid);
+//!
+//! let import_summary = import_jsonl_segment_to_nrj_records(
+//!     &jsonl_path,
+//!     &imported_path,
+//!     WriteOptions::default(),
+//! )?;
+//! assert_eq!(import_summary.imported_record_count, 1);
+//! # Ok(())
+//! # }
+//! ```
 
 #![deny(missing_docs)]
 
@@ -17,8 +72,11 @@ pub use id::{
     RecordIdError,
 };
 pub use journal::{
-    seal_segment, verify_segment_seal, JournalError, JsonlSegmentReader, JsonlSegmentWriter,
-    SegmentEntry, SegmentSeal,
+    export_nrj_records_to_jsonl_segment, import_jsonl_segment_to_nrj_records, seal_segment,
+    verify_jsonl_segment, verify_nrj_record_stream, verify_segment_seal, JournalError,
+    JsonlImportSummary, JsonlSegmentReader, JsonlSegmentVerification, JsonlSegmentWriter,
+    NrjRecordReader, NrjRecordWriter, RecordStreamSummary, SegmentEntry, SegmentSeal,
+    SourceJournalReport,
 };
 pub use record::{
     Authority, Context, Method, MethodKind, Record, RecordRefs, RecordRole, Scope, Statement,

@@ -126,6 +126,7 @@ pub fn run(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::CwdGuard;
     use northroot_journal::JournalReader;
     use serde_json::json;
     use std::fs;
@@ -133,22 +134,8 @@ mod tests {
 
     #[test]
     fn test_append_event_to_new_journal() {
-        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
-        std::env::set_current_dir(temp.path()).unwrap();
-
-        // Restore directory at end
-        struct DirGuard {
-            original: std::path::PathBuf,
-        }
-        impl Drop for DirGuard {
-            fn drop(&mut self) {
-                let _ = std::env::set_current_dir(&self.original);
-            }
-        }
-        let _guard = DirGuard {
-            original: original_dir,
-        };
+        let _guard = CwdGuard::enter(temp.path());
 
         let journal_path = temp.path().join("test.nrj");
         let journal_str = journal_path.to_str().unwrap(); // Use absolute path
@@ -183,22 +170,8 @@ mod tests {
 
     #[test]
     fn test_append_multiple_events() {
-        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
-        std::env::set_current_dir(temp.path()).unwrap();
-
-        // Restore directory at end
-        struct DirGuard {
-            original: std::path::PathBuf,
-        }
-        impl Drop for DirGuard {
-            fn drop(&mut self) {
-                let _ = std::env::set_current_dir(&self.original);
-            }
-        }
-        let _guard = DirGuard {
-            original: original_dir,
-        };
+        let _guard = CwdGuard::enter(temp.path());
 
         let journal_path = temp.path().join("test.nrj");
         let journal_str = journal_path.to_str().unwrap(); // Use absolute path
@@ -253,22 +226,8 @@ mod tests {
 
     #[test]
     fn test_append_invalid_json() {
-        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
-        std::env::set_current_dir(temp.path()).unwrap();
-
-        // Restore directory at end
-        struct DirGuard {
-            original: std::path::PathBuf,
-        }
-        impl Drop for DirGuard {
-            fn drop(&mut self) {
-                let _ = std::env::set_current_dir(&self.original);
-            }
-        }
-        let _guard = DirGuard {
-            original: original_dir,
-        };
+        let _guard = CwdGuard::enter(temp.path());
 
         let journal_path = temp.path().join("test.nrj");
         let journal_str = journal_path.to_str().unwrap(); // Use absolute path
@@ -288,22 +247,8 @@ mod tests {
 
     #[test]
     fn test_append_strict_mode_with_mismatched_event_id() {
-        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
-        std::env::set_current_dir(temp.path()).unwrap();
-
-        // Restore directory at end
-        struct DirGuard {
-            original: std::path::PathBuf,
-        }
-        impl Drop for DirGuard {
-            fn drop(&mut self) {
-                let _ = std::env::set_current_dir(&self.original);
-            }
-        }
-        let _guard = DirGuard {
-            original: original_dir,
-        };
+        let _guard = CwdGuard::enter(temp.path());
 
         let journal_path = temp.path().join("test.nrj");
         let journal_str = journal_path.to_str().unwrap(); // Use absolute path
@@ -336,21 +281,8 @@ mod tests {
 
     #[test]
     fn test_append_strict_rejects_duplicate_key_input() {
-        let original_dir = std::env::current_dir().unwrap();
         let temp = TempDir::new().unwrap();
-        std::env::set_current_dir(temp.path()).unwrap();
-
-        struct DirGuard {
-            original: std::path::PathBuf,
-        }
-        impl Drop for DirGuard {
-            fn drop(&mut self) {
-                let _ = std::env::set_current_dir(&self.original);
-            }
-        }
-        let _guard = DirGuard {
-            original: original_dir,
-        };
+        let _guard = CwdGuard::enter(temp.path());
 
         let journal_path = temp.path().join("test.nrj");
         let duplicate_file = temp.path().join("duplicate.json");

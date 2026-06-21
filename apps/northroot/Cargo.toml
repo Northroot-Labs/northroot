@@ -21,6 +21,7 @@ sha2 = "0.10"
 thiserror = "1.0"
 northroot-canonical = { path = "../../crates/northroot-canonical" }
 northroot-journal = { path = "../../crates/northroot-journal" }
+northroot-record = { path = "../../crates/northroot-record" }
 
 [dev-dependencies]
 tempfile = "3.8"

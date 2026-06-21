@@ -14,6 +14,7 @@ The kernel provides:
 - **Canonicalization**: Deterministic JSON canonicalization (RFC 8785 + Northroot rules)
 - **Event Identity**: Content-derived event identifiers
 - **Journal Format**: Portable, append-only event container
+- **Record Streams**: Neutral record contracts over `.nrj` with JSONL export for interchange
 - **Structural Journal Metadata**: rebuildable segment manifests and checkpoints
 
 ---
@@ -24,6 +25,7 @@ The kernel provides:
 |-------|----------------|---------------|
 | `northroot-canonical` | Canonicalization, digests, quantities, identifiers, event ID computation | [API Docs](https://docs.rs/northroot-canonical) |
 | `northroot-journal` | Append-only journal format (.nrj) | [API Docs](https://docs.rs/northroot-journal) |
+| `northroot-record` | Record schema, content IDs, validators, `.nrj` record stream wrappers, JSONL segment export | Rustdoc |
 
 ---
 
@@ -59,6 +61,30 @@ See the [rustdoc API reference](https://docs.rs/northroot-canonical) for complet
 - `JournalError` - Error types for journal operations
 
 See the [rustdoc API reference](https://docs.rs/northroot-journal) for complete type definitions and method signatures.
+
+### 3.3 Record Streams (`northroot-record`)
+
+**Key Types:**
+- `Record` - Neutral subject-predicate-object record shape
+- `compute_record_id` - Computes the record content identifier
+- `validate_record` - Validates core record grammar and content identity
+- `NrjRecordWriter` - Appends validated records to an authoritative `.nrj` stream
+- `NrjRecordReader` - Reads and verifies record wrapper events from `.nrj`
+- `verify_nrj_record_stream` - Verifies an authoritative `.nrj` record stream and returns record count/sequence summary
+- `import_jsonl_segment_to_nrj_records` - Verifies a sealed JSONL segment before appending its records into `.nrj`
+- `export_nrj_records_to_jsonl_segment` - Exports a verified `.nrj` stream to a sealed JSONL segment
+- `verify_jsonl_segment` - Verifies a sealed JSONL segment and reports optional source `.nrj` binding status
+- `verify_segment_seal` - Strict-parses the seal, rejects duplicate seal keys, and verifies JSONL segment digest, sequence metadata, and supported seal representation before interchange use
+
+JSONL segments are SDK/interchange artifacts. They are not a separate kernel log
+when an `.nrj` source exists. Imports verify the adjacent segment seal before
+appending records into an authoritative `.nrj` stream. Segment entries and seal
+metadata both use strict JSON hygiene: duplicate object keys are rejected before
+metadata is trusted. Import reports retain the input JSONL sequence range and
+the authoritative `.nrj` output sequence range, because importing into an
+existing stream may renumber records.
+The hidden record CLI also exposes `record verify-nrj` for strict record-stream
+verification above the generic journal verifier.
 
 ---
 

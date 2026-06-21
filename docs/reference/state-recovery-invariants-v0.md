@@ -40,7 +40,7 @@ compose over the substrate through explicit contracts.
 `northroot-agent` owns control-plane orchestration, queueing, dispatch, leases,
 worker contracts, and capability brokering.
 
-ClearlyOps owns product workflows, tenant/customer evidence, operator UX, and
+Downstream applications own product workflows, tenant/customer evidence, operator UX, and
 typed application surfaces.
 
 `northroot-foundation` owns doctrine and placement policy that can reference

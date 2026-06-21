@@ -10,5 +10,5 @@
     "result.retrieved"
   ],
   "requires_context": ["node_id", "time", "scope"],
-  "storage": "canonical-jsonl-segment"
+  "storage": "nrj-with-jsonl-export"
 }

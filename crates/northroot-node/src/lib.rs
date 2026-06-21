@@ -180,7 +180,7 @@ mod tests {
     fn validates_boring_node_and_workspace_layout() {
         let node = NodeManifest {
             schema: NODE_MANIFEST_SCHEMA_V0.to_string(),
-            node_id: "node:apd_croptrak_2026".to_string(),
+            node_id: "node:ag_demo_2026".to_string(),
             resource_namespace: "resource:".to_string(),
             entity_namespace: "entity:".to_string(),
             journal_path: "journal/".to_string(),
@@ -191,12 +191,12 @@ mod tests {
 
         let workspace = WorkspaceManifest {
             schema: WORKSPACE_MANIFEST_SCHEMA_V0.to_string(),
-            workspace_id: "workspace:clientops-local".to_string(),
+            workspace_id: "workspace:ag-demo".to_string(),
             node_id: node.node_id,
-            custody_classes: vec!["client_sensitive".to_string()],
-            journal_path: "journal/clientops-local".to_string(),
-            vault_path: "vault/clientops-local".to_string(),
-            state_path: "state/clientops-local".to_string(),
+            custody_classes: vec!["restricted".to_string()],
+            journal_path: "journal/ag-demo".to_string(),
+            vault_path: "vault/ag-demo".to_string(),
+            state_path: "state/ag-demo".to_string(),
         };
         workspace.validate().unwrap();
     }

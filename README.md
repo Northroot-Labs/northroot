@@ -9,7 +9,9 @@ Northroot is open governance and accountability infrastructure for verifiable
 state transitions.
 
 Its trust kernel provides canonical identity, append-only evidence journals,
-replay, and offline verification.
+replay, and offline verification. Higher-level SDKs can expose boring JSON and
+JSONL workflows while the kernel stores and verifies the authoritative stream in
+`.nrj`.
 
 Higher layers provide projection, evaluation, authority, attestations,
 business receipts, and economic/accountability profiles without polluting the
@@ -27,6 +29,7 @@ journal reference crates solid before moving on to state/eval core.
 - Content-derived event identity
 - Portable journal format (.nrj)
 - Offline verification
+- JSONL-friendly export/import surfaces over verified journal streams
 
 **What the kernel does NOT do:**
 - Make decisions or optimize outcomes
@@ -136,6 +139,7 @@ The kernel provides:
 - **Canonicalization**: RFC 8785 + Northroot hygiene rules
 - **Event Identity**: `sha256(domain_separator || canonical_json(event))`
 - **Journal Format**: Portable, append-only container (.nrj)
+- **JSONL Interchange**: Line-oriented exports and fixtures over verified streams
 
 Everything else (projection, evaluation, authority, attestations, business
 receipts, financial and accountability profiles, typed schemas, domain

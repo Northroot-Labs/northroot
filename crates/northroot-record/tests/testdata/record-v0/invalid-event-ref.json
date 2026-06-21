@@ -8,7 +8,7 @@
     "object": "resource:handoff:seed-report"
   },
   "context": {
-    "node_id": "node:apd_croptrak_2026",
+    "node_id": "node:ag_demo_2026",
     "time": "2026-06-14T18:00:00Z"
   },
   "refs": {
