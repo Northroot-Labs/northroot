@@ -1,0 +1,18 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "northroot-durability"
+version = "0.1.0"
+description = "Northroot durability policy, manifest, and public/private boundary helpers."
+requires-python = ">=3.11"
+readme = "README.md"
+license = { text = "MIT" }
+
+[project.scripts]
+northroot-durability = "northroot.durability.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+namespaces = true
