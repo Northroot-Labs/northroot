@@ -1,5 +1,6 @@
 //! Record stream import/export command implementation.
 
+use crate::path;
 use clap::Subcommand;
 use northroot_journal::WriteOptions;
 use northroot_record::{
@@ -23,7 +24,7 @@ pub enum RecordCommand {
         /// Sync file to disk after each append
         #[arg(long)]
         sync: bool,
-        /// Output import report as JSON
+        /// Pretty-print the JSON import report
         #[arg(long)]
         json: bool,
     },
@@ -35,7 +36,7 @@ pub enum RecordCommand {
         /// Output canonical JSONL segment path
         #[arg(long)]
         out: String,
-        /// Output export report as JSON
+        /// Pretty-print the JSON export report
         #[arg(long)]
         json: bool,
     },
@@ -44,7 +45,7 @@ pub enum RecordCommand {
         /// Source .nrj record stream
         #[arg(long)]
         journal: String,
-        /// Output verification report as JSON
+        /// Pretty-print the JSON verification report
         #[arg(long)]
         json: bool,
     },
@@ -56,7 +57,7 @@ pub enum RecordCommand {
         /// Fail if the seal names a source .nrj journal that is unavailable or mismatched
         #[arg(long)]
         require_source: bool,
-        /// Output verification report as JSON
+        /// Pretty-print the JSON verification report
         #[arg(long)]
         json: bool,
     },
@@ -70,16 +71,41 @@ pub fn run(command: RecordCommand) -> Result<(), Box<dyn std::error::Error>> {
             journal,
             sync,
             json,
-        } => import_jsonl(&PathBuf::from(input), &PathBuf::from(journal), sync, json),
+        } => import_jsonl(
+            &validated_existing_path(&input)?,
+            &validated_output_path(&journal)?,
+            sync,
+            json,
+        ),
         RecordCommand::ExportJsonl { journal, out, json } => {
-            export_jsonl(&PathBuf::from(journal), &PathBuf::from(out), json)
+            export_jsonl(
+                &validated_existing_path(&journal)?,
+                &validated_output_path(&out)?,
+                json,
+            )
         }
-        RecordCommand::VerifyNrj { journal, json } => verify_nrj(&PathBuf::from(journal), json),
+        RecordCommand::VerifyNrj { journal, json } => {
+            verify_nrj(&validated_existing_path(&journal)?, json)
+        }
         RecordCommand::VerifyJsonl {
             input,
             require_source,
             json,
-        } => verify_jsonl(&PathBuf::from(input), require_source, json),
+        } => verify_jsonl(&validated_existing_path(&input)?, require_source, json),
+    }
+}
+
+fn validated_existing_path(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    path::validate_journal_path(path, false)
+        .map_err(|err| format!("Invalid record path: {err}").into())
+}
+
+fn validated_output_path(path: &str) -> Result<PathBuf, Box<dyn std::error::Error>> {
+    if Path::new(path).exists() {
+        validated_existing_path(path)
+    } else {
+        path::validate_journal_path_for_create(path)
+            .map_err(|err| format!("Invalid record output path: {err}").into())
     }
 }
 

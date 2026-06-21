@@ -73,6 +73,40 @@ pub fn validate_journal_path(path: &str, reject_symlinks: bool) -> Result<PathBu
     Ok(resolved)
 }
 
+/// Validates and normalizes a journal path that may not exist yet.
+///
+/// The parent directory must exist and is canonicalized before the final path
+/// is reconstructed. This matches create-style CLI behavior while avoiding raw
+/// traversal-sensitive paths being passed into journal writers.
+pub fn validate_journal_path_for_create(path: &str) -> Result<PathBuf, PathError> {
+    let path = Path::new(path);
+    let filename = path
+        .file_name()
+        .filter(|name| *name != "." && *name != "..")
+        .ok_or_else(|| PathError::CannotResolve(format!("no filename: {}", path.display())))?;
+    let parent = path.parent().unwrap_or(Path::new(""));
+    let parent = if parent.as_os_str().is_empty() {
+        Path::new(".")
+    } else {
+        parent
+    };
+    let parent_canonical = if parent.is_absolute() {
+        parent
+            .canonicalize()
+            .map_err(|err| PathError::CannotResolve(format!("{}: {}", path.display(), err)))?
+    } else {
+        std::env::current_dir()?
+            .join(parent)
+            .canonicalize()
+            .map_err(|err| PathError::CannotResolve(format!("{}: {}", path.display(), err)))?
+    };
+    let resolved = parent_canonical.join(filename);
+    if resolved.to_string_lossy().contains("..") {
+        return Err(PathError::Traversal(resolved.display().to_string()));
+    }
+    Ok(resolved)
+}
+
 /// Sanitizes a path for display in error messages.
 ///
 /// Replaces absolute paths outside the current working directory with a generic message
