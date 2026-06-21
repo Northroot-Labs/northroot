@@ -124,6 +124,8 @@ northroot/
 │   ├── northroot-canonical/  # Canonicalization + event_id
 │   ├── northroot-journal/    # .nrj container format
 │   └── northroot-state-eval/ # Incubating state/eval primitives
+├── packages/
+│   └── northroot-durability/ # Promoted Python package: northroot.durability
 ├── apps/
 │   └── northroot/            # CLI application
 ├── fixtures/                  # Golden test vectors
@@ -132,6 +134,14 @@ northroot/
 ├── docs/                      # Documentation
 └── GOVERNANCE.md              # Project constitution
 ```
+
+## Promoted Packages
+
+Promoted packages live under `packages/` when they are importable Northroot capabilities but not kernel crates. They may be incubating, but they belong here once other projects should import them through the `northroot.*` namespace. Lab custody, local machine state, and promotion evidence stay in the Northroot-Labs refinery.
+
+Current package:
+
+- `northroot-durability`: Python distribution exposing `northroot.durability` for public-safe durability policy, naming, manifests, and public/private commit checks.
 
 ## Trust Kernel
 

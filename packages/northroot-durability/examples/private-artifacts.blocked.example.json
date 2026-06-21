@@ -1,0 +1,8 @@
+[
+  {
+    "path": ".northroot/state/machine-durability/20260101T000000Z/run-result.json",
+    "artifact_kind": "offload",
+    "contains_real_paths": true,
+    "contains_backup_receipts": true
+  }
+]

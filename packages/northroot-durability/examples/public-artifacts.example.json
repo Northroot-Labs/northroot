@@ -1,0 +1,15 @@
+[
+  {
+    "path": "packages/northroot-durability/src/northroot/durability/policy.py",
+    "artifact_kind": "source"
+  },
+  {
+    "path": "packages/northroot-durability/README.md",
+    "artifact_kind": "docs"
+  },
+  {
+    "path": "examples/machine-custody.redacted.json",
+    "artifact_kind": "redacted-example",
+    "is_redacted_example": true
+  }
+]
