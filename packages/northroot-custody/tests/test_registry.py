@@ -408,6 +408,37 @@ class RegistryTests(unittest.TestCase):
             self.assertFalse(authorization["allowed"])
             self.assertEqual(authorization["decision"], "invalid-registry")
 
+    def test_registry_status_and_authorization_fail_closed_for_unreadable_registry(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            registry.initialize_registry(
+                state_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            (state_dir / "service-registry.json").write_text("{not-json\n", encoding="utf-8")
+
+            status = registry.registry_status(state_dir, public_safe=True)
+
+            self.assertFalse(status["ready"])
+            self.assertFalse(status["protected_state_ok"])
+            self.assertEqual(status["error_count"], 1)
+            self.assertEqual(status["findings"][0]["code"], "unreadable_service_registry")
+            self.assertFalse(status["integrity"]["ready"])
+            self.assertIn(
+                "unreadable_service_registry",
+                {check["code"] for check in status["integrity"]["checks"] if check["code"]},
+            )
+            authorization = registry.authorize_operation(
+                state_dir,
+                operation="run",
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertFalse(authorization["allowed"])
+            self.assertEqual(authorization["decision"], "invalid-registry")
+            self.assertEqual(authorization["findings"][0]["code"], "unreadable_service_registry")
+
     def test_public_safe_mutation_rejects_raw_private_paths_without_corrupting_registry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"

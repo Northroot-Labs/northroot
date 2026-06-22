@@ -500,10 +500,42 @@ def registry_status(state_dir: Path, *, public_safe: bool = False) -> dict[str, 
                 }
             ],
         }
-    registry = load_registry(state_dir)
+    integrity = registry_integrity_report(state_dir, public_safe=public_safe)
+    try:
+        registry = load_registry(state_dir)
+    except Exception as exc:  # noqa: BLE001 - status must fail closed as data, not as an exception
+        finding = {
+            "severity": "error",
+            "code": "unreadable_service_registry",
+            "path": str(path),
+            "detail": str(exc),
+        }
+        return {
+            "schema_version": "northroot.steward.registry-status.v0",
+            "configured": True,
+            "ready": False,
+            "registry_path": str(path),
+            "registry_sha256": _file_sha256(path),
+            "expected_registry_sha256": integrity["expected_registry_sha256"],
+            "protected_state_ok": False,
+            "integrity": integrity,
+            "lock": lock,
+            "resume_required": lock is not None,
+            "finding_count": 1,
+            "error_count": 1,
+            "service_id": None,
+            "node_id": None,
+            "project_count": 0,
+            "object_count": 0,
+            "permission_count": 0,
+            "destination_count": 0,
+            "source_destination_count": 0,
+            "replica_count": 0,
+            "legacy_import_count": 0,
+            "findings": [finding],
+        }
     findings = model.validate_service_registry(registry, public_safe=public_safe)
     error_count = len([finding for finding in findings if finding.severity == "error"])
-    integrity = registry_integrity_report(state_dir, public_safe=public_safe)
     return {
         "schema_version": "northroot.steward.registry-status.v0",
         "configured": True,
