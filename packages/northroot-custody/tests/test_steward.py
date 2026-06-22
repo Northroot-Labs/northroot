@@ -229,6 +229,7 @@ class StewardTests(unittest.TestCase):
             self.assertIn("--force", operations["schedule.delete"]["force_command"])
             self.assertIn("direct restic/resticprofile", capabilities["prohibited_operations"][0])
             self.assertTrue(capabilities["schedule_lifecycle"]["scheduled_runner_command_checked_by_preflight"])
+            self.assertTrue(capabilities["schedule_lifecycle"]["schedule_manifest_integrity_checked_by_preflight"])
             self.assertTrue(capabilities["schedule_lifecycle"]["generated_schedule_integrity_checked_by_preflight"])
             self.assertTrue(capabilities["schedule_lifecycle"]["uninstall_required_before_delete_when_installed"])
             self.assertTrue(capabilities["schedule_lifecycle"]["delete_force_is_operator_cleanup_only"])
@@ -864,6 +865,7 @@ class StewardTests(unittest.TestCase):
             schedule_status = steward.schedule_status(output_dir)
             self.assertTrue(schedule_status["configured"])
             self.assertEqual(schedule_status["runner_command"], "nr steward")
+            self.assertTrue(schedule_status["schedule_integrity"]["ok"])
             install_plan = steward.install_schedule(output_dir)
             self.assertFalse(install_plan["executed"])
             self.assertTrue(install_plan["preflight_required"])
@@ -909,10 +911,17 @@ class StewardTests(unittest.TestCase):
             installed_schedule = model.load_json(schedule_file)
             installed_schedule["installed"] = True
             schedule_file.write_text(json.dumps(installed_schedule, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            with mock.patch.dict(os.environ, {"PATH": str(fake_bin), "OP_SERVICE_ACCOUNT_TOKEN": "dummy"}, clear=True):
+                tampered_schedule_preflight = steward.render_preflight(output_dir)
+            self.assertFalse(tampered_schedule_preflight["ready"])
+            self.assertIn("schedule_manifest_integrity_failed", {
+                check["code"] for check in tampered_schedule_preflight["checks"] if check["code"]
+            })
             blocked_delete = steward.delete_schedule(output_dir)
             self.assertFalse(blocked_delete["deleted"])
             self.assertTrue(blocked_delete["installed"])
-            self.assertIn("schedule uninstall --execute", blocked_delete["error"])
+            self.assertEqual(blocked_delete["schedule_integrity"]["status"], "digest-mismatch")
+            self.assertIn("schedule manifest integrity failed", blocked_delete["error"])
             self.assertTrue(Path(str(schedule["schedule_path"])).exists())
             forced_delete = steward.delete_schedule(output_dir, force=True)
             self.assertTrue(forced_delete["deleted"])

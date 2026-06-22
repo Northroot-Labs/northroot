@@ -28,6 +28,9 @@ RESTORE_DRILL_DIR = "restore-drills"
 OPERATION_LOCK_FILENAME = "steward-operation.lock.json"
 RUN_SUMMARY_INDEX_FILENAME = "index.json"
 RUN_SUMMARY_INDEX_SCHEMA = "northroot.steward.run-summary-index.v0"
+SCHEDULE_MANIFEST_FILENAME = "schedule.json"
+SCHEDULE_INDEX_FILENAME = "schedule-index.json"
+SCHEDULE_INDEX_SCHEMA = "northroot.steward.schedule-index.v0"
 SCHEDULE_OPERATIONS = {"run", "verify", "restore-drill"}
 OPERATIONS = {"run", "verify", "restore", "restore-drill"}
 RECOVERABLE_OPERATION_SUMMARY_OPERATIONS = OPERATIONS | {"legacy-run-import"}
@@ -184,6 +187,146 @@ def _artifact(path: Path) -> dict[str, str]:
     return {
         "path": str(path),
         "sha256": _file_sha256(path),
+    }
+
+
+def _schedule_manifest_path(output_dir: Path) -> Path:
+    return output_dir / "schedules" / SCHEDULE_MANIFEST_FILENAME
+
+
+def _schedule_index_path(output_dir: Path) -> Path:
+    return output_dir / "schedules" / SCHEDULE_INDEX_FILENAME
+
+
+def _write_schedule_manifest(output_dir: Path, schedule: dict[str, Any]) -> Path:
+    manifest_path = _schedule_manifest_path(output_dir)
+    sha256 = _atomic_write_json(manifest_path, schedule)
+    index = {
+        "schema_version": SCHEDULE_INDEX_SCHEMA,
+        "updated_at": _utc_stamp(),
+        "manifest": {
+            "path": SCHEDULE_MANIFEST_FILENAME,
+            "sha256": sha256,
+            "profile_name": schedule.get("profile_name"),
+            "scheduler": schedule.get("scheduler"),
+            "operation": schedule.get("operation"),
+            "every_minutes": schedule.get("every_minutes"),
+        },
+    }
+    _atomic_write_json(_schedule_index_path(output_dir), index)
+    return manifest_path
+
+
+def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
+    manifest_path = _schedule_manifest_path(output_dir)
+    index_path = _schedule_index_path(output_dir)
+    if not manifest_path.exists() and not index_path.exists():
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": True,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "not-configured",
+            "detail": "no schedule is configured",
+        }
+    if manifest_path.exists() and not index_path.exists():
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "unindexed",
+            "detail": "schedule manifest is not present in the steward digest index",
+        }
+    if index_path.exists() and not manifest_path.exists():
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "missing-manifest",
+            "detail": "indexed schedule manifest is missing",
+        }
+    try:
+        index = model.load_json(index_path)
+    except (OSError, ValueError, json.JSONDecodeError) as err:
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-index",
+            "detail": str(err),
+        }
+    if index.get("schema_version") != SCHEDULE_INDEX_SCHEMA:
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-index",
+            "detail": f"schedule index schema_version must be {SCHEDULE_INDEX_SCHEMA}",
+        }
+    manifest = index.get("manifest")
+    if not isinstance(manifest, dict) or manifest.get("path") != SCHEDULE_MANIFEST_FILENAME:
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-index",
+            "detail": "schedule index manifest entry must reference schedule.json",
+        }
+    expected_sha = manifest.get("sha256")
+    if not isinstance(expected_sha, str) or not expected_sha:
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-index",
+            "detail": "schedule index manifest entry is missing sha256",
+        }
+    actual_sha = _file_sha256(manifest_path)
+    if actual_sha != expected_sha:
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "digest-mismatch",
+            "detail": "schedule manifest digest does not match the steward digest index",
+            "expected_sha256": expected_sha,
+            "actual_sha256": actual_sha,
+        }
+    try:
+        schedule = model.load_json(manifest_path)
+    except (OSError, ValueError, json.JSONDecodeError) as err:
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-manifest",
+            "detail": str(err),
+        }
+    if schedule.get("schema_version") != "northroot.steward.schedule.v0":
+        return {
+            "schema_version": "northroot.steward.schedule-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-manifest",
+            "detail": "schedule manifest schema_version must be northroot.steward.schedule.v0",
+        }
+    return {
+        "schema_version": "northroot.steward.schedule-integrity.v0",
+        "ok": True,
+        "manifest_path": str(manifest_path),
+        "index_path": str(index_path),
+        "status": "ok",
+        "detail": "schedule manifest matches the steward digest index",
+        "sha256": actual_sha,
     }
 
 
@@ -727,6 +870,25 @@ def render_preflight(output_dir: Path) -> dict[str, Any]:
 
     schedule = schedule_status(output_dir)
     if schedule.get("configured"):
+        schedule_integrity = schedule.get("schedule_integrity")
+        schedule_integrity_ok = isinstance(schedule_integrity, dict) and bool(schedule_integrity.get("ok"))
+        checks.append(
+            _check(
+                "schedule_manifest_integrity",
+                schedule_integrity_ok,
+                "schedule manifest matches schedule digest index"
+                if schedule_integrity_ok
+                else "schedule manifest failed steward digest index verification",
+                code=None if schedule_integrity_ok else "schedule_manifest_integrity_failed",
+            )
+        )
+        if not schedule_integrity_ok:
+            return {
+                "schema_version": "northroot.steward.preflight.v0",
+                "profile_name": installation["profile_name"],
+                "ready": False,
+                "checks": checks,
+            }
         schedule_artifacts = schedule.get("generated_artifacts")
         if not isinstance(schedule_artifacts, dict):
             checks.append(
@@ -2016,6 +2178,7 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
         "schedule_lifecycle": {
             "install_delegates_to_platform_scheduler": True,
             "scheduled_runner_command_checked_by_preflight": True,
+            "schedule_manifest_integrity_checked_by_preflight": True,
             "generated_schedule_integrity_checked_by_preflight": True,
             "uninstall_required_before_delete_when_installed": True,
             "delete_force_is_operator_cleanup_only": True,
@@ -3377,24 +3540,69 @@ def create_schedule(
         "installed": False,
         "execution_mode": "delegated",
     }
-    (schedules_dir / "schedule.json").write_text(json.dumps(schedule, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    _write_schedule_manifest(output_dir, schedule)
     return schedule
 
 
 def schedule_status(output_dir: Path) -> dict[str, Any]:
-    schedules_dir = output_dir / "schedules"
-    schedule_path = schedules_dir / "schedule.json"
+    schedule_path = _schedule_manifest_path(output_dir)
+    integrity = render_schedule_integrity(output_dir)
     if not schedule_path.exists():
         return {
             "schema_version": "northroot.steward.schedule-status.v0",
             "configured": False,
             "installed": False,
             "schedule_path": None,
+            "schedule_integrity": integrity,
         }
-    schedule = model.load_json(schedule_path)
+    try:
+        schedule = model.load_json(schedule_path)
+    except (OSError, ValueError, json.JSONDecodeError):
+        return {
+            "schema_version": "northroot.steward.schedule-status.v0",
+            "configured": True,
+            "installed": False,
+            "schedule_path": str(schedule_path),
+            "schedule_integrity": integrity,
+        }
     schedule["schema_version"] = "northroot.steward.schedule-status.v0"
     schedule["configured"] = True
+    schedule["schedule_integrity"] = integrity
     return schedule
+
+
+def _schedule_integrity_error_result(
+    *,
+    schema_version: str,
+    status: dict[str, Any],
+    execute: bool = False,
+    force: bool = False,
+) -> dict[str, Any]:
+    integrity = status.get("schedule_integrity")
+    base = {
+        "schema_version": schema_version,
+        "scheduler": status.get("scheduler"),
+        "schedule_integrity": integrity,
+        "error": "schedule manifest integrity failed; recreate the schedule before platform mutation",
+    }
+    if schema_version == "northroot.steward.schedule-delete.v0":
+        return {
+            **base,
+            "configured_before_delete": bool(status.get("configured")),
+            "removed_paths": [],
+            "installed": bool(status.get("installed")),
+            "deleted": False,
+            "force": force,
+        }
+    return {
+        **base,
+        "execute_requested": execute,
+        "executed": False,
+        "installed": bool(status.get("installed")),
+        "return_code": 78,
+        "failed_command": None,
+        "commands": [],
+    }
 
 
 def _schedule_install_commands(schedule: dict[str, Any]) -> list[list[str]]:
@@ -3435,6 +3643,15 @@ def install_schedule(output_dir: Path, *, execute: bool = False, require_preflig
     status = schedule_status(output_dir)
     if not status.get("configured"):
         raise ValueError("schedule must be created before it can be installed")
+    if not status.get("schedule_integrity", {}).get("ok"):
+        result = _schedule_integrity_error_result(
+            schema_version="northroot.steward.schedule-install.v0",
+            status=status,
+            execute=execute,
+        )
+        result["preflight_required"] = require_preflight
+        result["preflight"] = None
+        return result
     commands = _schedule_install_commands(status)
     executed = False
     return_code = None
@@ -3460,11 +3677,11 @@ def install_schedule(output_dir: Path, *, execute: bool = False, require_preflig
         executed = True
         ok, return_code, failed_command = _run_command_sequence(commands)
         status["installed"] = ok
-        schedule_file = output_dir / "schedules" / "schedule.json"
         persisted = dict(status)
         persisted["schema_version"] = "northroot.steward.schedule.v0"
         persisted.pop("configured", None)
-        schedule_file.write_text(json.dumps(persisted, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        persisted.pop("schedule_integrity", None)
+        _write_schedule_manifest(output_dir, persisted)
     return {
         "schema_version": "northroot.steward.schedule-install.v0",
         "scheduler": status.get("scheduler"),
@@ -3484,6 +3701,12 @@ def uninstall_schedule(output_dir: Path, *, execute: bool = False) -> dict[str, 
     status = schedule_status(output_dir)
     if not status.get("configured"):
         raise ValueError("schedule must be created before it can be uninstalled")
+    if not status.get("schedule_integrity", {}).get("ok"):
+        return _schedule_integrity_error_result(
+            schema_version="northroot.steward.schedule-uninstall.v0",
+            status=status,
+            execute=execute,
+        )
     commands = _schedule_uninstall_commands(status)
     executed = False
     return_code = None
@@ -3493,11 +3716,11 @@ def uninstall_schedule(output_dir: Path, *, execute: bool = False) -> dict[str, 
         ok, return_code, failed_command = _run_command_sequence(commands)
         if ok:
             status["installed"] = False
-            schedule_file = output_dir / "schedules" / "schedule.json"
             persisted = dict(status)
             persisted["schema_version"] = "northroot.steward.schedule.v0"
             persisted.pop("configured", None)
-            schedule_file.write_text(json.dumps(persisted, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+            persisted.pop("schedule_integrity", None)
+            _write_schedule_manifest(output_dir, persisted)
     return {
         "schema_version": "northroot.steward.schedule-uninstall.v0",
         "scheduler": status.get("scheduler"),
@@ -3514,6 +3737,12 @@ def delete_schedule(output_dir: Path, *, force: bool = False) -> dict[str, Any]:
     status = schedule_status(output_dir)
     removed: list[str] = []
     schedules_dir = output_dir / "schedules"
+    if status.get("configured") and not status.get("schedule_integrity", {}).get("ok") and not force:
+        return _schedule_integrity_error_result(
+            schema_version="northroot.steward.schedule-delete.v0",
+            status=status,
+            force=force,
+        )
     installed = bool(status.get("installed"))
     if installed and not force:
         return {
