@@ -18,6 +18,77 @@
       "role": "ignored"
     }
   ],
+  "objects": [
+    {
+      "object_id": "repo/main",
+      "object_type": "repo",
+      "visibility": "public",
+      "storage_binding": "workspace://.",
+      "custody_policy": {
+        "backup": "metadata-only",
+        "retention": "git-remote-plus-steward-summary"
+      },
+      "redaction_policy": {
+        "public_summary": "name-and-commit-only"
+      },
+      "restore_class": "metadata-only"
+    },
+    {
+      "object_id": "state/sqlite",
+      "object_type": "sqlite",
+      "visibility": "private",
+      "storage_binding": "workspace://state/app.sqlite",
+      "custody_policy": {
+        "backup": "sqlite-online-backup",
+        "verification": "sample-restore"
+      },
+      "redaction_policy": {
+        "public_summary": "object-id-and-status"
+      },
+      "restore_class": "full-restore"
+    },
+    {
+      "object_id": "journals/main",
+      "object_type": "journal",
+      "visibility": "private",
+      "storage_binding": "journal://main",
+      "custody_policy": {
+        "backup": "journal-seal",
+        "verification": "journal-replay"
+      },
+      "redaction_policy": {
+        "public_summary": "object-id-and-seal-status"
+      },
+      "restore_class": "full-restore"
+    },
+    {
+      "object_id": "cache/runtime",
+      "object_type": "cache",
+      "visibility": "ephemeral",
+      "storage_binding": "cache://runtime",
+      "custody_policy": {
+        "backup": "excluded"
+      },
+      "redaction_policy": {
+        "public_summary": "excluded-cache-count"
+      },
+      "restore_class": "never-export"
+    },
+    {
+      "object_id": "secrets/restic-env",
+      "object_type": "env-file",
+      "visibility": "secret",
+      "storage_binding": "env://restic",
+      "custody_policy": {
+        "backup": "provider-rehydrated",
+        "verification": "binding-present"
+      },
+      "redaction_policy": {
+        "public_summary": "presence-only"
+      },
+      "restore_class": "rehydrate-from-provider"
+    }
+  ],
   "consistency_boundaries": [
     {
       "id": "sqlite-online-copy",

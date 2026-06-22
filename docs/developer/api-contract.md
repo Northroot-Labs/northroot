@@ -63,6 +63,11 @@ Keychain, offsite-copy tools, and external health monitors. Future backup,
 restore, schedule, retention, and DR automation should call `nr steward` or the
 `northroot.custody` APIs rather than adding new durability vocabulary.
 
+The next custody design layer is object-level stewardship: object identifiers,
+object types, visibility, symbolic storage bindings, custody policy, redaction
+policy, and restore class. See [Stewardship Workstream](stewardship-workstream.md)
+for the problem statement and private legacy-import boundary.
+
 ## Core Invariants
 
 - canonical bytes and event identity are deterministic;

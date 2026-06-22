@@ -39,6 +39,92 @@
     "kind": "delegated",
     "tool": "resticprofile"
   },
+  "object_custody": [
+    {
+      "custody_policy": {
+        "backup": "metadata-only",
+        "retention": "git-remote-plus-steward-summary"
+      },
+      "object_id": "repo/main",
+      "object_type": "repo",
+      "redaction_policy": {
+        "public_summary": "name-and-commit-only"
+      },
+      "restore_class": "metadata-only",
+      "storage_binding": "workspace://.",
+      "visibility": "public"
+    },
+    {
+      "custody_policy": {
+        "backup": "sqlite-online-backup",
+        "verification": "sample-restore"
+      },
+      "object_id": "state/sqlite",
+      "object_type": "sqlite",
+      "redaction_policy": {
+        "public_summary": "object-id-and-status"
+      },
+      "restore_class": "full-restore",
+      "storage_binding": "workspace://state/app.sqlite",
+      "visibility": "private"
+    },
+    {
+      "custody_policy": {
+        "backup": "journal-seal",
+        "verification": "journal-replay"
+      },
+      "object_id": "journals/main",
+      "object_type": "journal",
+      "redaction_policy": {
+        "public_summary": "object-id-and-seal-status"
+      },
+      "restore_class": "full-restore",
+      "storage_binding": "journal://main",
+      "visibility": "private"
+    },
+    {
+      "custody_policy": {
+        "backup": "excluded"
+      },
+      "object_id": "cache/runtime",
+      "object_type": "cache",
+      "redaction_policy": {
+        "public_summary": "excluded-cache-count"
+      },
+      "restore_class": "never-export",
+      "storage_binding": "cache://runtime",
+      "visibility": "ephemeral"
+    },
+    {
+      "custody_policy": {
+        "backup": "provider-rehydrated",
+        "verification": "binding-present"
+      },
+      "object_id": "secrets/restic-env",
+      "object_type": "env-file",
+      "redaction_policy": {
+        "public_summary": "presence-only"
+      },
+      "restore_class": "rehydrate-from-provider",
+      "storage_binding": "env://restic",
+      "visibility": "secret"
+    }
+  ],
+  "object_restore_classes": {
+    "full-restore": [
+      "state/sqlite",
+      "journals/main"
+    ],
+    "metadata-only": [
+      "repo/main"
+    ],
+    "never-export": [
+      "cache/runtime"
+    ],
+    "rehydrate-from-provider": [
+      "secrets/restic-env"
+    ]
+  },
   "policy_id": "example-policy",
   "retention": {
     "keep_daily": 7,
