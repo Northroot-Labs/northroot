@@ -162,6 +162,17 @@ class StewardTests(unittest.TestCase):
                 "northroot.steward.command-plan.v0",
             )
             self.assertFalse(capabilities["agent_contract"]["secret_handling"]["secret_values_returned"])
+            self.assertEqual(
+                model.validate_agent_delegation_policy(
+                    capabilities["agent_contract"]["default_dogfood_policy"],
+                    public_safe=True,
+                ),
+                [],
+            )
+            self.assertEqual(
+                capabilities["agent_contract"]["default_dogfood_policy"]["registered_agents"][0]["agent_id"],
+                "agent:codex",
+            )
             operations = {operation["name"]: operation for operation in capabilities["allowed_operations"]}
             operation_contracts = {
                 operation["name"]: operation for operation in capabilities["operation_contracts"]
@@ -187,6 +198,12 @@ class StewardTests(unittest.TestCase):
             self.assertIn("restore_drill", operation_contracts["restore-drill"]["satisfies_retention_evidence"])
             self.assertEqual(operation_contracts["retention.evaluate"]["success_schema"], model.RETENTION_DECISION_SCHEMA)
             self.assertEqual(operation_contracts["evidence.record"]["allowed_evidence"], ["verified_offsite_copy"])
+            self.assertEqual(
+                operation_contracts["import-legacy-runs"]["success_schema"],
+                "northroot.steward.legacy-run-import-result.v0",
+            )
+            self.assertTrue(operations["branch.create"]["governed_by_default_dogfood_policy"])
+            self.assertTrue(operations["import-legacy-runs"]["uses_operation_lock"])
             self.assertIn(
                 "delegates_platform_scheduler_registration_when_execute_is_set",
                 operation_contracts["schedule.install"]["side_effects"],
@@ -242,6 +259,60 @@ class StewardTests(unittest.TestCase):
                 ["nr", "steward", "report", "--state", str(output_dir), "--snapshot-id", "snap-001"],
             )
             self.assertEqual(model.validate_command_plan(report_plan), [])
+
+            legacy_import_plan = steward.render_command_plan(
+                output_dir,
+                operation="import-legacy-runs",
+                json_path=EXAMPLES / "legacy-run-import.redacted.example.json",
+            )
+            self.assertTrue(legacy_import_plan["ok"])
+            self.assertIn("--public-safe", legacy_import_plan["argv"])
+            self.assertTrue(legacy_import_plan["side_effects"]["writes_run_summary"])
+            self.assertEqual(model.validate_command_plan(legacy_import_plan), [])
+
+            missing_legacy_import_plan = steward.render_command_plan(output_dir, operation="import-legacy-runs")
+            self.assertFalse(missing_legacy_import_plan["ok"])
+            self.assertIn("json", missing_legacy_import_plan["missing_inputs"])
+
+            agent_branch_plan = steward.render_command_plan(
+                output_dir,
+                operation="branch.create",
+                branch="codex/steward-dogfood-policy",
+            )
+            self.assertTrue(agent_branch_plan["ok"])
+            self.assertEqual(
+                agent_branch_plan["argv"],
+                ["git", "switch", "-c", "codex/steward-dogfood-policy", "main"],
+            )
+            self.assertEqual(agent_branch_plan["agent_authorization"]["agent_id"], "agent:codex")
+            self.assertEqual(agent_branch_plan["agent_provenance"]["policy_id"], "agent-delegation/dogfood-default")
+            self.assertEqual(model.validate_command_plan(agent_branch_plan), [])
+
+            agent_commit_plan = steward.render_command_plan(
+                output_dir,
+                operation="commit.create",
+                branch="codex/steward-dogfood-policy",
+                commit_message="Checkpoint steward dogfood policy",
+                detail="focused tests passed",
+            )
+            self.assertTrue(agent_commit_plan["ok"])
+            self.assertIn("--trailer", agent_commit_plan["argv"])
+            self.assertIn("Agent-Id=agent:codex", agent_commit_plan["argv"])
+            self.assertEqual(
+                agent_commit_plan["agent_provenance"]["required_commit_trailers"]["Agent-Coauthorship"],
+                "agent-authored",
+            )
+
+            protected_agent_plan = steward.render_command_plan(
+                output_dir,
+                operation="push.branch",
+                branch="main",
+            )
+            self.assertFalse(protected_agent_plan["ok"])
+            self.assertIn(
+                "branch is outside delegated agent prefixes or protected: main",
+                protected_agent_plan["refused_reasons"],
+            )
 
             refused_restore_plan = steward.render_command_plan(
                 output_dir,
@@ -333,6 +404,35 @@ class StewardTests(unittest.TestCase):
             self.assertEqual(blocked_by_lock["failure_stage"], "operation-lock")
             self.assertIsNone(blocked_by_lock["preflight"])
             self.assertTrue(steward.operation_lock_path(output_dir).exists())
+            locked_state = steward.render_state_verification(output_dir)
+            self.assertFalse(locked_state["ready"])
+            self.assertFalse(locked_state["safe_to_execute"])
+            self.assertTrue(locked_state["operation_resume_required"])
+            self.assertIn(
+                "steward_operation_lock_present",
+                {check["code"] for check in locked_state["checks"] if check["code"]},
+            )
+            locked_report = steward.render_report(output_dir)
+            self.assertIn(
+                "run steward recover-operation before retrying steward execution",
+                locked_report["recommended_actions"],
+            )
+            locked_execute_plan = steward.render_command_plan(output_dir, operation="verify", execute=True)
+            self.assertFalse(locked_execute_plan["ok"])
+            self.assertIn(
+                "steward operation lock requires recover-operation before execute",
+                locked_execute_plan["refused_reasons"],
+            )
+            locked_import_plan = steward.render_command_plan(
+                output_dir,
+                operation="import-legacy-runs",
+                json_path=EXAMPLES / "legacy-run-import.redacted.example.json",
+            )
+            self.assertFalse(locked_import_plan["ok"])
+            self.assertIn(
+                "steward operation lock requires recover-operation before legacy run import",
+                locked_import_plan["refused_reasons"],
+            )
             locked_summary = model.load_json(Path(str(blocked_by_lock["run_summary_path"])))
             self.assertEqual(locked_summary["status"], "delegated-operation-locked")
             self.assertEqual(
