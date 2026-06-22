@@ -241,7 +241,12 @@ authorize`, and mutation commands depend on that proof before treating the
 registry as ready. If a machine dies or the process is interrupted while a
 registry mutation lock exists, later mutations fail closed until
 `registry recover` validates the current registry and records the interrupted
-operation. Recovery removes the lock only when the registry still validates.
+operation. Mutation locks include the registry digest observed before the
+mutation started; recovery records `resume_state` as
+`registry-unchanged-after-lock`, `registry-changed-after-lock`, or
+`registry-change-unknown` so operators can tell whether the interrupted write
+appears to have landed. Recovery removes the lock only when the registry still
+validates.
 
 `steward registry import-legacy-profile` applies a sanitized legacy migration
 bundle such as `examples/legacy-profile-import.redacted.example.json` as one

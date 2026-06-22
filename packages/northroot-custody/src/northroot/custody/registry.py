@@ -721,17 +721,19 @@ def mutate_registry(
     if existing_lock is not None:
         raise RegistryLockedError(existing_lock)
     operation_id = _operation_id(operation)
+    before_sha256 = _file_sha256(registry_path(state_dir))
     lock = {
         "schema_version": "northroot.steward.registry-operation-lock.v0",
         "operation_id": operation_id,
         "operation": operation,
         "started_at": _utc_stamp(),
         "pid": os.getpid(),
+        "registry_path": str(registry_path(state_dir)),
+        "before_sha256": before_sha256,
         "failure_policy": "fail-closed-record-summary",
         "resume_hint": "run registry recover before applying another mutation",
     }
     _atomic_write_json(lock_path(state_dir), lock)
-    before_sha256 = _file_sha256(registry_path(state_dir))
     try:
         registry = load_registry(state_dir)
         mutator(registry)
@@ -792,14 +794,23 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
     errors = [finding for finding in findings if finding.severity == "error"]
     operation_id = _operation_id("registry.recover")
     status = "recovered-after-interruption" if not errors else "blocked-invalid-registry"
+    current_sha256 = _file_sha256(registry_path(state_dir))
+    before_sha256 = lock.get("before_sha256")
+    if isinstance(before_sha256, str):
+        resume_state = "registry-unchanged-after-lock" if current_sha256 == before_sha256 else "registry-changed-after-lock"
+    else:
+        resume_state = "registry-change-unknown"
     summary = {
         "schema_version": "northroot.steward.registry-operation.v0",
         "operation_id": operation_id,
         "operation": "registry.recover",
         "status": status,
+        "resume_state": resume_state,
         "interrupted_operation_lock": lock,
         "registry_path": str(registry_path(state_dir)),
-        "registry_sha256": _file_sha256(registry_path(state_dir)),
+        "interrupted_before_sha256": before_sha256 if isinstance(before_sha256, str) else None,
+        "registry_sha256": current_sha256,
+        "registry_changed_since_lock": resume_state == "registry-changed-after-lock",
         "public_safe": public_safe,
         "findings": [finding.as_dict() for finding in findings],
         "completed_at": _utc_stamp(),
@@ -810,6 +821,7 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
             "recovered": False,
             "resume_required": True,
             "operation_summary_path": str(summary_path),
+            "resume_state": resume_state,
             "error_count": len(errors),
             "findings": [finding.as_dict() for finding in findings],
         }
@@ -820,6 +832,8 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
         "resume_required": False,
         "operation_summary_path": str(summary_path),
         "registry_sha256": summary["registry_sha256"],
+        "resume_state": resume_state,
+        "registry_changed_since_lock": summary["registry_changed_since_lock"],
     }
 
 

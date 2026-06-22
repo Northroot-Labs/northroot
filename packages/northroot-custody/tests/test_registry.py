@@ -249,6 +249,7 @@ class RegistryTests(unittest.TestCase):
                 "operation": "registry.project.register",
                 "started_at": "2026-06-22T00:00:00Z",
                 "pid": 123,
+                "before_sha256": final_status["registry_sha256"],
                 "failure_policy": "fail-closed-record-summary",
             }
             write_json(state_dir / "service-registry.lock.json", lock)
@@ -267,8 +268,68 @@ class RegistryTests(unittest.TestCase):
                 )
             recovered = registry.recover_registry(state_dir, public_safe=True)
             self.assertTrue(recovered["recovered"])
+            self.assertEqual(recovered["resume_state"], "registry-unchanged-after-lock")
+            self.assertFalse(recovered["registry_changed_since_lock"])
             self.assertFalse((state_dir / "service-registry.lock.json").exists())
             self.assertTrue(registry.registry_status(state_dir, public_safe=True)["ready"])
+
+    def test_registry_recovery_records_landed_interrupted_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            registry.initialize_registry(
+                state_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            before = registry.registry_status(state_dir, public_safe=True)["registry_sha256"]
+            lock = {
+                "schema_version": "northroot.steward.registry-operation-lock.v0",
+                "operation_id": "interrupted-after-registry-write",
+                "operation": "registry.object.add",
+                "started_at": "2026-06-22T00:00:00Z",
+                "pid": 123,
+                "registry_path": str(registry.registry_path(state_dir)),
+                "before_sha256": before,
+                "failure_policy": "fail-closed-record-summary",
+            }
+            write_json(registry.lock_path(state_dir), lock)
+            landed = registry.load_registry(state_dir)
+            landed["objects"].append(
+                {
+                    "object_id": "artifact/interrupted-write",
+                    "object_type": "artifact-dir",
+                    "visibility": "private",
+                    "storage_binding": "artifact://interrupted-write",
+                    "custody_policy": {
+                        "backup": "delegated",
+                        "verification": "sample-restore",
+                    },
+                    "redaction_policy": {
+                        "public_summary": "object-id-and-status",
+                    },
+                    "restore_class": "full-restore",
+                }
+            )
+            write_json(registry.registry_path(state_dir), landed)
+
+            locked_status = registry.registry_status(state_dir, public_safe=True)
+            self.assertFalse(locked_status["ready"])
+            self.assertTrue(locked_status["resume_required"])
+
+            recovered = registry.recover_registry(state_dir, public_safe=True)
+
+            self.assertTrue(recovered["recovered"])
+            self.assertEqual(recovered["resume_state"], "registry-changed-after-lock")
+            self.assertTrue(recovered["registry_changed_since_lock"])
+            summary = model.load_json(Path(str(recovered["operation_summary_path"])))
+            self.assertEqual(summary["status"], "recovered-after-interruption")
+            self.assertEqual(summary["resume_state"], "registry-changed-after-lock")
+            self.assertEqual(summary["interrupted_before_sha256"], before)
+            self.assertNotEqual(summary["registry_sha256"], before)
+            self.assertFalse(registry.lock_path(state_dir).exists())
+            status = registry.registry_status(state_dir, public_safe=True)
+            self.assertTrue(status["ready"])
+            self.assertEqual(status["object_count"], 6)
 
     def test_registry_integrity_detects_valid_but_unproven_state_change(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
