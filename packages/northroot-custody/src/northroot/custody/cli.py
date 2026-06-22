@@ -196,6 +196,7 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
         "bind-source",
         "add-replica",
         "record-legacy-import",
+        "import-legacy-profile",
     ):
         mutation = registry_sub.add_parser(name)
         mutation.add_argument("--state", required=True)
@@ -447,6 +448,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "bind-source": registry.bind_source_destination,
             "add-replica": registry.add_replica,
             "record-legacy-import": registry.record_legacy_import,
+            "import-legacy-profile": registry.import_legacy_profile,
         }
         if args.registry_command in mutation_map:
             return _write_registry_result(

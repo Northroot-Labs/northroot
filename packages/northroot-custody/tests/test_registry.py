@@ -294,6 +294,51 @@ class RegistryTests(unittest.TestCase):
             self.assertTrue(status["ready"])
             self.assertEqual(status["registry_sha256"], before)
 
+    def test_import_legacy_profile_applies_sanitized_batch_idempotently(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            registry.initialize_registry(
+                state_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            legacy_import = model.load_json(EXAMPLES / "legacy-profile-import.redacted.example.json")
+
+            imported = registry.import_legacy_profile(state_dir, legacy_import, public_safe=True)
+
+            self.assertTrue(imported["mutated"])
+            self.assertEqual(imported["operation"], "registry.legacy-profile.import")
+            self.assertEqual(imported["schema_version"], "northroot.steward.legacy-profile-import-result.v0")
+            self.assertEqual(imported["imported_counts"]["objects"]["inserted"], 3)
+            self.assertEqual(imported["imported_counts"]["legacy_imports"]["inserted"], 1)
+            imported_status = registry.registry_status(state_dir, public_safe=True)
+            self.assertTrue(imported_status["ready"])
+            self.assertEqual(imported_status["project_count"], 2)
+            self.assertEqual(imported_status["object_count"], 8)
+            self.assertEqual(imported_status["destination_count"], 6)
+            self.assertEqual(imported_status["source_destination_count"], 2)
+            self.assertEqual(imported_status["replica_count"], 2)
+            self.assertEqual(imported_status["legacy_import_count"], 2)
+
+            replayed = registry.import_legacy_profile(state_dir, legacy_import, public_safe=True)
+
+            self.assertTrue(replayed["mutated"])
+            self.assertEqual(replayed["imported_counts"]["objects"]["inserted"], 0)
+            self.assertEqual(replayed["imported_counts"]["objects"]["skipped_existing"], 3)
+            self.assertEqual(replayed["imported_counts"]["legacy_imports"]["skipped_existing"], 1)
+            replayed_status = registry.registry_status(state_dir, public_safe=True)
+            self.assertEqual(replayed_status["registry_sha256"], imported_status["registry_sha256"])
+
+            conflicting_import = model.load_json(EXAMPLES / "legacy-profile-import.redacted.example.json")
+            conflicting_import["objects"][0]["storage_binding"] = "workspace://other-legacy-project"
+            before_conflict = registry.registry_status(state_dir, public_safe=True)["registry_sha256"]
+            with self.assertRaises(ValueError):
+                registry.import_legacy_profile(state_dir, conflicting_import, public_safe=True)
+            self.assertFalse((state_dir / "service-registry.lock.json").exists())
+            after_conflict = registry.registry_status(state_dir, public_safe=True)
+            self.assertTrue(after_conflict["ready"])
+            self.assertEqual(after_conflict["registry_sha256"], before_conflict)
+
 
 if __name__ == "__main__":
     unittest.main()

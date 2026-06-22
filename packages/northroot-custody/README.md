@@ -70,6 +70,7 @@ nr-custody validate examples/retention-decision.example.json --public-safe
 nr-custody validate examples/run-summary.example.json --public-safe
 nr-custody validate examples/command-plan.example.json --public-safe
 nr-custody validate examples/service-registry.example.json --public-safe
+nr-custody validate examples/legacy-profile-import.redacted.example.json --public-safe
 nr-custody validate examples/agent-delegation-policy.dogfood.example.json --public-safe
 nr-custody validate examples/secret-bindings.macos-keychain.example.json --public-safe
 nr-custody validate examples/repository-bindings.redacted.example.json --public-safe
@@ -143,6 +144,10 @@ nr-custody steward registry register-project \
   --project-json /tmp/project.json \
   --permission-json /tmp/project-permission.json \
   --public-safe
+nr-custody steward registry import-legacy-profile \
+  --state /tmp/northroot-steward-registry \
+  --json examples/legacy-profile-import.redacted.example.json \
+  --public-safe
 nr-custody steward registry recover --state /tmp/northroot-steward-registry --public-safe
 nr-custody steward schedule create \
   --state /tmp/northroot-steward-example \
@@ -197,6 +202,14 @@ interrupted while a registry mutation lock exists, later mutations fail closed
 until `registry recover` validates the current registry and records the
 interrupted operation. Recovery removes the lock only when the registry still
 validates.
+
+`steward registry import-legacy-profile` applies a sanitized legacy migration
+bundle such as `examples/legacy-profile-import.redacted.example.json` as one
+atomic registry mutation. The bundle must contain symbolic refs and redacted
+object custody entries, not raw LaunchAgent paths, machine-local state paths,
+volume names, secret values, or private receipts. Replaying an identical import
+skips existing entries; conflicting entries fail closed without changing the
+registry.
 
 `steward registry authorize` is the deterministic permission gate for agents and
 automation. It evaluates a project operation, and optionally an object-scoped

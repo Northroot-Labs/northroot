@@ -1,0 +1,173 @@
+{
+  "schema_version": "northroot.steward.legacy-profile-import.v0",
+  "import_id": "legacy/example-machine-durability",
+  "source": "legacy-machine-durability",
+  "import_mode": "sanitized-run-summaries",
+  "objects": [
+    {
+      "object_id": "repo/legacy-project",
+      "object_type": "repo",
+      "visibility": "private",
+      "storage_binding": "workspace://legacy-project",
+      "custody_policy": {
+        "backup": "metadata-only",
+        "retention": "git-remote-plus-steward-summary"
+      },
+      "redaction_policy": {
+        "public_summary": "object-id-and-status"
+      },
+      "restore_class": "metadata-only"
+    },
+    {
+      "object_id": "state/legacy-runner",
+      "object_type": "generated-state",
+      "visibility": "private",
+      "storage_binding": "artifact://legacy-machine-durability-state",
+      "custody_policy": {
+        "backup": "sanitized-run-summaries",
+        "verification": "binding-present"
+      },
+      "redaction_policy": {
+        "public_summary": "object-id-and-status"
+      },
+      "restore_class": "metadata-only"
+    },
+    {
+      "object_id": "secrets/legacy-restic-env",
+      "object_type": "env-file",
+      "visibility": "secret",
+      "storage_binding": "env://legacy-restic",
+      "custody_policy": {
+        "backup": "provider-rehydrated",
+        "verification": "binding-present"
+      },
+      "redaction_policy": {
+        "public_summary": "presence-only"
+      },
+      "restore_class": "rehydrate-from-provider"
+    }
+  ],
+  "permissions": [
+    {
+      "permission_set_id": "perm/project-legacy-import",
+      "scope": "project",
+      "project_id": "project/legacy-import",
+      "allowed_operations": [
+        "status",
+        "preflight",
+        "verify-state",
+        "report",
+        "run",
+        "verify",
+        "restore-drill",
+        "retention.evaluate",
+        "evidence.report",
+        "offsite.report",
+        "legacy.import",
+        "source.bind",
+        "replica.sync"
+      ],
+      "requires_human_clearance": [
+        "restore",
+        "schedule.install",
+        "schedule.uninstall",
+        "schedule.delete"
+      ]
+    },
+    {
+      "permission_set_id": "perm/object-legacy-secrets",
+      "scope": "object",
+      "object_id": "secrets/legacy-restic-env",
+      "allowed_operations": [
+        "preflight",
+        "verify-state"
+      ],
+      "blocked_operations": [
+        "run",
+        "restore",
+        "restore-drill",
+        "evidence.record"
+      ]
+    }
+  ],
+  "projects": [
+    {
+      "project_id": "project/legacy-import",
+      "workspace_id": "legacy-import-workspace",
+      "node_ref": "node://legacy-machine",
+      "permission_set_ref": "perm/project-legacy-import",
+      "object_ids": [
+        "repo/legacy-project",
+        "state/legacy-runner",
+        "secrets/legacy-restic-env"
+      ],
+      "source_destination_ids": [
+        "source/legacy-import-primary"
+      ],
+      "schedule_ref": "scheduler://legacy-machine-durability"
+    }
+  ],
+  "destinations": [
+    {
+      "destination_id": "dest/legacy-primary",
+      "role": "primary",
+      "adapter": "resticprofile",
+      "storage_binding": "repository://legacy-primary",
+      "visibility": "private"
+    },
+    {
+      "destination_id": "dest/legacy-replica",
+      "role": "replica",
+      "adapter": "external-delegated",
+      "storage_binding": "repository://legacy-replica",
+      "visibility": "private"
+    },
+    {
+      "destination_id": "dest/legacy-receipts",
+      "role": "receipt-log",
+      "adapter": "filesystem",
+      "storage_binding": "receipt://legacy-backup-receipts",
+      "visibility": "private"
+    }
+  ],
+  "source_destinations": [
+    {
+      "source_destination_id": "source/legacy-import-primary",
+      "project_id": "project/legacy-import",
+      "destination_id": "dest/legacy-primary",
+      "permission_set_ref": "perm/project-legacy-import",
+      "object_ids": [
+        "repo/legacy-project",
+        "state/legacy-runner"
+      ],
+      "consistency_boundary_ids": [
+        "journal-seal"
+      ]
+    }
+  ],
+  "replicas": [
+    {
+      "replica_id": "replica/legacy-offsite",
+      "source_destination_id": "source/legacy-import-primary",
+      "destination_id": "dest/legacy-replica",
+      "execution_model": "external-delegated",
+      "required_evidence": [
+        "verified_offsite_copy"
+      ],
+      "resume_policy_ref": "resume/fail-closed-v0"
+    }
+  ],
+  "legacy_imports": [
+    {
+      "import_id": "legacy/example-machine-durability",
+      "source": "legacy-machine-durability",
+      "scheduler_ref": "scheduler://legacy-machine-durability",
+      "machine_node_ref": "node://legacy-machine",
+      "project_nodes_ref": "project://legacy-project-nodes",
+      "runner_state_ref": "run-state://legacy-machine-durability",
+      "per_run_state_ref": "state://legacy-machine-durability/runs",
+      "import_mode": "sanitized-run-summaries",
+      "status": "pending"
+    }
+  ]
+}

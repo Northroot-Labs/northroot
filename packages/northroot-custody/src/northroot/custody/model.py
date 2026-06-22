@@ -24,6 +24,7 @@ SECRET_BINDINGS_SCHEMA = "northroot.custody.secret-bindings.v0"
 REPOSITORY_BINDINGS_SCHEMA = "northroot.custody.repository-bindings.v0"
 COMMAND_PLAN_SCHEMA = "northroot.steward.command-plan.v0"
 SERVICE_REGISTRY_SCHEMA = "northroot.steward.service-registry.v0"
+LEGACY_PROFILE_IMPORT_SCHEMA = "northroot.steward.legacy-profile-import.v0"
 AGENT_DELEGATION_POLICY_SCHEMA = "northroot.steward.agent-delegation-policy.v0"
 
 STATE_ROLES = {"authoritative", "generated", "ignored"}
@@ -1479,6 +1480,247 @@ def validate_service_registry(payload: dict[str, Any], *, public_safe: bool = Fa
     return findings
 
 
+def _validate_legacy_import_record(legacy_import: dict[str, Any], *, path: str) -> list[Finding]:
+    findings: list[Finding] = []
+    findings.extend(_require_string(legacy_import, "import_id", path))
+    if legacy_import.get("source") != "legacy-machine-durability":
+        findings.append(
+            _finding(
+                "invalid_legacy_import_source",
+                f"{path}.source",
+                "legacy import source must be legacy-machine-durability",
+            )
+        )
+    for key in (
+        "scheduler_ref",
+        "machine_node_ref",
+        "project_nodes_ref",
+        "runner_state_ref",
+        "per_run_state_ref",
+    ):
+        findings.extend(_validate_symbolic_ref(legacy_import.get(key), path=f"{path}.{key}", name=key))
+    if legacy_import.get("import_mode") not in {"metadata-only", "sanitized-run-summaries"}:
+        findings.append(
+            _finding(
+                "invalid_legacy_import_mode",
+                f"{path}.import_mode",
+                "import_mode must be metadata-only or sanitized-run-summaries",
+            )
+        )
+    if legacy_import.get("status") not in {"pending", "imported", "blocked"}:
+        findings.append(
+            _finding(
+                "invalid_legacy_import_status",
+                f"{path}.status",
+                "status must be pending, imported, or blocked",
+            )
+        )
+    return findings
+
+
+def _validate_legacy_batch_list(
+    payload: dict[str, Any],
+    key: str,
+    identity_key: str,
+    *,
+    required: bool = True,
+) -> tuple[list[Finding], list[dict[str, Any]]]:
+    findings: list[Finding] = []
+    values = payload.get(key)
+    if not isinstance(values, list):
+        findings.append(_finding(key, f"$.{key}", f"{key} must be a list"))
+        return findings, []
+    if required and not values:
+        findings.append(_finding(key, f"$.{key}", f"{key} must not be empty"))
+    seen: set[str] = set()
+    objects: list[dict[str, Any]] = []
+    for index, value in enumerate(values):
+        item_path = f"$.{key}[{index}]"
+        if not isinstance(value, dict):
+            findings.append(_finding(key, item_path, f"{key} entries must be objects"))
+            continue
+        objects.append(value)
+        identity = value.get(identity_key)
+        if not _is_string(identity):
+            findings.append(_finding("missing_string", f"{item_path}.{identity_key}", f"{identity_key} is required"))
+        elif str(identity) in seen:
+            findings.append(
+                _finding(
+                    f"duplicate_{identity_key}",
+                    f"{item_path}.{identity_key}",
+                    f"duplicate {identity_key}: {identity}",
+                )
+            )
+        else:
+            seen.add(str(identity))
+    return findings, objects
+
+
+def validate_legacy_profile_import(payload: dict[str, Any], *, public_safe: bool = False) -> list[Finding]:
+    findings: list[Finding] = []
+    if payload.get("schema_version") != LEGACY_PROFILE_IMPORT_SCHEMA:
+        findings.append(_finding("schema_version", "$.schema_version", f"expected {LEGACY_PROFILE_IMPORT_SCHEMA}"))
+    findings.extend(_require_string(payload, "import_id", "$"))
+    if payload.get("source") != "legacy-machine-durability":
+        findings.append(
+            _finding(
+                "invalid_legacy_import_source",
+                "$.source",
+                "legacy profile import source must be legacy-machine-durability",
+            )
+        )
+    if payload.get("import_mode") not in {"metadata-only", "sanitized-run-summaries"}:
+        findings.append(
+            _finding(
+                "invalid_legacy_import_mode",
+                "$.import_mode",
+                "import_mode must be metadata-only or sanitized-run-summaries",
+            )
+        )
+
+    list_specs = (
+        ("objects", "object_id", True),
+        ("permissions", "permission_set_id", True),
+        ("projects", "project_id", True),
+        ("destinations", "destination_id", True),
+        ("source_destinations", "source_destination_id", True),
+        ("replicas", "replica_id", False),
+        ("legacy_imports", "import_id", True),
+    )
+    parsed: dict[str, list[dict[str, Any]]] = {}
+    for key, identity_key, required in list_specs:
+        list_findings, objects = _validate_legacy_batch_list(payload, key, identity_key, required=required)
+        findings.extend(list_findings)
+        parsed[key] = objects
+
+    findings.extend(_validate_object_custody(parsed.get("objects", []), path="$.objects"))
+
+    for index, destination in enumerate(parsed.get("destinations", [])):
+        dest_path = f"$.destinations[{index}]"
+        if destination.get("role") not in SERVICE_DESTINATION_ROLES:
+            findings.append(
+                _finding(
+                    "invalid_destination_role",
+                    f"{dest_path}.role",
+                    f"role must be one of {sorted(SERVICE_DESTINATION_ROLES)}",
+                )
+            )
+        if destination.get("adapter") not in SERVICE_ADAPTERS:
+            findings.append(
+                _finding(
+                    "invalid_destination_adapter",
+                    f"{dest_path}.adapter",
+                    f"adapter must be one of {sorted(SERVICE_ADAPTERS)}",
+                )
+            )
+        findings.extend(
+            _validate_symbolic_ref(
+                destination.get("storage_binding"),
+                path=f"{dest_path}.storage_binding",
+                name="storage_binding",
+            )
+        )
+        if destination.get("visibility") not in VISIBILITY_CLASSES:
+            findings.append(
+                _finding(
+                    "invalid_visibility",
+                    f"{dest_path}.visibility",
+                    f"visibility must be one of {sorted(VISIBILITY_CLASSES)}",
+                )
+            )
+
+    for index, permission in enumerate(parsed.get("permissions", [])):
+        perm_path = f"$.permissions[{index}]"
+        if permission.get("scope") not in SERVICE_PERMISSION_SCOPES:
+            findings.append(
+                _finding(
+                    "invalid_permission_scope",
+                    f"{perm_path}.scope",
+                    f"scope must be one of {sorted(SERVICE_PERMISSION_SCOPES)}",
+                )
+            )
+        findings.extend(
+            _validate_permission_operations(
+                permission.get("allowed_operations"),
+                path=f"{perm_path}.allowed_operations",
+            )
+        )
+        for key in ("blocked_operations", "requires_human_clearance"):
+            values = permission.get(key, [])
+            if values:
+                findings.extend(_validate_permission_operations(values, path=f"{perm_path}.{key}"))
+
+    for index, project in enumerate(parsed.get("projects", [])):
+        project_path = f"$.projects[{index}]"
+        findings.extend(_require_string(project, "workspace_id", project_path))
+        if project.get("node_ref") is not None:
+            findings.extend(
+                _validate_symbolic_ref(project.get("node_ref"), path=f"{project_path}.node_ref", name="node_ref")
+            )
+        findings.extend(_require_string(project, "permission_set_ref", project_path))
+        if not isinstance(project.get("object_ids"), list) or not project.get("object_ids"):
+            findings.append(
+                _finding("project_object_ids", f"{project_path}.object_ids", "project must name at least one object")
+            )
+
+    for index, binding in enumerate(parsed.get("source_destinations", [])):
+        binding_path = f"$.source_destinations[{index}]"
+        for key in ("project_id", "destination_id", "permission_set_ref"):
+            findings.extend(_require_string(binding, key, binding_path))
+        if not isinstance(binding.get("object_ids"), list) or not binding.get("object_ids"):
+            findings.append(
+                _finding(
+                    "source_object_ids",
+                    f"{binding_path}.object_ids",
+                    "source destination must name at least one object",
+                )
+            )
+
+    for index, replica in enumerate(parsed.get("replicas", [])):
+        replica_path = f"$.replicas[{index}]"
+        for key in ("source_destination_id", "destination_id", "resume_policy_ref"):
+            findings.extend(_require_string(replica, key, replica_path))
+        if replica.get("execution_model") != "external-delegated":
+            findings.append(
+                _finding(
+                    "invalid_replica_execution_model",
+                    f"{replica_path}.execution_model",
+                    "replica execution_model must be external-delegated",
+                )
+            )
+        evidence = replica.get("required_evidence")
+        if not isinstance(evidence, list) or not evidence:
+            findings.append(
+                _finding("replica_required_evidence", f"{replica_path}.required_evidence", "replicas must name required evidence")
+            )
+        else:
+            for evidence_index, item in enumerate(evidence):
+                if item not in RETENTION_EVIDENCE:
+                    findings.append(
+                        _finding(
+                            "invalid_replica_evidence",
+                            f"{replica_path}.required_evidence[{evidence_index}]",
+                            f"evidence must be one of {sorted(RETENTION_EVIDENCE)}",
+                        )
+                    )
+
+    import_ids = {str(item.get("import_id")) for item in parsed.get("legacy_imports", []) if _is_string(item.get("import_id"))}
+    if _is_string(payload.get("import_id")) and str(payload.get("import_id")) not in import_ids:
+        findings.append(
+            _finding(
+                "missing_matching_legacy_import",
+                "$.legacy_imports",
+                "legacy_imports must include the top-level import_id",
+            )
+        )
+    for index, legacy_import in enumerate(parsed.get("legacy_imports", [])):
+        findings.extend(_validate_legacy_import_record(legacy_import, path=f"$.legacy_imports[{index}]"))
+
+    if public_safe:
+        findings.extend(find_public_private_bindings(payload))
+    return findings
+
+
 def build_run_summary(
     *,
     run_id: str,
@@ -1709,6 +1951,8 @@ def validate_document(payload: dict[str, Any], *, public_safe: bool = False) -> 
         return validate_command_plan(payload, public_safe=public_safe)
     if schema == SERVICE_REGISTRY_SCHEMA:
         return validate_service_registry(payload, public_safe=public_safe)
+    if schema == LEGACY_PROFILE_IMPORT_SCHEMA:
+        return validate_legacy_profile_import(payload, public_safe=public_safe)
     if schema == AGENT_DELEGATION_POLICY_SCHEMA:
         return validate_agent_delegation_policy(payload, public_safe=public_safe)
     return [_finding("unknown_schema", "$.schema_version", f"unsupported custody schema: {schema}")]
