@@ -77,6 +77,13 @@ goes offline while the lock exists, later mutations fail closed until
 `steward registry recover` validates the current registry and records the
 interruption.
 
+The registry also exposes `steward registry authorize` as the first runtime
+permission gate. It evaluates an operation against the registered project
+permission set and any object permission set for the requested object. The
+decision is deterministic and fail-closed: unresolved registry locks, invalid
+registries, unknown objects, blocked operations, human-clearance requirements,
+and missing allow rules are all non-allowed outcomes.
+
 The registry still does not execute replica sync, inspect private LaunchAgent
 state, or import raw legacy run directories by itself. Those are the next
 adapter layers over the now-durable registry state.

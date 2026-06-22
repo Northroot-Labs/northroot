@@ -121,6 +121,11 @@ nr-custody steward registry init \
   --registry examples/service-registry.example.json \
   --public-safe
 nr-custody steward registry status --state /tmp/northroot-steward-registry --public-safe
+nr-custody steward registry authorize \
+  --state /tmp/northroot-steward-registry \
+  --operation run \
+  --project-id project/example \
+  --public-safe
 nr-custody steward registry add-object \
   --state /tmp/northroot-steward-registry \
   --json /tmp/object-custody.json \
@@ -184,6 +189,12 @@ interrupted while a registry mutation lock exists, later mutations fail closed
 until `registry recover` validates the current registry and records the
 interrupted operation. Recovery removes the lock only when the registry still
 validates.
+
+`steward registry authorize` is the deterministic permission gate for agents and
+automation. It evaluates a project operation, and optionally an object-scoped
+operation, against project and object permission sets. Blocked operations,
+human-clearance operations, missing allow rules, invalid registries, and
+unresolved recovery locks all return non-zero.
 
 `steward restore` is the bounded recovery path for an actual restore. It
 requires both `--snapshot-id` and `--target`, delegates to `resticprofile`, and

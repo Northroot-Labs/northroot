@@ -158,6 +158,12 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     registry_status = registry_sub.add_parser("status")
     registry_status.add_argument("--state", required=True)
     registry_status.add_argument("--public-safe", action="store_true")
+    registry_authorize = registry_sub.add_parser("authorize")
+    registry_authorize.add_argument("--state", required=True)
+    registry_authorize.add_argument("--operation", choices=tuple(sorted(model.SERVICE_PERMISSION_OPERATIONS)), required=True)
+    registry_authorize.add_argument("--project-id", required=True)
+    registry_authorize.add_argument("--object-id")
+    registry_authorize.add_argument("--public-safe", action="store_true")
     registry_recover = registry_sub.add_parser("recover")
     registry_recover.add_argument("--state", required=True)
     registry_recover.add_argument("--public-safe", action="store_true")
@@ -381,6 +387,16 @@ def main(argv: Sequence[str] | None = None) -> int:
         status = registry.registry_status(Path(args.state), public_safe=args.public_safe)
         write_json(status)
         return 0 if status["ready"] else 1
+    if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "authorize":
+        authorization = registry.authorize_operation(
+            Path(args.state),
+            operation=args.operation,
+            project_id=args.project_id,
+            object_id=args.object_id,
+            public_safe=args.public_safe,
+        )
+        write_json(authorization)
+        return 0 if authorization["allowed"] else 1
     if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "recover":
         return _write_registry_result(registry.recover_registry(Path(args.state), public_safe=args.public_safe))
     if args.command == "steward" and args.steward_command == "registry":
