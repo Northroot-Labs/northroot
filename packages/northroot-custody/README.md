@@ -6,6 +6,26 @@ delegated snapshot plans, and the steward profile helper layer.
 The reusable custody vocabulary is intentionally small: workspace inventory,
 policy, snapshot plan, verification result, retention decision, and run summary.
 
+Workspace inventories may also include object-level custody state. This is the
+layer that makes stewardship more precise than Git visibility:
+
+- `object_id`: stable symbolic identifier;
+- `object_type`: `repo`, `sqlite`, `postgres`, `secret-file`, `env-file`,
+  `artifact-dir`, `journal`, `cache`, or `generated-state`;
+- `visibility`: `public`, `private`, `secret`, `regulated`, or `ephemeral`;
+- `storage_binding`: symbolic binding such as `workspace://...`,
+  `repository://...`, `secret://...`, `env://...`, or `provider://...`;
+- `custody_policy`: object-level backup, retention, verification, and restore
+  obligations;
+- `redaction_policy`: what may appear in public summaries and agent-facing
+  reports;
+- `restore_class`: `full-restore`, `metadata-only`,
+  `rehydrate-from-provider`, or `never-export`.
+
+Real paths, provider references, external volumes, LaunchAgent labels, logs,
+and backup receipt locations stay in private binding documents or deployment
+state. Public inventories use symbolic bindings only.
+
 It is not a backup engine, scheduler, secret manager, storage transport, or
 monitoring stack. Execution is delegated to established tools such as `restic`,
 `resticprofile`, `launchd`, `systemd`, 1Password service-account based secret

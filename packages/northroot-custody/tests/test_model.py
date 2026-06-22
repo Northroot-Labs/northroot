@@ -70,6 +70,48 @@ class CustodyModelTests(unittest.TestCase):
         self.assertIn("sample-restore", plan["verification_required"])
         self.assertIn("restore_drill", plan["retention_prune_requires"])
         self.assertEqual(plan["destinations"][0]["secret_ref"], "secret://restic/local-password")
+        self.assertEqual(
+            plan["object_restore_classes"]["full-restore"],
+            ["state/sqlite", "journals/main"],
+        )
+        self.assertEqual(
+            plan["object_restore_classes"]["never-export"],
+            ["cache/runtime"],
+        )
+        self.assertEqual(
+            plan["object_custody"][0]["storage_binding"],
+            "workspace://.",
+        )
+
+    def test_object_custody_rejects_invalid_restore_and_raw_binding(self) -> None:
+        inventory = load_example("workspace-inventory.example.json")
+        inventory["objects"][0]["restore_class"] = "best-effort"
+        inventory["objects"][1]["storage_binding"] = "/Users/example/private-state/app.sqlite"
+
+        findings = model.validate_workspace_inventory(inventory, public_safe=True)
+
+        self.assertIn("invalid_restore_class", {finding.code for finding in findings})
+        self.assertIn("invalid_storage_binding", {finding.code for finding in findings})
+        self.assertIn("public_private_binding", {finding.code for finding in findings})
+
+    def test_object_custody_rejects_ephemeral_full_restore(self) -> None:
+        inventory = load_example("workspace-inventory.example.json")
+        inventory["objects"][3]["restore_class"] = "full-restore"
+
+        findings = model.validate_workspace_inventory(inventory)
+
+        self.assertIn("ephemeral_full_restore", {finding.code for finding in findings})
+
+    def test_snapshot_plan_checks_object_restore_class_summary(self) -> None:
+        plan = model.render_snapshot_plan(
+            load_example("workspace-inventory.example.json"),
+            load_example("custody-policy.example.json"),
+        )
+        plan["object_restore_classes"]["full-restore"] = []
+
+        findings = model.validate_snapshot_plan(plan, public_safe=True)
+
+        self.assertIn("object_restore_classes", {finding.code for finding in findings})
 
     def test_public_policy_rejects_real_secret_reference(self) -> None:
         policy = load_example("custody-policy.example.json")

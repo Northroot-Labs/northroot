@@ -30,11 +30,35 @@ ADAPTERS = {"resticprofile", "restic"}
 VERIFY_MODES = {"repository-check", "sample-restore", "app-restore-drill", "journal-replay"}
 RETENTION_EVIDENCE = {"verified_snapshot", "verified_offsite_copy", "restore_drill"}
 EXTERNAL_RETENTION_EVIDENCE = {"verified_offsite_copy"}
+OBJECT_TYPES = {
+    "artifact-dir",
+    "cache",
+    "env-file",
+    "generated-state",
+    "journal",
+    "postgres",
+    "repo",
+    "secret-file",
+    "sqlite",
+}
+VISIBILITY_CLASSES = {"public", "private", "secret", "regulated", "ephemeral"}
+RESTORE_CLASSES = {"full-restore", "metadata-only", "rehydrate-from-provider", "never-export"}
+STORAGE_BINDING_PREFIXES = (
+    "artifact://",
+    "cache://",
+    "env://",
+    "journal://",
+    "provider://",
+    "repository://",
+    "secret://",
+    "workspace://",
+)
 SECRET_REF_PREFIXES = ("secret://", "env://")
 REPOSITORY_REF_PREFIXES = ("repository://",)
 SECRET_BINDING_PROVIDERS = {"onepassword-cli", "macos-keychain", "env-command"}
 RUNTIME_ENV_PROVIDERS = {"macos-keychain", "env-command"}
 ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+OBJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:/-]*$")
 REPOSITORY_CHECK_STATUSES = {"ok", "failed", "not-run"}
 
 PUBLIC_FORBIDDEN_PATTERNS = (
@@ -88,6 +112,106 @@ def _require_string(payload: dict[str, Any], key: str, path: str) -> list[Findin
     if not _is_string(payload.get(key)):
         return [_finding("missing_string", f"{path}.{key}", f"{key} must be a non-empty string")]
     return []
+
+
+def _validate_object_custody(objects: Any, *, path: str) -> list[Finding]:
+    findings: list[Finding] = []
+    if objects is None:
+        return findings
+    if not _is_object_list(objects):
+        return [_finding("objects", path, "objects must be a list of custody objects when present")]
+
+    seen_ids: set[str] = set()
+    for index, obj in enumerate(objects):
+        object_path = f"{path}[{index}]"
+        object_id = obj.get("object_id")
+        if not _is_string(object_id):
+            findings.append(_finding("missing_string", f"{object_path}.object_id", "object_id is required"))
+        elif not OBJECT_ID_PATTERN.match(str(object_id)):
+            findings.append(
+                _finding(
+                    "invalid_object_id",
+                    f"{object_path}.object_id",
+                    "object_id must be a stable symbolic identifier",
+                )
+            )
+        elif str(object_id) in seen_ids:
+            findings.append(
+                _finding("duplicate_object_id", f"{object_path}.object_id", f"duplicate object_id: {object_id}")
+            )
+        else:
+            seen_ids.add(str(object_id))
+
+        if obj.get("object_type") not in OBJECT_TYPES:
+            findings.append(
+                _finding(
+                    "invalid_object_type",
+                    f"{object_path}.object_type",
+                    f"object_type must be one of {sorted(OBJECT_TYPES)}",
+                )
+            )
+        if obj.get("visibility") not in VISIBILITY_CLASSES:
+            findings.append(
+                _finding(
+                    "invalid_visibility",
+                    f"{object_path}.visibility",
+                    f"visibility must be one of {sorted(VISIBILITY_CLASSES)}",
+                )
+            )
+        storage_binding = obj.get("storage_binding")
+        if not _is_string(storage_binding):
+            findings.append(
+                _finding("missing_string", f"{object_path}.storage_binding", "storage_binding is required")
+            )
+        elif not str(storage_binding).startswith(STORAGE_BINDING_PREFIXES):
+            findings.append(
+                _finding(
+                    "invalid_storage_binding",
+                    f"{object_path}.storage_binding",
+                    f"storage_binding must use one of {STORAGE_BINDING_PREFIXES}",
+                )
+            )
+        if not isinstance(obj.get("custody_policy"), dict):
+            findings.append(
+                _finding(
+                    "custody_policy",
+                    f"{object_path}.custody_policy",
+                    "custody_policy must be an object",
+                )
+            )
+        if not isinstance(obj.get("redaction_policy"), dict):
+            findings.append(
+                _finding(
+                    "redaction_policy",
+                    f"{object_path}.redaction_policy",
+                    "redaction_policy must be an object",
+                )
+            )
+        restore_class = obj.get("restore_class")
+        if restore_class not in RESTORE_CLASSES:
+            findings.append(
+                _finding(
+                    "invalid_restore_class",
+                    f"{object_path}.restore_class",
+                    f"restore_class must be one of {sorted(RESTORE_CLASSES)}",
+                )
+            )
+        if obj.get("visibility") == "ephemeral" and restore_class == "full-restore":
+            findings.append(
+                _finding(
+                    "ephemeral_full_restore",
+                    f"{object_path}.restore_class",
+                    "ephemeral objects cannot require full restore",
+                )
+            )
+    return findings
+
+
+def _object_restore_classes(objects: list[dict[str, Any]]) -> dict[str, list[str]]:
+    classes = {restore_class: [] for restore_class in sorted(RESTORE_CLASSES)}
+    for obj in objects:
+        classes[str(obj["restore_class"])].append(str(obj["object_id"]))
+    return classes
 
 
 def find_public_private_bindings(payload: Any, path: str = "$") -> list[Finding]:
@@ -180,6 +304,8 @@ def validate_workspace_inventory(payload: dict[str, Any], *, public_safe: bool =
                                 f"unknown state root id: {source_id}",
                             )
                         )
+
+    findings.extend(_validate_object_custody(payload.get("objects"), path="$.objects"))
 
     if public_safe:
         findings.extend(find_public_private_bindings(payload))
@@ -297,8 +423,9 @@ def render_snapshot_plan(inventory: dict[str, Any], policy: dict[str, Any]) -> d
         if root["role"] == "authoritative"
     ]
     ignored_paths = [root["path"] for root in inventory["state_roots"] if root["role"] in {"generated", "ignored"}]
+    object_custody = list(inventory.get("objects", []))
 
-    return {
+    plan = {
         "schema_version": SNAPSHOT_PLAN_SCHEMA,
         "workspace_id": inventory["workspace_id"],
         "policy_id": policy["policy_id"],
@@ -316,6 +443,10 @@ def render_snapshot_plan(inventory: dict[str, Any], policy: dict[str, Any]) -> d
             "custom_backup_engine": False,
         },
     }
+    if object_custody:
+        plan["object_custody"] = object_custody
+        plan["object_restore_classes"] = _object_restore_classes(object_custody)
+    return plan
 
 
 def validate_snapshot_plan(payload: dict[str, Any], *, public_safe: bool = False) -> list[Finding]:
@@ -339,6 +470,18 @@ def validate_snapshot_plan(payload: dict[str, Any], *, public_safe: bool = False
         )
     if not _is_object_list(payload.get("sources")):
         findings.append(_finding("sources", "$.sources", "sources must be a list of objects"))
+    object_custody = payload.get("object_custody")
+    findings.extend(_validate_object_custody(object_custody, path="$.object_custody"))
+    if _is_object_list(object_custody) and isinstance(payload.get("object_restore_classes"), dict):
+        expected_classes = _object_restore_classes(list(object_custody))
+        if payload["object_restore_classes"] != expected_classes:
+            findings.append(
+                _finding(
+                    "object_restore_classes",
+                    "$.object_restore_classes",
+                    "object_restore_classes must match object_custody restore classes",
+                )
+            )
     if public_safe:
         findings.extend(find_public_private_bindings(payload))
     return findings

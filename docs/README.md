@@ -6,7 +6,8 @@ Northroot is open governance and accountability infrastructure for verifiable
 state transitions. The stable kernel is canonical identity plus `.nrj` journal
 verification. Current repository code also includes record streams, node and
 workspace manifests, governance/execution/exchange profile helpers, a sanitized
-ag-domain crate, and the promoted `northroot.durability` Python package.
+ag-domain crate, the promoted `northroot.custody` stewardship package, and the
+legacy-compatibility `northroot.durability` Python package.
 
 ## Documentation Structure
 
@@ -20,6 +21,7 @@ ag-domain crate, and the promoted `northroot.durability` Python package.
 - [Environment and Setup](developer/environment.md) - neutral setup and verification entrypoints
 - [API Contract](developer/api-contract.md) - public API surface
 - [Architecture](developer/architecture.md) - system design and components
+- [Stewardship Workstream](developer/stewardship-workstream.md) - object custody and legacy import context
 - [Testing Guide](developer/testing.md) - QA harness and test patterns
 - [Layering on Northroot](developer/layering.md) - profile, consumer protocol, custom backend, and filter patterns
 - [Script Inventory](developer/script-inventory.md) - release scripts, setup scripts, and helper boundaries

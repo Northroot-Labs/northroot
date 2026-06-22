@@ -131,6 +131,7 @@ Those are support surfaces, not stable kernel semantics.
 ## Related Documentation
 
 - [API Contract](api-contract.md)
+- [Stewardship Workstream](stewardship-workstream.md)
 - [Environment and Setup](environment.md)
 - [Core Specification](../reference/spec.md)
 - [Record V0 Stack](../reference/record-v0/stack.md)
