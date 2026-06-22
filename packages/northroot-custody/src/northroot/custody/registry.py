@@ -1,0 +1,403 @@
+"""Durable service-registry state helpers for the Northroot steward."""
+
+from __future__ import annotations
+
+import datetime as dt
+import hashlib
+import json
+import os
+from pathlib import Path
+from typing import Any, Callable
+
+from . import model
+
+
+REGISTRY_FILENAME = "service-registry.json"
+LOCK_FILENAME = "service-registry.lock.json"
+OPERATION_DIRNAME = "registry-operations"
+
+
+class RegistryLockedError(RuntimeError):
+    """Raised when a registry mutation finds an unresolved operation lock."""
+
+    def __init__(self, lock: dict[str, Any]) -> None:
+        super().__init__("service registry has an unresolved operation lock")
+        self.lock = lock
+
+
+def _utc_stamp() -> str:
+    return dt.datetime.now(tz=dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+
+
+def _operation_id(operation: str) -> str:
+    safe_operation = operation.replace(".", "-").replace("/", "-")
+    return f"{_utc_stamp()}-{safe_operation}"
+
+
+def registry_path(state_dir: Path) -> Path:
+    return state_dir / REGISTRY_FILENAME
+
+
+def lock_path(state_dir: Path) -> Path:
+    return state_dir / LOCK_FILENAME
+
+
+def operation_dir(state_dir: Path) -> Path:
+    return state_dir / OPERATION_DIRNAME
+
+
+def _sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def _file_sha256(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _json_bytes(payload: dict[str, Any]) -> bytes:
+    return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def _fsync_directory(path: Path) -> None:
+    if not path.exists():
+        return
+    flags = getattr(os, "O_DIRECTORY", 0) | os.O_RDONLY
+    try:
+        fd = os.open(path, flags)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _atomic_write_json(path: Path, payload: dict[str, Any]) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = _json_bytes(payload)
+    temp_path = path.with_name(f".{path.name}.{os.getpid()}.{_utc_stamp()}.tmp")
+    with temp_path.open("wb") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, path)
+    _fsync_directory(path.parent)
+    return _sha256_bytes(data)
+
+
+def _read_json(path: Path) -> dict[str, Any]:
+    return model.load_json(path)
+
+
+def _validate_or_raise(registry: dict[str, Any], *, public_safe: bool) -> None:
+    findings = model.validate_service_registry(registry, public_safe=public_safe)
+    errors = [finding for finding in findings if finding.severity == "error"]
+    if errors:
+        detail = "; ".join(f"{finding.path}: {finding.detail}" for finding in errors)
+        raise ValueError(f"invalid service registry: {detail}")
+
+
+def _load_lock(state_dir: Path) -> dict[str, Any] | None:
+    path = lock_path(state_dir)
+    if not path.is_file():
+        return None
+    return _read_json(path)
+
+
+def _write_operation_summary(state_dir: Path, summary: dict[str, Any]) -> Path:
+    out_dir = operation_dir(state_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    path = out_dir / f"{summary['operation_id']}.json"
+    _atomic_write_json(path, summary)
+    return path
+
+
+def load_registry(state_dir: Path) -> dict[str, Any]:
+    return _read_json(registry_path(state_dir))
+
+
+def registry_status(state_dir: Path, *, public_safe: bool = False) -> dict[str, Any]:
+    path = registry_path(state_dir)
+    lock = _load_lock(state_dir)
+    if not path.is_file():
+        return {
+            "schema_version": "northroot.steward.registry-status.v0",
+            "configured": False,
+            "ready": False,
+            "registry_path": str(path),
+            "registry_sha256": None,
+            "lock": lock,
+            "resume_required": lock is not None,
+            "findings": [
+                {
+                    "severity": "error",
+                    "code": "missing_service_registry",
+                    "path": str(path),
+                    "detail": "service registry has not been initialized",
+                }
+            ],
+        }
+    registry = load_registry(state_dir)
+    findings = model.validate_service_registry(registry, public_safe=public_safe)
+    error_count = len([finding for finding in findings if finding.severity == "error"])
+    return {
+        "schema_version": "northroot.steward.registry-status.v0",
+        "configured": True,
+        "ready": error_count == 0 and lock is None,
+        "registry_path": str(path),
+        "registry_sha256": _file_sha256(path),
+        "lock": lock,
+        "resume_required": lock is not None,
+        "finding_count": len(findings),
+        "error_count": error_count,
+        "service_id": registry.get("service_id"),
+        "node_id": registry.get("node_id"),
+        "project_count": len(registry.get("projects", [])) if isinstance(registry.get("projects"), list) else 0,
+        "object_count": len(registry.get("objects", [])) if isinstance(registry.get("objects"), list) else 0,
+        "permission_count": len(registry.get("permissions", [])) if isinstance(registry.get("permissions"), list) else 0,
+        "destination_count": len(registry.get("destinations", [])) if isinstance(registry.get("destinations"), list) else 0,
+        "source_destination_count": len(registry.get("source_destinations", []))
+        if isinstance(registry.get("source_destinations"), list)
+        else 0,
+        "replica_count": len(registry.get("replicas", [])) if isinstance(registry.get("replicas"), list) else 0,
+        "legacy_import_count": len(registry.get("legacy_imports", []))
+        if isinstance(registry.get("legacy_imports"), list)
+        else 0,
+        "findings": [finding.as_dict() for finding in findings],
+    }
+
+
+def initialize_registry(
+    state_dir: Path,
+    registry: dict[str, Any],
+    *,
+    public_safe: bool = False,
+    overwrite: bool = False,
+) -> dict[str, Any]:
+    path = registry_path(state_dir)
+    if path.exists() and not overwrite:
+        raise FileExistsError(f"service registry already exists: {path}")
+    _validate_or_raise(registry, public_safe=public_safe)
+    state_dir.mkdir(parents=True, exist_ok=True)
+    digest = _atomic_write_json(path, registry)
+    summary = {
+        "schema_version": "northroot.steward.registry-operation.v0",
+        "operation_id": _operation_id("registry.init"),
+        "operation": "registry.init",
+        "status": "completed",
+        "registry_path": str(path),
+        "registry_sha256": digest,
+        "public_safe": public_safe,
+        "completed_at": _utc_stamp(),
+    }
+    summary_path = _write_operation_summary(state_dir, summary)
+    return {
+        "initialized": True,
+        "registry_path": str(path),
+        "registry_sha256": digest,
+        "operation_summary_path": str(summary_path),
+    }
+
+
+def mutate_registry(
+    state_dir: Path,
+    *,
+    operation: str,
+    mutator: Callable[[dict[str, Any]], None],
+    public_safe: bool = False,
+) -> dict[str, Any]:
+    existing_lock = _load_lock(state_dir)
+    if existing_lock is not None:
+        raise RegistryLockedError(existing_lock)
+    operation_id = _operation_id(operation)
+    lock = {
+        "schema_version": "northroot.steward.registry-operation-lock.v0",
+        "operation_id": operation_id,
+        "operation": operation,
+        "started_at": _utc_stamp(),
+        "pid": os.getpid(),
+        "failure_policy": "fail-closed-record-summary",
+        "resume_hint": "run registry recover before applying another mutation",
+    }
+    _atomic_write_json(lock_path(state_dir), lock)
+    before_sha256 = _file_sha256(registry_path(state_dir))
+    try:
+        registry = load_registry(state_dir)
+        mutator(registry)
+        _validate_or_raise(registry, public_safe=public_safe)
+        after_sha256 = _atomic_write_json(registry_path(state_dir), registry)
+        summary = {
+            "schema_version": "northroot.steward.registry-operation.v0",
+            "operation_id": operation_id,
+            "operation": operation,
+            "status": "completed",
+            "registry_path": str(registry_path(state_dir)),
+            "before_sha256": before_sha256,
+            "registry_sha256": after_sha256,
+            "public_safe": public_safe,
+            "completed_at": _utc_stamp(),
+        }
+        summary_path = _write_operation_summary(state_dir, summary)
+        lock_path(state_dir).unlink(missing_ok=True)
+        _fsync_directory(state_dir)
+        return {
+            "mutated": True,
+            "operation": operation,
+            "operation_id": operation_id,
+            "registry_path": str(registry_path(state_dir)),
+            "before_sha256": before_sha256,
+            "registry_sha256": after_sha256,
+            "operation_summary_path": str(summary_path),
+        }
+    except Exception as exc:
+        summary = {
+            "schema_version": "northroot.steward.registry-operation.v0",
+            "operation_id": operation_id,
+            "operation": operation,
+            "status": "failed",
+            "registry_path": str(registry_path(state_dir)),
+            "before_sha256": before_sha256,
+            "registry_sha256": _file_sha256(registry_path(state_dir)),
+            "public_safe": public_safe,
+            "error": str(exc),
+            "completed_at": _utc_stamp(),
+        }
+        _write_operation_summary(state_dir, summary)
+        lock_path(state_dir).unlink(missing_ok=True)
+        _fsync_directory(state_dir)
+        raise
+
+
+def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str, Any]:
+    lock = _load_lock(state_dir)
+    if lock is None:
+        return {
+            "recovered": False,
+            "resume_required": False,
+            "detail": "no operation lock present",
+        }
+    registry = load_registry(state_dir)
+    findings = model.validate_service_registry(registry, public_safe=public_safe)
+    errors = [finding for finding in findings if finding.severity == "error"]
+    operation_id = _operation_id("registry.recover")
+    status = "recovered-after-interruption" if not errors else "blocked-invalid-registry"
+    summary = {
+        "schema_version": "northroot.steward.registry-operation.v0",
+        "operation_id": operation_id,
+        "operation": "registry.recover",
+        "status": status,
+        "interrupted_operation_lock": lock,
+        "registry_path": str(registry_path(state_dir)),
+        "registry_sha256": _file_sha256(registry_path(state_dir)),
+        "public_safe": public_safe,
+        "findings": [finding.as_dict() for finding in findings],
+        "completed_at": _utc_stamp(),
+    }
+    summary_path = _write_operation_summary(state_dir, summary)
+    if errors:
+        return {
+            "recovered": False,
+            "resume_required": True,
+            "operation_summary_path": str(summary_path),
+            "error_count": len(errors),
+            "findings": [finding.as_dict() for finding in findings],
+        }
+    lock_path(state_dir).unlink(missing_ok=True)
+    _fsync_directory(state_dir)
+    return {
+        "recovered": True,
+        "resume_required": False,
+        "operation_summary_path": str(summary_path),
+        "registry_sha256": summary["registry_sha256"],
+    }
+
+
+def _append_unique(items: list[dict[str, Any]], key: str, value: dict[str, Any]) -> None:
+    identity = value.get(key)
+    if any(item.get(key) == identity for item in items):
+        raise ValueError(f"duplicate {key}: {identity}")
+    items.append(value)
+
+
+def add_object(state_dir: Path, custody_object: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    def mutator(registry: dict[str, Any]) -> None:
+        _append_unique(registry.setdefault("objects", []), "object_id", custody_object)
+
+    return mutate_registry(state_dir, operation="registry.object.add", mutator=mutator, public_safe=public_safe)
+
+
+def add_permission(state_dir: Path, permission: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    def mutator(registry: dict[str, Any]) -> None:
+        _append_unique(registry.setdefault("permissions", []), "permission_set_id", permission)
+
+    return mutate_registry(state_dir, operation="registry.permission.add", mutator=mutator, public_safe=public_safe)
+
+
+def add_project(state_dir: Path, project: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    def mutator(registry: dict[str, Any]) -> None:
+        _append_unique(registry.setdefault("projects", []), "project_id", project)
+
+    return mutate_registry(state_dir, operation="registry.project.add", mutator=mutator, public_safe=public_safe)
+
+
+def register_project(
+    state_dir: Path,
+    *,
+    project: dict[str, Any],
+    permission: dict[str, Any],
+    public_safe: bool = False,
+) -> dict[str, Any]:
+    def mutator(registry: dict[str, Any]) -> None:
+        _append_unique(registry.setdefault("permissions", []), "permission_set_id", permission)
+        _append_unique(registry.setdefault("projects", []), "project_id", project)
+
+    return mutate_registry(state_dir, operation="registry.project.register", mutator=mutator, public_safe=public_safe)
+
+
+def add_destination(state_dir: Path, destination: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    def mutator(registry: dict[str, Any]) -> None:
+        _append_unique(registry.setdefault("destinations", []), "destination_id", destination)
+
+    return mutate_registry(state_dir, operation="registry.destination.add", mutator=mutator, public_safe=public_safe)
+
+
+def bind_source_destination(
+    state_dir: Path,
+    source_destination: dict[str, Any],
+    *,
+    public_safe: bool = False,
+) -> dict[str, Any]:
+    def mutator(registry: dict[str, Any]) -> None:
+        _append_unique(registry.setdefault("source_destinations", []), "source_destination_id", source_destination)
+
+    return mutate_registry(
+        state_dir,
+        operation="registry.source-destination.bind",
+        mutator=mutator,
+        public_safe=public_safe,
+    )
+
+
+def add_replica(state_dir: Path, replica: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    def mutator(registry: dict[str, Any]) -> None:
+        _append_unique(registry.setdefault("replicas", []), "replica_id", replica)
+
+    return mutate_registry(state_dir, operation="registry.replica.add", mutator=mutator, public_safe=public_safe)
+
+
+def record_legacy_import(
+    state_dir: Path,
+    legacy_import: dict[str, Any],
+    *,
+    public_safe: bool = False,
+) -> dict[str, Any]:
+    def mutator(registry: dict[str, Any]) -> None:
+        _append_unique(registry.setdefault("legacy_imports", []), "import_id", legacy_import)
+
+    return mutate_registry(state_dir, operation="registry.legacy-import.record", mutator=mutator, public_safe=public_safe)

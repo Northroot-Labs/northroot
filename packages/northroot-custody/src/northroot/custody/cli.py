@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from . import model, steward
+from . import model, registry, steward
 
 
 def write_json(payload: object) -> None:
@@ -148,7 +148,61 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     retention_evaluate.add_argument("--evidence", action="append", default=[])
     retention_evaluate.add_argument("--use-recorded-evidence", action="store_true")
 
+    registry_parser = steward_sub.add_parser("registry", help="Manage durable steward service registry state.")
+    registry_sub = registry_parser.add_subparsers(dest="registry_command", required=True)
+    registry_init = registry_sub.add_parser("init")
+    registry_init.add_argument("--state", required=True)
+    registry_init.add_argument("--registry", required=True)
+    registry_init.add_argument("--public-safe", action="store_true")
+    registry_init.add_argument("--overwrite", action="store_true")
+    registry_status = registry_sub.add_parser("status")
+    registry_status.add_argument("--state", required=True)
+    registry_status.add_argument("--public-safe", action="store_true")
+    registry_recover = registry_sub.add_parser("recover")
+    registry_recover.add_argument("--state", required=True)
+    registry_recover.add_argument("--public-safe", action="store_true")
+    for name in (
+        "add-object",
+        "add-permission",
+        "add-project",
+        "add-destination",
+        "bind-source",
+        "add-replica",
+        "record-legacy-import",
+    ):
+        mutation = registry_sub.add_parser(name)
+        mutation.add_argument("--state", required=True)
+        mutation.add_argument("--json", required=True, help="Path to the JSON object to append.")
+        mutation.add_argument("--public-safe", action="store_true")
+    register_project = registry_sub.add_parser("register-project")
+    register_project.add_argument("--state", required=True)
+    register_project.add_argument("--project-json", required=True)
+    register_project.add_argument("--permission-json", required=True)
+    register_project.add_argument("--public-safe", action="store_true")
+
     return parser.parse_args(argv)
+
+
+def _write_registry_result(result: object) -> int:
+    write_json(result)
+    if isinstance(result, dict) and result.get("locked"):
+        return 1
+    if isinstance(result, dict) and result.get("recovered") is False and result.get("resume_required"):
+        return 1
+    return 0
+
+
+def _registry_mutation_result(fn, *, state: str, json_path: str, public_safe: bool) -> dict[str, object]:
+    try:
+        return fn(Path(state), model.load_json(Path(json_path)), public_safe=public_safe)
+    except registry.RegistryLockedError as exc:
+        return {
+            "mutated": False,
+            "locked": True,
+            "resume_required": True,
+            "lock": exc.lock,
+            "detail": "service registry has an unresolved operation lock; run steward registry recover first",
+        }
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -313,6 +367,61 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         write_json(decision)
         return 0 if decision["allowed"] else 1
+    if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "init":
+        write_json(
+            registry.initialize_registry(
+                Path(args.state),
+                model.load_json(Path(args.registry)),
+                public_safe=args.public_safe,
+                overwrite=args.overwrite,
+            )
+        )
+        return 0
+    if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "status":
+        status = registry.registry_status(Path(args.state), public_safe=args.public_safe)
+        write_json(status)
+        return 0 if status["ready"] else 1
+    if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "recover":
+        return _write_registry_result(registry.recover_registry(Path(args.state), public_safe=args.public_safe))
+    if args.command == "steward" and args.steward_command == "registry":
+        mutation_map = {
+            "add-object": registry.add_object,
+            "add-permission": registry.add_permission,
+            "add-project": registry.add_project,
+            "add-destination": registry.add_destination,
+            "bind-source": registry.bind_source_destination,
+            "add-replica": registry.add_replica,
+            "record-legacy-import": registry.record_legacy_import,
+        }
+        if args.registry_command in mutation_map:
+            return _write_registry_result(
+                _registry_mutation_result(
+                    mutation_map[args.registry_command],
+                    state=args.state,
+                    json_path=args.json,
+                    public_safe=args.public_safe,
+                )
+            )
+        if args.registry_command == "register-project":
+            try:
+                return _write_registry_result(
+                    registry.register_project(
+                        Path(args.state),
+                        project=model.load_json(Path(args.project_json)),
+                        permission=model.load_json(Path(args.permission_json)),
+                        public_safe=args.public_safe,
+                    )
+                )
+            except registry.RegistryLockedError as exc:
+                return _write_registry_result(
+                    {
+                        "mutated": False,
+                        "locked": True,
+                        "resume_required": True,
+                        "lock": exc.lock,
+                        "detail": "service registry has an unresolved operation lock; run steward registry recover first",
+                    }
+                )
     raise AssertionError(args.command)
 
 

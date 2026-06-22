@@ -1088,6 +1088,8 @@ def validate_service_registry(payload: dict[str, Any], *, public_safe: bool = Fa
 
     permissions = payload.get("permissions")
     permission_set_ids: set[str] = set()
+    permission_scopes: dict[str, str] = {}
+    permission_project_ids: dict[str, str] = {}
     project_permission_refs: list[tuple[str, str]] = []
     if not _is_object_list(permissions):
         findings.append(_finding("permissions", "$.permissions", "permissions must be a list of objects"))
@@ -1095,6 +1097,7 @@ def validate_service_registry(payload: dict[str, Any], *, public_safe: bool = Fa
         for index, permission in enumerate(permissions):
             perm_path = f"$.permissions[{index}]"
             permission_set_id = permission.get("permission_set_id")
+            scope = permission.get("scope")
             if not _is_string(permission_set_id):
                 findings.append(
                     _finding("missing_string", f"{perm_path}.permission_set_id", "permission_set_id is required")
@@ -1109,7 +1112,7 @@ def validate_service_registry(payload: dict[str, Any], *, public_safe: bool = Fa
                 )
             else:
                 permission_set_ids.add(str(permission_set_id))
-            scope = permission.get("scope")
+                permission_scopes[str(permission_set_id)] = str(scope)
             if scope not in SERVICE_PERMISSION_SCOPES:
                 findings.append(
                     _finding(
@@ -1132,6 +1135,8 @@ def validate_service_registry(payload: dict[str, Any], *, public_safe: bool = Fa
                 findings.append(_finding("missing_string", f"{perm_path}.project_id", "project_id is required"))
             elif scope == "project":
                 project_permission_refs.append((perm_path, str(permission.get("project_id"))))
+                if _is_string(permission_set_id):
+                    permission_project_ids[str(permission_set_id)] = str(permission.get("project_id"))
             findings.extend(
                 _validate_permission_operations(
                     permission.get("allowed_operations"),
@@ -1188,6 +1193,22 @@ def validate_service_registry(payload: dict[str, Any], *, public_safe: bool = Fa
                         "unknown_project_permission_set",
                         f"{project_path}.permission_set_ref",
                         f"unknown permission_set_ref: {permission_set_ref}",
+                    )
+                )
+            elif permission_scopes.get(str(permission_set_ref)) != "project":
+                findings.append(
+                    _finding(
+                        "invalid_project_permission_scope",
+                        f"{project_path}.permission_set_ref",
+                        "project permission_set_ref must reference a project-scoped permission set",
+                    )
+                )
+            elif permission_project_ids.get(str(permission_set_ref)) != project_id:
+                findings.append(
+                    _finding(
+                        "mismatched_project_permission",
+                        f"{project_path}.permission_set_ref",
+                        "project permission_set_ref must reference a permission set for the same project_id",
                     )
                 )
             if not isinstance(project.get("object_ids"), list) or not project.get("object_ids"):

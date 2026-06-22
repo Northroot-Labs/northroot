@@ -128,6 +128,14 @@ class CustodyModelTests(unittest.TestCase):
 
         self.assertIn("unknown_project_permission_set", {finding.code for finding in findings})
 
+    def test_service_registry_rejects_mismatched_project_permission(self) -> None:
+        registry = load_example("service-registry.example.json")
+        registry["permissions"][0]["project_id"] = "project/other"
+
+        findings = model.validate_service_registry(registry)
+
+        self.assertIn("mismatched_project_permission", {finding.code for finding in findings})
+
     def test_service_registry_rejects_unknown_replica_source(self) -> None:
         registry = load_example("service-registry.example.json")
         registry["replicas"][0]["source_destination_id"] = "source/missing"
