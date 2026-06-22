@@ -136,6 +136,8 @@ class StewardTests(unittest.TestCase):
             self.assertEqual(status["external_destination_evidence_required"], ["verified_offsite_copy"])
             self.assertIn("resticprofile_config", status["generated_artifacts"])
             self.assertIn("snapshot_plan", status["generated_artifacts"])
+            self.assertTrue(status["installation_integrity"]["ok"])
+            self.assertTrue((output_dir / "steward-installation-index.json").exists())
             self.assertIn("nr steward status --state", status["commands"]["status"])
             self.assertIn("nr steward preflight --state", status["commands"]["preflight"])
             self.assertIn("nr steward capabilities --state", status["commands"]["capabilities"])
@@ -143,6 +145,7 @@ class StewardTests(unittest.TestCase):
             capabilities = steward.render_capabilities(output_dir)
             self.assertEqual(capabilities["schema_version"], "northroot.steward.capabilities.v0")
             self.assertTrue(capabilities["execution_model"]["preflight_required_before_execute"])
+            self.assertTrue(capabilities["execution_model"]["installation_manifest_integrity_checked_by_preflight"])
             self.assertTrue(capabilities["execution_model"]["generated_artifact_integrity_checked_by_preflight"])
             self.assertIn("macos-keychain", capabilities["secret_binding_providers"])
             self.assertIn("onepassword-cli", capabilities["secret_binding_providers"])
@@ -607,6 +610,30 @@ class StewardTests(unittest.TestCase):
             self.assertIn("generated_artifact_integrity_failed", {
                 check["code"] for check in tampered_verification["checks"] if check["code"]
             })
+            tampered_installation_dir = Path(temp_dir) / "steward-tampered-installation"
+            steward.init_steward(
+                inventory_path=EXAMPLES / "workspace-inventory.example.json",
+                policy_path=EXAMPLES / "custody-policy.example.json",
+                output_dir=tampered_installation_dir,
+                secret_bindings_path=EXAMPLES / "secret-bindings.redacted.example.json",
+                repository_bindings_path=EXAMPLES / "repository-bindings.redacted.example.json",
+            )
+            installation_manifest = tampered_installation_dir / "steward-installation.json"
+            tampered_installation = model.load_json(installation_manifest)
+            tampered_installation["profile_name"] = "operator-hand-edit"
+            installation_manifest.write_text(
+                json.dumps(tampered_installation, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            tampered_installation_preflight = steward.render_preflight(tampered_installation_dir)
+            tampered_installation_verify = steward.render_state_verification(tampered_installation_dir)
+            self.assertFalse(tampered_installation_preflight["ready"])
+            self.assertEqual(tampered_installation_preflight["installation_integrity"]["status"], "digest-mismatch")
+            self.assertIn("installation_manifest_integrity_failed", {
+                check["code"] for check in tampered_installation_preflight["checks"] if check["code"]
+            })
+            self.assertFalse(tampered_installation_verify["ready"])
+            self.assertFalse(tampered_installation_verify["safe_to_execute"])
             self.assertEqual(
                 preflight["destination_execution"]["additional_destination_handling"],
                 "external-evidence-required",

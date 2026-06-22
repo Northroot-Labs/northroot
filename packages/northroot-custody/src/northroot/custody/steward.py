@@ -19,6 +19,8 @@ from .registry import authorize_operation
 
 
 INSTALLATION_SCHEMA = "northroot.steward.installation.v0"
+INSTALLATION_INDEX_FILENAME = "steward-installation-index.json"
+INSTALLATION_INDEX_SCHEMA = "northroot.steward.installation-index.v0"
 DEFAULT_PROFILE_NAME = "steward"
 DEFAULT_RUNNER_COMMAND = "nr steward"
 DEFAULT_DOGFOOD_AGENT_ID = "agent:codex"
@@ -173,6 +175,19 @@ def _fsync_directory(path: Path) -> None:
 def _atomic_write_json(path: Path, payload: dict[str, Any]) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = _json_bytes(payload)
+    temp_path = path.with_name(f".{path.name}.{os.getpid()}.{_utc_stamp()}.tmp")
+    with temp_path.open("wb") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, path)
+    _fsync_directory(path.parent)
+    return hashlib.sha256(data).hexdigest()
+
+
+def _atomic_write_text(path: Path, text: str) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = text.encode("utf-8")
     temp_path = path.with_name(f".{path.name}.{os.getpid()}.{_utc_stamp()}.tmp")
     with temp_path.open("wb") as handle:
         handle.write(data)
@@ -484,6 +499,140 @@ def installation_path(output_dir: Path) -> Path:
     return output_dir / "steward-installation.json"
 
 
+def installation_index_path(output_dir: Path) -> Path:
+    return output_dir / INSTALLATION_INDEX_FILENAME
+
+
+def _write_installation_manifest(output_dir: Path, installation: StewardInstallation) -> None:
+    payload = installation.as_dict()
+    digest = _atomic_write_json(installation_path(output_dir), payload)
+    index = {
+        "schema_version": INSTALLATION_INDEX_SCHEMA,
+        "updated_at": _utc_stamp(),
+        "manifest": {
+            "path": installation_path(output_dir).name,
+            "sha256": digest,
+            "profile_name": payload.get("profile_name"),
+            "execution_mode": payload.get("execution_mode"),
+            "delegated_tool": payload.get("delegated_tool"),
+        },
+    }
+    _atomic_write_json(installation_index_path(output_dir), index)
+
+
+def render_installation_integrity(output_dir: Path) -> dict[str, Any]:
+    manifest_path = installation_path(output_dir)
+    index_path = installation_index_path(output_dir)
+    if not manifest_path.exists() and not index_path.exists():
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "missing-installation",
+            "detail": "steward installation has not been initialized",
+        }
+    if manifest_path.exists() and not index_path.exists():
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "unindexed",
+            "detail": "steward installation manifest is not present in the digest index",
+        }
+    if index_path.exists() and not manifest_path.exists():
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "missing-manifest",
+            "detail": "indexed steward installation manifest is missing",
+        }
+    try:
+        index = model.load_json(index_path)
+    except (OSError, ValueError, json.JSONDecodeError) as err:
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-index",
+            "detail": str(err),
+        }
+    if index.get("schema_version") != INSTALLATION_INDEX_SCHEMA:
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-index",
+            "detail": f"installation index schema_version must be {INSTALLATION_INDEX_SCHEMA}",
+        }
+    manifest = index.get("manifest")
+    if not isinstance(manifest, dict) or manifest.get("path") != manifest_path.name:
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-index",
+            "detail": "installation index manifest entry must reference steward-installation.json",
+        }
+    expected_sha = manifest.get("sha256")
+    if not isinstance(expected_sha, str) or not expected_sha:
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-index",
+            "detail": "installation index manifest entry is missing sha256",
+        }
+    actual_sha = _file_sha256(manifest_path)
+    if actual_sha != expected_sha:
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "digest-mismatch",
+            "detail": "steward installation manifest digest does not match the digest index",
+            "expected_sha256": expected_sha,
+            "actual_sha256": actual_sha,
+        }
+    try:
+        installation = model.load_json(manifest_path)
+    except (OSError, ValueError, json.JSONDecodeError) as err:
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-manifest",
+            "detail": str(err),
+        }
+    if installation.get("schema_version") != INSTALLATION_SCHEMA:
+        return {
+            "schema_version": "northroot.steward.installation-integrity.v0",
+            "ok": False,
+            "manifest_path": str(manifest_path),
+            "index_path": str(index_path),
+            "status": "invalid-manifest",
+            "detail": f"installation manifest schema_version must be {INSTALLATION_SCHEMA}",
+        }
+    return {
+        "schema_version": "northroot.steward.installation-integrity.v0",
+        "ok": True,
+        "manifest_path": str(manifest_path),
+        "index_path": str(index_path),
+        "status": "ok",
+        "detail": "steward installation manifest matches the digest index",
+        "sha256": actual_sha,
+    }
+
+
 def init_steward(
     *,
     inventory_path: Path,
@@ -502,15 +651,15 @@ def init_steward(
     output_dir.mkdir(parents=True, exist_ok=True)
     plan_path = output_dir / "snapshot-plan.json"
     resticprofile_path = output_dir / "resticprofile.yaml"
-    plan_path.write_text(json.dumps(plan, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    resticprofile_path.write_text(
+    _atomic_write_json(plan_path, plan)
+    _atomic_write_text(
+        resticprofile_path,
         render_resticprofile_config(
             plan,
             profile_name=profile_name,
             secret_bindings=secret_bindings,
             repository_bindings=repository_bindings,
         ),
-        encoding="utf-8",
     )
 
     installation = StewardInstallation(
@@ -539,10 +688,7 @@ def init_steward(
             "evidence": f"{DEFAULT_RUNNER_COMMAND} evidence report --state {output_dir}",
         },
     )
-    installation_path(output_dir).write_text(
-        json.dumps(installation.as_dict(), indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    _write_installation_manifest(output_dir, installation)
     return installation
 
 
@@ -634,11 +780,33 @@ def _runtime_env_for_execution(secret_bindings: dict[str, Any] | None) -> dict[s
 
 def render_preflight(output_dir: Path) -> dict[str, Any]:
     installation = load_installation(output_dir)
+    installation_integrity = render_installation_integrity(output_dir)
     plan_path = Path(str(installation["snapshot_plan_path"]))
     resticprofile_path = Path(str(installation["resticprofile_path"]))
     checks: list[dict[str, Any]] = []
 
     checks.append(_check("installation", True, f"loaded {installation_path(output_dir)}"))
+    checks.append(
+        _check(
+            "installation_manifest_integrity",
+            bool(installation_integrity["ok"]),
+            "steward installation manifest matches digest index"
+            if installation_integrity["ok"]
+            else "steward installation manifest failed digest index verification",
+            code=None if installation_integrity["ok"] else "installation_manifest_integrity_failed",
+        )
+    )
+    if not installation_integrity["ok"]:
+        return {
+            "schema_version": "northroot.steward.preflight.v0",
+            "profile_name": installation.get("profile_name"),
+            "ready": False,
+            "execution_mode": installation.get("execution_mode"),
+            "delegated_tool": installation.get("delegated_tool"),
+            "custom_backup_engine": installation.get("custom_backup_engine"),
+            "installation_integrity": installation_integrity,
+            "checks": checks,
+        }
     checks.append(
         _check(
             "resticprofile_config",
@@ -955,6 +1123,7 @@ def render_preflight(output_dir: Path) -> dict[str, Any]:
         "execution_mode": installation["execution_mode"],
         "delegated_tool": installation["delegated_tool"],
         "custom_backup_engine": installation["custom_backup_engine"],
+        "installation_integrity": installation_integrity,
         "destination_execution": _destination_execution(plan),
         "schedule": schedule,
         "checks": checks,
@@ -963,6 +1132,7 @@ def render_preflight(output_dir: Path) -> dict[str, Any]:
 
 def render_status(output_dir: Path) -> dict[str, Any]:
     installation = load_installation(output_dir)
+    installation_integrity = render_installation_integrity(output_dir)
     plan_path = Path(str(installation["snapshot_plan_path"]))
     plan = model.load_json(plan_path)
     destination_execution = _destination_execution(plan)
@@ -975,6 +1145,7 @@ def render_status(output_dir: Path) -> dict[str, Any]:
         "custom_backup_engine": installation["custom_backup_engine"],
         "snapshot_plan_path": str(plan_path),
         "resticprofile_path": installation["resticprofile_path"],
+        "installation_integrity": installation_integrity,
         "generated_artifacts": installation.get("generated_artifacts", {}),
         "source_count": len(plan.get("sources", [])),
         "destination_count": len(plan.get("destinations", [])),
@@ -1936,6 +2107,7 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
             "delegated_tool": installation["delegated_tool"],
             "custom_backup_engine": False,
             "preflight_required_before_execute": True,
+            "installation_manifest_integrity_checked_by_preflight": True,
             "generated_artifact_integrity_checked_by_preflight": True,
         },
         "restore_verification": {
