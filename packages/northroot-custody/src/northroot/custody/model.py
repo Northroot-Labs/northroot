@@ -25,6 +25,7 @@ REPOSITORY_BINDINGS_SCHEMA = "northroot.custody.repository-bindings.v0"
 COMMAND_PLAN_SCHEMA = "northroot.steward.command-plan.v0"
 SERVICE_REGISTRY_SCHEMA = "northroot.steward.service-registry.v0"
 LEGACY_PROFILE_IMPORT_SCHEMA = "northroot.steward.legacy-profile-import.v0"
+LEGACY_RUN_IMPORT_SCHEMA = "northroot.steward.legacy-run-import.v0"
 AGENT_DELEGATION_POLICY_SCHEMA = "northroot.steward.agent-delegation-policy.v0"
 
 STATE_ROLES = {"authoritative", "generated", "ignored"}
@@ -62,6 +63,7 @@ SECRET_BINDING_PROVIDERS = {"onepassword-cli", "macos-keychain", "env-command"}
 RUNTIME_ENV_PROVIDERS = {"macos-keychain", "env-command"}
 ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 OBJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:/-]*$")
+RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$")
 REPOSITORY_CHECK_STATUSES = {"ok", "failed", "not-run"}
 SERVICE_REF_PREFIXES = STORAGE_BINDING_PREFIXES + (
     "logs://",
@@ -665,7 +667,9 @@ def validate_run_summary(payload: dict[str, Any], *, public_safe: bool = False) 
         findings.append(_finding("verification_result", "$.verification_result", "verification_result must be an object"))
     else:
         findings.extend(validate_verification_result(verification, public_safe=public_safe))
-        if verification.get("restore_verified") is not True:
+        if payload.get("status") not in {"external-evidence-recorded", "legacy-run-imported"} and verification.get(
+            "restore_verified"
+        ) is not True:
             findings.append(
                 _finding(
                     "restore_not_verified",
@@ -1721,6 +1725,67 @@ def validate_legacy_profile_import(payload: dict[str, Any], *, public_safe: bool
     return findings
 
 
+def validate_legacy_run_import(payload: dict[str, Any], *, public_safe: bool = False) -> list[Finding]:
+    findings: list[Finding] = []
+    if payload.get("schema_version") != LEGACY_RUN_IMPORT_SCHEMA:
+        findings.append(_finding("schema_version", "$.schema_version", f"expected {LEGACY_RUN_IMPORT_SCHEMA}"))
+    findings.extend(_require_string(payload, "import_id", "$"))
+    if payload.get("source") != "legacy-machine-durability":
+        findings.append(
+            _finding(
+                "invalid_legacy_import_source",
+                "$.source",
+                "legacy run import source must be legacy-machine-durability",
+            )
+        )
+    if payload.get("import_mode") != "sanitized-run-summaries":
+        findings.append(
+            _finding(
+                "invalid_legacy_import_mode",
+                "$.import_mode",
+                "legacy run import mode must be sanitized-run-summaries",
+            )
+        )
+    for key in ("legacy_import_ref", "runner_state_ref", "per_run_state_ref"):
+        if payload.get(key) is not None:
+            findings.extend(_validate_symbolic_ref(payload.get(key), path=f"$.{key}", name=key))
+
+    run_summaries = payload.get("run_summaries")
+    run_ids: set[str] = set()
+    if not isinstance(run_summaries, list):
+        findings.append(_finding("run_summaries", "$.run_summaries", "run_summaries must be a non-empty list"))
+    elif not run_summaries:
+        findings.append(_finding("run_summaries", "$.run_summaries", "run_summaries must be a non-empty list"))
+    else:
+        for index, summary in enumerate(run_summaries):
+            summary_path = f"$.run_summaries[{index}]"
+            if not isinstance(summary, dict):
+                findings.append(_finding("run_summary", summary_path, "run summary entries must be objects"))
+                continue
+            run_id = summary.get("run_id")
+            if not _is_string(run_id):
+                findings.append(_finding("missing_string", f"{summary_path}.run_id", "run_id is required"))
+            elif not RUN_ID_PATTERN.match(str(run_id)):
+                findings.append(
+                    _finding(
+                        "invalid_run_id",
+                        f"{summary_path}.run_id",
+                        "run_id must be filesystem-safe and may not contain path separators",
+                    )
+                )
+            elif str(run_id) in run_ids:
+                findings.append(
+                    _finding("duplicate_run_id", f"{summary_path}.run_id", f"duplicate run_id: {run_id}")
+                )
+            else:
+                run_ids.add(str(run_id))
+            findings.extend(validate_run_summary(summary, public_safe=public_safe))
+
+    if public_safe:
+        findings.extend(find_public_private_bindings(payload))
+    return findings
+
+
 def build_run_summary(
     *,
     run_id: str,
@@ -1953,6 +2018,8 @@ def validate_document(payload: dict[str, Any], *, public_safe: bool = False) -> 
         return validate_service_registry(payload, public_safe=public_safe)
     if schema == LEGACY_PROFILE_IMPORT_SCHEMA:
         return validate_legacy_profile_import(payload, public_safe=public_safe)
+    if schema == LEGACY_RUN_IMPORT_SCHEMA:
+        return validate_legacy_run_import(payload, public_safe=public_safe)
     if schema == AGENT_DELEGATION_POLICY_SCHEMA:
         return validate_agent_delegation_policy(payload, public_safe=public_safe)
     return [_finding("unknown_schema", "$.schema_version", f"unsupported custody schema: {schema}")]

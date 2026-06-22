@@ -1,0 +1,105 @@
+{
+  "schema_version": "northroot.steward.legacy-run-import.v0",
+  "import_id": "legacy/example-machine-durability-runs",
+  "source": "legacy-machine-durability",
+  "import_mode": "sanitized-run-summaries",
+  "legacy_import_ref": "state://legacy-import/example-machine-durability",
+  "runner_state_ref": "run-state://legacy-machine-durability",
+  "per_run_state_ref": "state://legacy-machine-durability/runs",
+  "run_summaries": [
+    {
+      "retention_decision": {
+        "allowed": true,
+        "available_evidence": [
+          "verified_snapshot",
+          "verified_offsite_copy",
+          "restore_drill"
+        ],
+        "missing_evidence": [],
+        "policy_id": "example-policy",
+        "required_evidence": [
+          "verified_snapshot",
+          "verified_offsite_copy",
+          "restore_drill"
+        ],
+        "schema_version": "northroot.custody.retention-decision.v0",
+        "snapshot_id": "legacy-snap-001",
+        "workspace_id": "example-workspace"
+      },
+      "run_id": "legacy-run-001",
+      "schema_version": "northroot.custody.run-summary.v0",
+      "snapshot_result": {
+        "delegated_tool": "resticprofile",
+        "execute_requested": true,
+        "executed": true,
+        "import_id": "legacy/example-machine-durability-runs",
+        "operation": "restore-drill",
+        "snapshot_id": "legacy-snap-001"
+      },
+      "status": "delegated-ok",
+      "tool_invocations": [
+        {
+          "executed": true,
+          "operation": "restore-drill",
+          "return_code": 0,
+          "tool": "legacy-machine-durability"
+        }
+      ],
+      "verification_result": {
+        "external_evidence": [
+          "verified_offsite_copy"
+        ],
+        "repository_check": "ok",
+        "restore_observation": {
+          "byte_count": 7,
+          "exists": true,
+          "file_count": 1,
+          "manifest_sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+          "target": "restore-target://legacy-drill",
+          "verified": true
+        },
+        "restore_verified": true,
+        "schema_version": "northroot.custody.verification-result.v0"
+      },
+      "workspace_id": "example-workspace"
+    },
+    {
+      "run_id": "legacy-offsite-evidence-001",
+      "schema_version": "northroot.custody.run-summary.v0",
+      "snapshot_result": {
+        "artifact_ref": "artifact://legacy/offsite-copy-check",
+        "detail": "legacy offsite copy verification was imported from sanitized run evidence",
+        "evidence": [
+          "verified_offsite_copy"
+        ],
+        "external_evidence_source": "external-monitor://legacy-offsite-copy-check",
+        "import_id": "legacy/example-machine-durability-runs",
+        "operation": "evidence-record",
+        "snapshot_id": "legacy-snap-001"
+      },
+      "status": "external-evidence-recorded",
+      "tool_invocations": [
+        {
+          "artifact_ref": "artifact://legacy/offsite-copy-check",
+          "evidence": [
+            "verified_offsite_copy"
+          ],
+          "operation": "evidence-record",
+          "snapshot_id": "legacy-snap-001",
+          "source": "external-monitor://legacy-offsite-copy-check",
+          "tool": "legacy-machine-durability"
+        }
+      ],
+      "verification_result": {
+        "external_evidence": [
+          "verified_offsite_copy"
+        ],
+        "repository_check": "not-run",
+        "restore_observation": null,
+        "restore_verified": false,
+        "schema_version": "northroot.custody.verification-result.v0"
+      },
+      "workspace_id": "example-workspace"
+    }
+  ]
+}

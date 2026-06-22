@@ -21,6 +21,76 @@ def write_fake_executable(directory: Path, name: str, body: str = "#!/bin/sh\nex
 
 
 class StewardTests(unittest.TestCase):
+    def test_import_legacy_run_summaries_feeds_evidence_report_safely(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "steward"
+            steward.init_steward(
+                inventory_path=EXAMPLES / "workspace-inventory.example.json",
+                policy_path=EXAMPLES / "custody-policy.example.json",
+                output_dir=output_dir,
+            )
+            legacy_import = model.load_json(EXAMPLES / "legacy-run-import.redacted.example.json")
+
+            imported = steward.import_legacy_run_summaries(output_dir, legacy_import, public_safe=True)
+
+            self.assertTrue(imported["imported"])
+            self.assertEqual(imported["inserted_run_ids"], ["legacy-run-001", "legacy-offsite-evidence-001"])
+            self.assertEqual(imported["skipped_existing_run_ids"], [])
+            self.assertTrue((output_dir / "run-summaries" / "legacy-run-001.json").exists())
+            self.assertFalse(steward.operation_lock_path(output_dir).exists())
+            evidence = steward.render_evidence_report(output_dir, snapshot_id="legacy-snap-001")
+            self.assertEqual(
+                evidence["available_evidence"],
+                ["restore_drill", "verified_offsite_copy", "verified_snapshot"],
+            )
+            retention = steward.evaluate_retention(
+                output_dir,
+                snapshot_id="legacy-snap-001",
+                available_evidence=[],
+                use_recorded_evidence=True,
+            )
+            self.assertTrue(retention["allowed"])
+
+            replayed = steward.import_legacy_run_summaries(output_dir, legacy_import, public_safe=True)
+            self.assertEqual(replayed["inserted_run_ids"], [])
+            self.assertEqual(replayed["skipped_existing_run_ids"], ["legacy-run-001", "legacy-offsite-evidence-001"])
+            self.assertIsNone(replayed["operation_summary_path"])
+
+            conflicting_import = model.load_json(EXAMPLES / "legacy-run-import.redacted.example.json")
+            conflicting_import["run_summaries"][0]["status"] = "delegated-failed"
+            with self.assertRaises(ValueError):
+                steward.import_legacy_run_summaries(output_dir, conflicting_import, public_safe=True)
+            self.assertFalse(steward.operation_lock_path(output_dir).exists())
+            retained = model.load_json(output_dir / "run-summaries" / "legacy-run-001.json")
+            self.assertEqual(retained["status"], "delegated-ok")
+
+            steward.operation_lock_path(output_dir).write_text(
+                json.dumps(
+                    {
+                        "schema_version": "northroot.steward.operation-lock.v0",
+                        "operation_id": "legacy-import-lock",
+                        "operation": "legacy-run-import",
+                        "state": str(output_dir),
+                        "command": "steward import-legacy-runs",
+                        "import_id": "legacy/example-machine-durability-runs",
+                        "pid": 999999,
+                        "started_at": "20260622T000000000000Z",
+                        "failure_policy": "fail-closed-record-summary-before-retry",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            locked = steward.import_legacy_run_summaries(output_dir, legacy_import, public_safe=True)
+            self.assertFalse(locked["imported"])
+            self.assertTrue(locked["locked"])
+            recovered = steward.recover_operation(output_dir)
+            self.assertTrue(recovered["recovered"])
+            recovered_summary = model.load_json(Path(str(recovered["run_summary_path"])))
+            self.assertEqual(recovered_summary["snapshot_result"]["operation"], "legacy-run-import")
+
     def test_init_status_run_and_schedule_are_delegated(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "steward"

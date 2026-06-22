@@ -30,6 +30,7 @@ class PackageMetadataTests(unittest.TestCase):
             model.RUN_SUMMARY_SCHEMA,
             model.SERVICE_REGISTRY_SCHEMA,
             model.LEGACY_PROFILE_IMPORT_SCHEMA,
+            model.LEGACY_RUN_IMPORT_SCHEMA,
         }
         examples = [
             ROOT / "examples" / "workspace-inventory.example.json",
@@ -40,6 +41,7 @@ class PackageMetadataTests(unittest.TestCase):
             ROOT / "examples" / "run-summary.example.json",
             ROOT / "examples" / "service-registry.example.json",
             ROOT / "examples" / "legacy-profile-import.redacted.example.json",
+            ROOT / "examples" / "legacy-run-import.redacted.example.json",
             ROOT / "examples" / "agent-delegation-policy.dogfood.example.json",
         ]
 

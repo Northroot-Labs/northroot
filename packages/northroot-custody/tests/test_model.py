@@ -181,6 +181,18 @@ class CustodyModelTests(unittest.TestCase):
         self.assertIn("invalid_symbolic_ref", {finding.code for finding in findings})
         self.assertIn("public_private_binding", {finding.code for finding in findings})
 
+    def test_legacy_run_import_validates_sanitized_run_summaries(self) -> None:
+        legacy_import = load_example("legacy-run-import.redacted.example.json")
+
+        self.assertEqual(model.validate_document(legacy_import, public_safe=True), [])
+
+        legacy_import["run_summaries"][0]["run_id"] = "../unsafe"
+        legacy_import["run_summaries"][0]["snapshot_result"]["raw_log"] = "/Users/example/private.log"
+        findings = model.validate_legacy_run_import(legacy_import, public_safe=True)
+
+        self.assertIn("invalid_run_id", {finding.code for finding in findings})
+        self.assertIn("public_private_binding", {finding.code for finding in findings})
+
     def test_agent_delegation_policy_rejects_protected_branch_and_human_impersonation_gap(self) -> None:
         policy = load_example("agent-delegation-policy.dogfood.example.json")
         policy["scope"]["delegated_branch_prefixes"] = ["main/"]
