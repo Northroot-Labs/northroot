@@ -184,7 +184,11 @@ environment bindings without printing secret values. Steward records hashes for
 generated custody artifacts such as `snapshot-plan.json` and
 `resticprofile.yaml`; preflight fails if those generated files drift. Change the
 inventory, policy, or private bindings and rerun `steward init` instead of
-hand-editing generated config.
+hand-editing generated config. The root `steward-installation.json` manifest is
+also indexed in `steward-installation-index.json` with
+`northroot.steward.installation-index.v0`; preflight fails closed if that root
+manifest is unindexed, missing, or digest-mismatched because it controls the
+paths and generated artifact hashes used by the rest of steward state.
 
 `steward verify-state` is the read-only aggregate gate for agents and daemons.
 It composes status, preflight, the capability manifest, schedule metadata, and
