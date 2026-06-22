@@ -64,6 +64,13 @@ class CustodyModelTests(unittest.TestCase):
             ),
             [],
         )
+        self.assertEqual(
+            model.validate_agent_delegation_policy(
+                load_example("agent-delegation-policy.dogfood.example.json"),
+                public_safe=True,
+            ),
+            [],
+        )
 
     def test_render_snapshot_plan_delegates_to_resticprofile(self) -> None:
         plan = model.render_snapshot_plan(
@@ -162,6 +169,16 @@ class CustodyModelTests(unittest.TestCase):
 
         self.assertIn("invalid_symbolic_ref", {finding.code for finding in findings})
         self.assertIn("public_private_binding", {finding.code for finding in findings})
+
+    def test_agent_delegation_policy_rejects_protected_branch_and_human_impersonation_gap(self) -> None:
+        policy = load_example("agent-delegation-policy.dogfood.example.json")
+        policy["scope"]["delegated_branch_prefixes"] = ["main/"]
+        policy["prohibited_operations"].remove("impersonate-human-author")
+
+        findings = model.validate_agent_delegation_policy(policy, public_safe=True)
+
+        self.assertIn("protected_branch_prefix", {finding.code for finding in findings})
+        self.assertIn("missing_required_prohibitions", {finding.code for finding in findings})
 
     def test_public_policy_rejects_real_secret_reference(self) -> None:
         policy = load_example("custody-policy.example.json")

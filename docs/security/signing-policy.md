@@ -183,6 +183,20 @@ Agent tokens **must** be scoped to:
 - Read repo + write branches + PRs
 - **No** admin, **no** direct push to main, **no** workflow permission escalation
 
+### Default Dogfood Delegation Policy
+
+For current steward dogfooding, use
+`packages/northroot-custody/examples/agent-delegation-policy.dogfood.example.json`
+as the default agent delegation policy. It registers `agent:codex` for `codex/`
+branches and allows branch checkout/creation, checkpoint commits, branch pushes,
+draft PR open/update, PR follow-up, and verification under explicit agent
+identity/provenance metadata. It is intentionally permissive enough to prevent
+steward work from stalling, while still prohibiting protected-branch pushes,
+protected-branch merges, workflow permission escalation, long-lived signing key
+access, and human-author impersonation. This is a dogfood default, not final
+organizational authority; harden it before applying it to protected release
+flows.
+
 ## Audit Trail
 
 For each accepted change, we retain:

@@ -21,6 +21,7 @@ class PackageMetadataTests(unittest.TestCase):
 
     def test_public_examples_cover_the_reusable_vocabulary(self) -> None:
         expected_schemas = {
+            model.AGENT_DELEGATION_POLICY_SCHEMA,
             model.INVENTORY_SCHEMA,
             model.POLICY_SCHEMA,
             model.SNAPSHOT_PLAN_SCHEMA,
@@ -37,6 +38,7 @@ class PackageMetadataTests(unittest.TestCase):
             ROOT / "examples" / "retention-decision.example.json",
             ROOT / "examples" / "run-summary.example.json",
             ROOT / "examples" / "service-registry.example.json",
+            ROOT / "examples" / "agent-delegation-policy.dogfood.example.json",
         ]
 
         observed_schemas = set()

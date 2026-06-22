@@ -1,6 +1,8 @@
 """Northroot custody contracts and steward profile helpers."""
 
 from .model import (
+    AGENT_DELEGATION_POLICY_SCHEMA,
+    COMMAND_PLAN_SCHEMA,
     INVENTORY_SCHEMA,
     OBJECT_TYPES,
     POLICY_SCHEMA,
@@ -17,12 +19,12 @@ from .model import (
     VISIBILITY_CLASSES,
     VERIFICATION_RESULT_SCHEMA,
     Finding,
-    COMMAND_PLAN_SCHEMA,
     build_run_summary,
     evaluate_retention,
     find_public_private_bindings,
     load_json,
     render_snapshot_plan,
+    validate_agent_delegation_policy,
     validate_custody_policy,
     validate_command_plan,
     validate_document,
@@ -75,6 +77,7 @@ from .registry import (
 
 __all__ = [
     "Finding",
+    "AGENT_DELEGATION_POLICY_SCHEMA",
     "COMMAND_PLAN_SCHEMA",
     "INVENTORY_SCHEMA",
     "OBJECT_TYPES",
@@ -129,6 +132,7 @@ __all__ = [
     "registry_status",
     "schedule_status",
     "uninstall_schedule",
+    "validate_agent_delegation_policy",
     "validate_custody_policy",
     "validate_command_plan",
     "validate_document",

@@ -70,6 +70,7 @@ nr-custody validate examples/retention-decision.example.json --public-safe
 nr-custody validate examples/run-summary.example.json --public-safe
 nr-custody validate examples/command-plan.example.json --public-safe
 nr-custody validate examples/service-registry.example.json --public-safe
+nr-custody validate examples/agent-delegation-policy.dogfood.example.json --public-safe
 nr-custody validate examples/secret-bindings.macos-keychain.example.json --public-safe
 nr-custody validate examples/repository-bindings.redacted.example.json --public-safe
 nr-custody render-plan \
@@ -201,6 +202,14 @@ automation. It evaluates a project operation, and optionally an object-scoped
 operation, against project and object permission sets. Blocked operations,
 human-clearance operations, missing allow rules, invalid registries, and
 unresolved recovery locks all return non-zero.
+
+`examples/agent-delegation-policy.dogfood.example.json` is the default dogfood
+delegation policy for current steward work. It registers `agent:codex` for
+`codex/` branches and allows branch checkout/creation, checkpoint commits,
+branch pushes, draft PR open/update, PR follow-up, and verification under
+explicit agent identity metadata. It still prohibits protected-branch pushes,
+protected-branch merges, workflow permission escalation, long-lived signing key
+access, and human-author impersonation.
 
 Delegated `steward run`, `steward verify`, `steward restore`, and
 `steward restore-drill` accept `--registry-state`, `--project-id`, and optional
