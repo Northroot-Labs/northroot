@@ -4,7 +4,8 @@ use northroot_execution::{MethodDescriptor, MethodRegistry};
 use northroot_governance::matching_policies;
 use northroot_journal::WriteOptions;
 use northroot_node::{
-    NodeManifest, WorkspaceManifest, NODE_MANIFEST_SCHEMA_V0, WORKSPACE_MANIFEST_SCHEMA_V0,
+    IndexBinding, NodeManifest, ObjectStoreBinding, WorkspaceManifest, DEFAULT_INDEX_URI,
+    DEFAULT_OBJECT_STORE_URI, NODE_MANIFEST_SCHEMA_V0, WORKSPACE_MANIFEST_SCHEMA_V0,
 };
 use northroot_record::{
     compute_record_id, export_nrj_records_to_jsonl_segment, import_jsonl_segment_to_nrj_records,
@@ -23,11 +24,23 @@ fn record_stack_supports_end_to_end_without_core_domain_semantics() {
     let node = NodeManifest {
         schema: NODE_MANIFEST_SCHEMA_V0.to_string(),
         node_id: "node:ag_demo_2026".to_string(),
+        slug: Some("ag-demo".to_string()),
+        scope: Some("workspace".to_string()),
         resource_namespace: "resource:".to_string(),
         entity_namespace: "entity:".to_string(),
         journal_path: "journal/".to_string(),
         vault_path: "vault/".to_string(),
         state_path: "state/".to_string(),
+        index: Some(IndexBinding {
+            kind: "sqlite".to_string(),
+            uri: DEFAULT_INDEX_URI.to_string(),
+        }),
+        object_stores: vec![ObjectStoreBinding {
+            id: "local".to_string(),
+            kind: "fs".to_string(),
+            uri: DEFAULT_OBJECT_STORE_URI.to_string(),
+            role: "primary".to_string(),
+        }],
     };
     node.validate().unwrap();
 

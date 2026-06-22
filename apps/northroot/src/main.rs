@@ -8,7 +8,9 @@ mod path;
 #[cfg(test)]
 mod test_support;
 
-use commands::{append, canonicalize, event_id, journal, read, record, verify, verify_bundle, work};
+use commands::{
+    append, canonicalize, event_id, journal, node, read, record, verify, verify_bundle, work,
+};
 
 #[derive(Parser)]
 #[command(name = "northroot")]
@@ -101,6 +103,11 @@ enum Commands {
         #[command(subcommand)]
         command: record::RecordCommand,
     },
+    /// Node custody and storage initialization
+    Node {
+        #[command(subcommand)]
+        command: node::NodeCommand,
+    },
 }
 
 fn main() {
@@ -132,6 +139,7 @@ fn main() {
         Commands::Work { command } => work::run(command),
         Commands::Journal { command } => journal::run(command),
         Commands::Record { command } => record::run(command),
+        Commands::Node { command } => node::run(command),
     };
 
     if let Err(e) = result {

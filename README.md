@@ -65,6 +65,13 @@ northroot read events.nrj
 northroot verify events.nrj
 ```
 
+Node substrate commands initialize portable custody roots outside repositories:
+
+```bash
+northroot node init --slug local-node
+northroot node status --json
+```
+
 Hidden operator/development command groups also exist for record streams,
 structural journal helpers, work-ledger dogfood, and bundle verification. Those
 commands are incubating support surfaces, not stable kernel semantics.
@@ -117,8 +124,10 @@ They belong in private/internal repos or the governed Northroot-Labs refinery.
 - [Architecture](docs/developer/architecture.md)
 - [API Contract](docs/developer/api-contract.md)
 - [Environment and Setup](docs/developer/environment.md)
+- [Git Authorship](docs/developer/git-authorship.md)
 - [Testing Guide](docs/developer/testing.md)
 - [QA Harness](docs/qa/harness.md)
+- [Node Substrate](docs/reference/node.md)
 - [Record V0 Stack](docs/reference/record-v0/stack.md)
 - [v0.1 Stability Contract](docs/reference/v0.1-stability.md)
 - [Governance](GOVERNANCE.md)

@@ -264,6 +264,7 @@ dependencies = [
  "clap",
  "northroot-canonical",
  "northroot-journal",
+ "northroot-node",
  "northroot-record",
  "serde",
  "serde_json",
@@ -292,6 +293,14 @@ dependencies = [
  "northroot-canonical",
  "serde",
  "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "northroot-node"
+version = "0.1.0"
+dependencies = [
+ "serde",
  "thiserror",
 ]
 
