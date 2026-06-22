@@ -211,11 +211,14 @@ registry. `registry init` validates and installs a public-safe registry
 document. Mutation commands append object custody entries, project/object
 permissions, registered projects, destinations, source bindings, replicas, and
 legacy import records through atomic writes. Each successful mutation records a
-registry operation summary with the resulting registry digest. `registry verify`
-checks the live registry against that operation log, so a structurally valid but
-unrecorded registry edit is not treated as protected state. `registry status`,
-`registry authorize`, and mutation commands depend on that proof before treating
-the registry as ready. If a machine dies or the process is interrupted while a
+registry operation summary with the resulting registry digest. Registry
+operation summaries are also indexed in `registry-operations/index.json` with
+`northroot.steward.registry-operation-index.v0` digest entries. `registry verify`
+checks both the live registry digest and the operation-log digest index,
+so a structurally valid but unrecorded registry edit, or a hand-edited operation
+summary, is not treated as protected state. `registry status`, `registry
+authorize`, and mutation commands depend on that proof before treating the
+registry as ready. If a machine dies or the process is interrupted while a
 registry mutation lock exists, later mutations fail closed until
 `registry recover` validates the current registry and records the interrupted
 operation. Recovery removes the lock only when the registry still validates.

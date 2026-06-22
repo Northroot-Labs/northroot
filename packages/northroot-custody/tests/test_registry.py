@@ -306,6 +306,47 @@ class RegistryTests(unittest.TestCase):
             self.assertFalse(authorization["allowed"])
             self.assertEqual(authorization["decision"], "invalid-registry")
 
+    def test_registry_integrity_detects_tampered_operation_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            registry.initialize_registry(
+                state_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            before = registry.registry_integrity_report(state_dir, public_safe=True)
+            self.assertTrue(before["ready"])
+            self.assertTrue(before["operation_log_integrity"]["ok"])
+            self.assertTrue((state_dir / "registry-operations" / "index.json").exists())
+
+            operation_summary = sorted(
+                path for path in (state_dir / "registry-operations").glob("*.json") if path.name != "index.json"
+            )[0]
+            tampered = model.load_json(operation_summary)
+            tampered["completed_at"] = "20260622T000000000000Z"
+            write_json(operation_summary, tampered)
+
+            operation_log_integrity = registry.registry_operation_log_integrity(state_dir)
+            self.assertFalse(operation_log_integrity["ok"])
+            self.assertEqual(operation_log_integrity["observations"][0]["status"], "digest-mismatch")
+
+            integrity = registry.registry_integrity_report(state_dir, public_safe=True)
+            self.assertFalse(integrity["ready"])
+            self.assertFalse(integrity["protected_state_ok"])
+            self.assertFalse(integrity["operation_log_integrity"]["ok"])
+            self.assertIn(
+                "invalid_registry_operation_log",
+                {check["code"] for check in integrity["checks"] if check["code"]},
+            )
+            authorization = registry.authorize_operation(
+                state_dir,
+                operation="run",
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertFalse(authorization["allowed"])
+            self.assertEqual(authorization["decision"], "invalid-registry")
+
     def test_public_safe_mutation_rejects_raw_private_paths_without_corrupting_registry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"

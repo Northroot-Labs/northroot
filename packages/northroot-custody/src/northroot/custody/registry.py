@@ -15,6 +15,8 @@ from . import model
 REGISTRY_FILENAME = "service-registry.json"
 LOCK_FILENAME = "service-registry.lock.json"
 OPERATION_DIRNAME = "registry-operations"
+OPERATION_INDEX_FILENAME = "index.json"
+OPERATION_INDEX_SCHEMA = "northroot.steward.registry-operation-index.v0"
 
 
 class RegistryLockedError(RuntimeError):
@@ -44,6 +46,10 @@ def lock_path(state_dir: Path) -> Path:
 
 def operation_dir(state_dir: Path) -> Path:
     return state_dir / OPERATION_DIRNAME
+
+
+def operation_index_path(state_dir: Path) -> Path:
+    return operation_dir(state_dir) / OPERATION_INDEX_FILENAME
 
 
 def _sha256_bytes(data: bytes) -> str:
@@ -114,7 +120,8 @@ def _write_operation_summary(state_dir: Path, summary: dict[str, Any]) -> Path:
     out_dir = operation_dir(state_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
     path = out_dir / f"{summary['operation_id']}.json"
-    _atomic_write_json(path, summary)
+    digest = _atomic_write_json(path, summary)
+    _index_operation_summary(state_dir, path, operation_id=str(summary["operation_id"]), sha256=digest)
     return path
 
 
@@ -122,7 +129,52 @@ def _operation_summary_paths(state_dir: Path) -> list[Path]:
     out_dir = operation_dir(state_dir)
     if not out_dir.is_dir():
         return []
-    return sorted(out_dir.glob("*.json"))
+    return sorted(path for path in out_dir.glob("*.json") if path.name != OPERATION_INDEX_FILENAME)
+
+
+def _load_operation_index(state_dir: Path) -> dict[str, Any]:
+    path = operation_index_path(state_dir)
+    if not path.exists():
+        return {
+            "schema_version": OPERATION_INDEX_SCHEMA,
+            "updated_at": None,
+            "entries": [],
+        }
+    index = _read_json(path)
+    if index.get("schema_version") != OPERATION_INDEX_SCHEMA:
+        raise ValueError(f"registry operation index schema_version must be {OPERATION_INDEX_SCHEMA}")
+    if not isinstance(index.get("entries"), list):
+        raise ValueError("registry operation index entries must be a list")
+    return index
+
+
+def _write_operation_index(state_dir: Path, entries: list[dict[str, Any]]) -> None:
+    payload = {
+        "schema_version": OPERATION_INDEX_SCHEMA,
+        "updated_at": _utc_stamp(),
+        "entries": sorted(entries, key=lambda entry: str(entry.get("operation_id", ""))),
+    }
+    _atomic_write_json(operation_index_path(state_dir), payload)
+
+
+def _index_operation_summary(state_dir: Path, summary_path: Path, *, operation_id: str, sha256: str | None = None) -> None:
+    index = _load_operation_index(state_dir)
+    entries = [
+        entry
+        for entry in index.get("entries", [])
+        if isinstance(entry, dict)
+        and entry.get("path") != summary_path.name
+        and entry.get("operation_id") != operation_id
+    ]
+    entries.append(
+        {
+            "operation_id": operation_id,
+            "path": summary_path.name,
+            "sha256": sha256 or _file_sha256(summary_path),
+            "indexed_at": _utc_stamp(),
+        }
+    )
+    _write_operation_index(state_dir, entries)
 
 
 def load_registry(state_dir: Path) -> dict[str, Any]:
@@ -138,9 +190,173 @@ def _check(name: str, ok: bool, detail: str, *, code: str | None = None) -> dict
     }
 
 
+def registry_operation_log_integrity(state_dir: Path) -> dict[str, Any]:
+    summaries = _operation_summary_paths(state_dir)
+    index_path = operation_index_path(state_dir)
+    observations: list[dict[str, Any]] = []
+    if not summaries and not index_path.exists():
+        return {
+            "schema_version": "northroot.steward.registry-operation-log-integrity.v0",
+            "ok": True,
+            "index_path": str(index_path),
+            "observations": [],
+        }
+    try:
+        index = _load_operation_index(state_dir)
+    except (OSError, ValueError, json.JSONDecodeError) as err:
+        return {
+            "schema_version": "northroot.steward.registry-operation-log-integrity.v0",
+            "ok": False,
+            "index_path": str(index_path),
+            "observations": [
+                {
+                    "summary_path": str(index_path),
+                    "status": "invalid-index",
+                    "detail": str(err),
+                }
+            ],
+        }
+
+    entries_by_path: dict[str, dict[str, Any]] = {}
+    duplicate_paths: set[str] = set()
+    for entry in index.get("entries", []):
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            observations.append(
+                {
+                    "summary_path": str(index_path),
+                    "status": "invalid-index-entry",
+                    "detail": "registry operation index entries must include path strings",
+                }
+            )
+            continue
+        path_name = str(entry["path"])
+        if path_name in entries_by_path:
+            duplicate_paths.add(path_name)
+        entries_by_path[path_name] = entry
+
+    summary_names = {path.name for path in summaries}
+    for path_name, entry in sorted(entries_by_path.items()):
+        if path_name == OPERATION_INDEX_FILENAME:
+            observations.append(
+                {
+                    "summary_path": str(index_path),
+                    "status": "invalid-index-entry",
+                    "detail": "registry operation index may not index itself",
+                }
+            )
+            continue
+        if path_name not in summary_names:
+            observations.append(
+                {
+                    "summary_path": str(operation_dir(state_dir) / path_name),
+                    "operation_id": entry.get("operation_id"),
+                    "status": "missing-summary",
+                    "detail": "indexed registry operation summary is missing",
+                }
+            )
+
+    for summary_path in summaries:
+        entry = entries_by_path.get(summary_path.name)
+        if entry is None:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "operation_id": None,
+                    "status": "unindexed",
+                    "detail": "registry operation summary is not present in the steward digest index",
+                }
+            )
+            continue
+        if summary_path.name in duplicate_paths:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "operation_id": entry.get("operation_id"),
+                    "status": "duplicate-index-entry",
+                    "detail": "registry operation summary has duplicate digest index entries",
+                }
+            )
+            continue
+        expected_sha = entry.get("sha256")
+        if not isinstance(expected_sha, str) or not expected_sha:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "operation_id": entry.get("operation_id"),
+                    "status": "invalid-index-entry",
+                    "detail": "registry operation index entry is missing sha256",
+                }
+            )
+            continue
+        actual_sha = _file_sha256(summary_path)
+        if actual_sha != expected_sha:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "operation_id": entry.get("operation_id"),
+                    "status": "digest-mismatch",
+                    "detail": "registry operation summary digest does not match the steward digest index",
+                    "expected_sha256": expected_sha,
+                    "actual_sha256": actual_sha,
+                }
+            )
+            continue
+        try:
+            summary = _read_json(summary_path)
+        except (OSError, ValueError, json.JSONDecodeError) as err:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "operation_id": entry.get("operation_id"),
+                    "status": "invalid-json",
+                    "detail": str(err),
+                }
+            )
+            continue
+        indexed_operation_id = entry.get("operation_id")
+        summary_operation_id = summary.get("operation_id")
+        if summary.get("schema_version") != "northroot.steward.registry-operation.v0":
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "operation_id": summary_operation_id,
+                    "status": "invalid-summary",
+                    "detail": "unexpected registry operation summary schema",
+                }
+            )
+        elif indexed_operation_id != summary_operation_id:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "operation_id": summary_operation_id,
+                    "status": "operation-id-mismatch",
+                    "detail": "registry operation summary operation_id does not match the steward digest index",
+                    "indexed_operation_id": indexed_operation_id,
+                }
+            )
+        else:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "operation_id": summary_operation_id,
+                    "status": "ok",
+                    "sha256": actual_sha,
+                }
+            )
+
+    ok = all(observation.get("status") == "ok" for observation in observations)
+    return {
+        "schema_version": "northroot.steward.registry-operation-log-integrity.v0",
+        "ok": ok,
+        "index_path": str(index_path),
+        "observations": observations,
+    }
+
+
 def registry_integrity_report(state_dir: Path, *, public_safe: bool = False) -> dict[str, Any]:
     path = registry_path(state_dir)
     lock = _load_lock(state_dir)
+    operation_log_integrity = registry_operation_log_integrity(state_dir)
     registry: dict[str, Any] | None = None
     registry_error: str | None = None
     findings: list[dict[str, str]] = []
@@ -179,7 +395,7 @@ def registry_integrity_report(state_dir: Path, *, public_safe: bool = False) -> 
     registry_readable = registry_present and registry_error is None and registry is not None
     registry_valid = registry_readable and error_count == 0
     operation_log_present = bool(summaries or invalid_summaries)
-    operation_log_readable = not invalid_summaries
+    operation_log_readable = not invalid_summaries and bool(operation_log_integrity["ok"])
     registry_matches_latest_operation = bool(expected_sha256 and current_sha256 == expected_sha256)
     protected_state_ok = bool(
         registry_present
@@ -220,9 +436,9 @@ def registry_integrity_report(state_dir: Path, *, public_safe: bool = False) -> 
         _check(
             "operation_log_readable",
             operation_log_readable,
-            "registry operation summaries are readable"
+            "registry operation summaries are readable and match the steward digest index"
             if operation_log_readable
-            else "one or more registry operation summaries are unreadable or invalid",
+            else "one or more registry operation summaries are unreadable, invalid, unindexed, or digest-mismatched",
             code="invalid_registry_operation_log",
         ),
         _check(
@@ -254,6 +470,7 @@ def registry_integrity_report(state_dir: Path, *, public_safe: bool = False) -> 
         "completed_operation_summary_count": len(completed),
         "failed_operation_summary_count": len([summary for summary in summaries if summary.get("status") == "failed"]),
         "invalid_operation_summaries": invalid_summaries,
+        "operation_log_integrity": operation_log_integrity,
         "lock": lock,
         "finding_count": len(findings),
         "error_count": error_count,
