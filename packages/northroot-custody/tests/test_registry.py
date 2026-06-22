@@ -15,6 +15,95 @@ def write_json(path: Path, payload: dict[str, object]) -> None:
 
 
 class RegistryTests(unittest.TestCase):
+    def test_authorize_operation_evaluates_project_and_object_permissions(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            registry.initialize_registry(
+                state_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+
+            allowed_project = registry.authorize_operation(
+                state_dir,
+                operation="run",
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertTrue(allowed_project["allowed"])
+            self.assertEqual(allowed_project["decision"], "allowed")
+            self.assertEqual(allowed_project["matched_permission_sets"], ["perm/project-example"])
+
+            blocked_secret_object = registry.authorize_operation(
+                state_dir,
+                operation="run",
+                project_id="project/example",
+                object_id="secrets/restic-env",
+                public_safe=True,
+            )
+            self.assertFalse(blocked_secret_object["allowed"])
+            self.assertEqual(blocked_secret_object["decision"], "blocked")
+            self.assertIn("perm/object-secrets", blocked_secret_object["matched_permission_sets"])
+
+            allowed_secret_preflight = registry.authorize_operation(
+                state_dir,
+                operation="preflight",
+                project_id="project/example",
+                object_id="secrets/restic-env",
+                public_safe=True,
+            )
+            self.assertTrue(allowed_secret_preflight["allowed"])
+            self.assertEqual(allowed_secret_preflight["decision"], "allowed")
+
+            human_restore = registry.authorize_operation(
+                state_dir,
+                operation="restore",
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertFalse(human_restore["allowed"])
+            self.assertTrue(human_restore["requires_human_clearance"])
+            self.assertEqual(human_restore["decision"], "human-clearance-required")
+
+            not_allowed_source_bind = registry.authorize_operation(
+                state_dir,
+                operation="source.bind",
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertFalse(not_allowed_source_bind["allowed"])
+            self.assertEqual(not_allowed_source_bind["decision"], "not-allowed")
+
+            unknown_object = registry.authorize_operation(
+                state_dir,
+                operation="run",
+                project_id="project/example",
+                object_id="artifact/missing",
+                public_safe=True,
+            )
+            self.assertFalse(unknown_object["allowed"])
+            self.assertEqual(unknown_object["decision"], "unknown-project-object")
+
+            write_json(
+                state_dir / "service-registry.lock.json",
+                {
+                    "schema_version": "northroot.steward.registry-operation-lock.v0",
+                    "operation_id": "interrupted-test",
+                    "operation": "registry.project.register",
+                    "started_at": "2026-06-22T00:00:00Z",
+                    "pid": 123,
+                    "failure_policy": "fail-closed-record-summary",
+                },
+            )
+            locked = registry.authorize_operation(
+                state_dir,
+                operation="run",
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertFalse(locked["allowed"])
+            self.assertEqual(locked["decision"], "resume-required")
+
     def test_registry_state_mutations_are_validated_and_recoverable(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"

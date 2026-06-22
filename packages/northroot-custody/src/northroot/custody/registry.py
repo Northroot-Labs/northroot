@@ -173,6 +173,150 @@ def registry_status(state_dir: Path, *, public_safe: bool = False) -> dict[str, 
     }
 
 
+def _project_by_id(registry: dict[str, Any], project_id: str) -> dict[str, Any] | None:
+    for project in registry.get("projects", []):
+        if isinstance(project, dict) and project.get("project_id") == project_id:
+            return project
+    return None
+
+
+def _permission_by_id(registry: dict[str, Any], permission_set_id: str) -> dict[str, Any] | None:
+    for permission in registry.get("permissions", []):
+        if isinstance(permission, dict) and permission.get("permission_set_id") == permission_set_id:
+            return permission
+    return None
+
+
+def _object_permissions(registry: dict[str, Any], object_id: str) -> list[dict[str, Any]]:
+    return [
+        permission
+        for permission in registry.get("permissions", [])
+        if isinstance(permission, dict) and permission.get("scope") == "object" and permission.get("object_id") == object_id
+    ]
+
+
+def _permission_values(permission: dict[str, Any], key: str) -> set[str]:
+    values = permission.get(key, [])
+    if not isinstance(values, list):
+        return set()
+    return {str(value) for value in values if isinstance(value, str)}
+
+
+def authorize_operation(
+    state_dir: Path,
+    *,
+    operation: str,
+    project_id: str,
+    object_id: str | None = None,
+    public_safe: bool = False,
+) -> dict[str, Any]:
+    lock = _load_lock(state_dir)
+    status = registry_status(state_dir, public_safe=public_safe)
+    base = {
+        "schema_version": "northroot.steward.authorization.v0",
+        "operation": operation,
+        "project_id": project_id,
+        "object_id": object_id,
+        "registry_path": status["registry_path"],
+        "registry_sha256": status["registry_sha256"],
+        "allowed": False,
+        "decision": "blocked",
+        "reason": None,
+        "requires_human_clearance": False,
+        "matched_permission_sets": [],
+    }
+    if operation not in model.SERVICE_PERMISSION_OPERATIONS:
+        return {
+            **base,
+            "decision": "invalid-operation",
+            "reason": f"operation is not in service permission vocabulary: {operation}",
+        }
+    if lock is not None:
+        return {
+            **base,
+            "decision": "resume-required",
+            "reason": "registry has an unresolved operation lock",
+            "lock": lock,
+        }
+    if not status["ready"]:
+        return {
+            **base,
+            "decision": "invalid-registry",
+            "reason": "registry is not ready for authorization",
+            "findings": status.get("findings", []),
+        }
+
+    service_registry = load_registry(state_dir)
+    project = _project_by_id(service_registry, project_id)
+    if project is None:
+        return {**base, "decision": "unknown-project", "reason": f"unknown project_id: {project_id}"}
+    if object_id is not None and object_id not in project.get("object_ids", []):
+        return {
+            **base,
+            "decision": "unknown-project-object",
+            "reason": f"object_id is not registered under project_id {project_id}: {object_id}",
+        }
+
+    permission_ref = project.get("permission_set_ref")
+    project_permission = _permission_by_id(service_registry, str(permission_ref))
+    if project_permission is None:
+        return {
+            **base,
+            "decision": "missing-project-permission",
+            "reason": f"project permission_set_ref is missing: {permission_ref}",
+        }
+
+    matched_permission_sets = [str(project_permission.get("permission_set_id"))]
+    object_permissions = _object_permissions(service_registry, object_id) if object_id is not None else []
+    matched_permission_sets.extend(str(permission["permission_set_id"]) for permission in object_permissions)
+
+    permissions = [project_permission, *object_permissions]
+    for permission in permissions:
+        if operation in _permission_values(permission, "blocked_operations"):
+            return {
+                **base,
+                "decision": "blocked",
+                "reason": f"operation blocked by {permission.get('permission_set_id')}",
+                "matched_permission_sets": matched_permission_sets,
+            }
+    for permission in permissions:
+        if operation in _permission_values(permission, "requires_human_clearance"):
+            return {
+                **base,
+                "decision": "human-clearance-required",
+                "reason": f"operation requires human clearance by {permission.get('permission_set_id')}",
+                "requires_human_clearance": True,
+                "matched_permission_sets": matched_permission_sets,
+            }
+
+    project_allowed = operation in _permission_values(project_permission, "allowed_operations")
+    if not project_allowed:
+        return {
+            **base,
+            "decision": "not-allowed",
+            "reason": f"operation is not allowed by project permission set {permission_ref}",
+            "matched_permission_sets": matched_permission_sets,
+        }
+
+    if object_permissions:
+        object_allowed = any(operation in _permission_values(permission, "allowed_operations") for permission in object_permissions)
+        if not object_allowed:
+            return {
+                **base,
+                "decision": "not-allowed",
+                "reason": "operation is not allowed by object permission set",
+                "matched_permission_sets": matched_permission_sets,
+            }
+
+    return {
+        **base,
+        "allowed": True,
+        "decision": "allowed",
+        "reason": "operation is allowed by registry permissions",
+        "matched_permission_sets": matched_permission_sets,
+    }
+
+
 def initialize_registry(
     state_dir: Path,
     registry: dict[str, Any],

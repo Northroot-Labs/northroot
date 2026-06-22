@@ -160,7 +160,43 @@ class CliTests(unittest.TestCase):
                     ),
                     0,
                 )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "authorize",
+                            "--state",
+                            str(state_dir),
+                            "--operation",
+                            "run",
+                            "--project-id",
+                            "project/cli",
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "authorize",
+                            "--state",
+                            str(state_dir),
+                            "--operation",
+                            "restore",
+                            "--project-id",
+                            "project/cli",
+                            "--public-safe",
+                        ]
+                    ),
+                    1,
+                )
             self.assertIn('"project_count": 2', stdout.getvalue())
+            self.assertIn('"decision": "allowed"', stdout.getvalue())
+            self.assertIn('"decision": "not-allowed"', stdout.getvalue())
             self.assertTrue((state_dir / "registry-operations").exists())
 
     def test_validate_render_plan_and_steward_flow(self) -> None:
