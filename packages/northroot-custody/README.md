@@ -98,6 +98,12 @@ nr-custody steward preflight --state /tmp/northroot-steward-example
 nr-custody steward report --state /tmp/northroot-steward-example --snapshot-id snap-001
 nr-custody steward verify-state --state /tmp/northroot-steward-example --snapshot-id snap-001
 nr-custody steward run --state /tmp/northroot-steward-example --snapshot-id snap-001
+nr-custody steward run \
+  --state /tmp/northroot-steward-example \
+  --registry-state /tmp/northroot-steward-registry \
+  --project-id project/example \
+  --snapshot-id snap-001 \
+  --execute
 nr-custody steward verify --state /tmp/northroot-steward-example --snapshot-id snap-001
 nr-custody steward restore \
   --state /tmp/northroot-steward-example \
@@ -195,6 +201,13 @@ automation. It evaluates a project operation, and optionally an object-scoped
 operation, against project and object permission sets. Blocked operations,
 human-clearance operations, missing allow rules, invalid registries, and
 unresolved recovery locks all return non-zero.
+
+Delegated `steward run`, `steward verify`, `steward restore`, and
+`steward restore-drill` accept `--registry-state`, `--project-id`, and optional
+`--object-id`. When those arguments are supplied with `--execute`, registry
+authorization runs before preflight or delegated tooling. Denied operations
+write a run summary with `delegated-authorization-denied` and do not call the
+external backup or restore command.
 
 `steward restore` is the bounded recovery path for an actual restore. It
 requires both `--snapshot-id` and `--target`, delegates to `resticprofile`, and

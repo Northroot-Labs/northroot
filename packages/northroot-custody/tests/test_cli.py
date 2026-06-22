@@ -319,6 +319,57 @@ class CliTests(unittest.TestCase):
                     ),
                     1,
                 )
+                registry_dir = Path(temp_dir) / "registry-state"
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "init",
+                            "--state",
+                            str(registry_dir),
+                            "--registry",
+                            str(EXAMPLES / "service-registry.example.json"),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "command-plan",
+                            "--state",
+                            str(output_dir),
+                            "--operation",
+                            "run",
+                            "--registry-state",
+                            str(registry_dir),
+                            "--project-id",
+                            "project/example",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "run",
+                            "--state",
+                            str(output_dir),
+                            "--registry-state",
+                            str(registry_dir),
+                            "--project-id",
+                            "project/example",
+                            "--object-id",
+                            "secrets/restic-env",
+                            "--execute",
+                        ]
+                    ),
+                    1,
+                )
                 self.assertEqual(
                     cli.main(["steward", "report", "--state", str(output_dir), "--snapshot-id", "snap-001"]),
                     0,
@@ -593,6 +644,7 @@ class CliTests(unittest.TestCase):
                 '"operation": "verify"',
                 stdout.getvalue(),
             )
+            self.assertIn('"failure_stage": "authorization"', stdout.getvalue())
 
 
 if __name__ == "__main__":

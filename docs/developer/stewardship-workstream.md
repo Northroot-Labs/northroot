@@ -84,6 +84,12 @@ decision is deterministic and fail-closed: unresolved registry locks, invalid
 registries, unknown objects, blocked operations, human-clearance requirements,
 and missing allow rules are all non-allowed outcomes.
 
+The delegated execution commands can now consume that gate directly. When
+`steward run`, `verify`, `restore`, or `restore-drill` are invoked with a
+registry state, project id, and optional object id, authorization runs before
+preflight and before any external delegated tool is called. Denials are recorded
+as run summaries rather than disappearing as local control-flow.
+
 The registry still does not execute replica sync, inspect private LaunchAgent
 state, or import raw legacy run directories by itself. Those are the next
 adapter layers over the now-durable registry state.

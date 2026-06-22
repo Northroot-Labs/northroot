@@ -15,6 +15,7 @@ from typing import Any
 from xml.sax.saxutils import escape as xml_escape
 
 from . import model
+from .registry import authorize_operation
 
 
 INSTALLATION_SCHEMA = "northroot.steward.installation.v0"
@@ -1050,6 +1051,9 @@ def render_command_plan(
     force: bool = False,
     use_recorded_evidence: bool = False,
     skip_preflight: bool = False,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
 ) -> dict[str, Any]:
     state = str(output_dir)
     missing_inputs: list[str] = []
@@ -1061,6 +1065,7 @@ def render_command_plan(
     writes_run_summary = False
     mutates_backup_repository = False
     delegated_platform_mutation = False
+    authorization: dict[str, Any] | None = None
 
     if operation not in COMMAND_PLAN_OPERATIONS:
         refused_reasons.append(f"unsupported steward operation: {operation}")
@@ -1073,6 +1078,12 @@ def render_command_plan(
     elif operation in {"run", "verify"}:
         argv.extend([operation, "--state", state])
         _append_snapshot(argv, snapshot_id)
+        if registry_state is not None:
+            argv.extend(["--registry-state", str(registry_state)])
+        if project_id:
+            argv.extend(["--project-id", project_id])
+        if object_id:
+            argv.extend(["--object-id", object_id])
         if execute:
             argv.append("--execute")
         requires_preflight = True
@@ -1084,6 +1095,12 @@ def render_command_plan(
             warnings.append("snapshot_id is required for verify evidence to satisfy retention")
     elif operation == "restore":
         argv.extend(["restore", "--state", state])
+        if registry_state is not None:
+            argv.extend(["--registry-state", str(registry_state)])
+        if project_id:
+            argv.extend(["--project-id", project_id])
+        if object_id:
+            argv.extend(["--object-id", object_id])
         if not snapshot_id:
             missing_inputs.append("snapshot_id")
         else:
@@ -1098,6 +1115,12 @@ def render_command_plan(
         writes_run_summary = True
     elif operation == "restore-drill":
         argv.extend(["restore-drill", "--state", state])
+        if registry_state is not None:
+            argv.extend(["--registry-state", str(registry_state)])
+        if project_id:
+            argv.extend(["--project-id", project_id])
+        if object_id:
+            argv.extend(["--object-id", object_id])
         if target:
             argv.extend(["--target", target])
         _append_snapshot(argv, snapshot_id)
@@ -1186,6 +1209,20 @@ def render_command_plan(
         else:
             argv.extend(["--snapshot-id", snapshot_id])
 
+    if registry_state is not None:
+        if not project_id:
+            missing_inputs.append("project_id")
+        elif operation in model.SERVICE_PERMISSION_OPERATIONS:
+            authorization = authorize_operation(
+                registry_state,
+                operation=operation,
+                project_id=project_id,
+                object_id=object_id,
+                public_safe=True,
+            )
+            if not authorization["allowed"]:
+                refused_reasons.append(f"registry authorization denied: {authorization['decision']}")
+
     preflight_ready: bool | None = None
     preflight_failed_codes: list[str] = []
     if execute and requires_preflight and operation not in {"schedule.install"}:
@@ -1226,6 +1263,7 @@ def render_command_plan(
         "missing_inputs": sorted(set(missing_inputs)),
         "refused_reasons": refused_reasons,
         "warnings": warnings,
+        "authorization": authorization,
         "side_effects": {
             "writes_run_summary": writes_run_summary,
             "mutates_backup_repository": mutates_backup_repository,
@@ -1843,6 +1881,9 @@ def render_operation(
     execute: bool = False,
     restore_target: Path | None = None,
     snapshot_id: str | None = None,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
 ) -> dict[str, Any]:
     if operation not in OPERATIONS:
         raise ValueError(f"unsupported steward operation: {operation}")
@@ -1863,9 +1904,42 @@ def render_operation(
     failure_stage = None
     restore_observation = None
     preflight_result = None
+    authorization = None
     if execute:
-        preflight_result = render_preflight(output_dir)
-        if not preflight_result["ready"]:
+        if registry_state is not None and not project_id:
+            return_code = 77
+            error = "registry authorization requires --project-id"
+            failure_stage = "authorization"
+            authorization = {
+                "schema_version": "northroot.steward.authorization.v0",
+                "operation": operation,
+                "project_id": project_id,
+                "object_id": object_id,
+                "registry_path": str(registry_state),
+                "registry_sha256": None,
+                "allowed": False,
+                "decision": "missing-project-id",
+                "reason": "registry authorization requires project_id",
+                "requires_human_clearance": False,
+                "matched_permission_sets": [],
+            }
+        elif registry_state is not None:
+            authorization = authorize_operation(
+                registry_state,
+                operation=operation,
+                project_id=str(project_id),
+                object_id=object_id,
+                public_safe=True,
+            )
+            if not authorization["allowed"]:
+                return_code = 77
+                error = f"registry authorization denied: {authorization['decision']}"
+                failure_stage = "authorization"
+        if return_code is not None:
+            pass
+        else:
+            preflight_result = render_preflight(output_dir)
+        if preflight_result is not None and not preflight_result["ready"]:
             failed_codes = sorted(
                 {
                     str(check["code"])
@@ -1876,7 +1950,7 @@ def render_operation(
             return_code = 78
             error = "preflight failed" if not failed_codes else f"preflight failed: {', '.join(failed_codes)}"
             failure_stage = "preflight"
-        elif operation in {"restore", "restore-drill"}:
+        elif return_code is None and operation in {"restore", "restore-drill"}:
             try:
                 secret_bindings_path = installation.get("secret_bindings_path")
                 secret_bindings = (
@@ -1900,7 +1974,7 @@ def render_operation(
                 return_code = 78
                 error = str(err)
                 failure_stage = "runtime-env"
-        else:
+        elif return_code is None:
             try:
                 secret_bindings_path = installation.get("secret_bindings_path")
                 secret_bindings = (
@@ -1932,6 +2006,7 @@ def render_operation(
         "failure_stage": failure_stage,
         "restore_observation": restore_observation,
         "preflight": preflight_result,
+        "authorization": authorization,
     }
     summary_path = write_operation_summary(
         output_dir=output_dir,
@@ -2029,7 +2104,9 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
         and restore_observation
         and restore_observation.get("verified")
     )
-    if execute_requested and not executed and operation_payload.get("failure_stage") == "runtime-env":
+    if execute_requested and not executed and operation_payload.get("failure_stage") == "authorization":
+        status = "delegated-authorization-denied"
+    elif execute_requested and not executed and operation_payload.get("failure_stage") == "runtime-env":
         status = "delegated-runtime-env-failed"
     elif execute_requested and operation_payload.get("failure_stage") == "restore-observation":
         status = "delegated-restore-unverified"
@@ -2061,6 +2138,7 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
         "preflight_ready": operation_payload.get("preflight", {}).get("ready")
         if isinstance(operation_payload.get("preflight"), dict)
         else None,
+        "authorization": operation_payload.get("authorization"),
     }
     summary = model.build_run_summary(
         run_id=run_id,
@@ -2078,6 +2156,7 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
                 "return_code": return_code,
                 "failure_stage": operation_payload.get("failure_stage"),
                 "preflight": operation_payload.get("preflight"),
+                "authorization": operation_payload.get("authorization"),
             }
         ],
     )
