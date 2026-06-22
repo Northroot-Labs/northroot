@@ -57,6 +57,13 @@ class CustodyModelTests(unittest.TestCase):
             ),
             [],
         )
+        self.assertEqual(
+            model.validate_service_registry(
+                load_example("service-registry.example.json"),
+                public_safe=True,
+            ),
+            [],
+        )
 
     def test_render_snapshot_plan_delegates_to_resticprofile(self) -> None:
         plan = model.render_snapshot_plan(
@@ -112,6 +119,41 @@ class CustodyModelTests(unittest.TestCase):
         findings = model.validate_snapshot_plan(plan, public_safe=True)
 
         self.assertIn("object_restore_classes", {finding.code for finding in findings})
+
+    def test_service_registry_rejects_unknown_project_permission(self) -> None:
+        registry = load_example("service-registry.example.json")
+        registry["projects"][0]["permission_set_ref"] = "perm/missing"
+
+        findings = model.validate_service_registry(registry)
+
+        self.assertIn("unknown_project_permission_set", {finding.code for finding in findings})
+
+    def test_service_registry_rejects_unknown_replica_source(self) -> None:
+        registry = load_example("service-registry.example.json")
+        registry["replicas"][0]["source_destination_id"] = "source/missing"
+
+        findings = model.validate_service_registry(registry)
+
+        self.assertIn("unknown_replica_source_destination", {finding.code for finding in findings})
+
+    def test_service_registry_rejects_unsafe_resume_policy(self) -> None:
+        registry = load_example("service-registry.example.json")
+        registry["resume_policy"]["on_disconnected_storage"] = "continue"
+        registry["resume_policy"]["partial_run_handling"] = "prune-anyway"
+
+        findings = model.validate_service_registry(registry)
+
+        self.assertIn("invalid_resume_failure_policy", {finding.code for finding in findings})
+        self.assertIn("invalid_partial_run_handling", {finding.code for finding in findings})
+
+    def test_public_service_registry_rejects_private_legacy_paths(self) -> None:
+        registry = load_example("service-registry.example.json")
+        registry["legacy_imports"][0]["runner_state_ref"] = "/Users/example/.northroot/state/runner-state.json"
+
+        findings = model.validate_service_registry(registry, public_safe=True)
+
+        self.assertIn("invalid_symbolic_ref", {finding.code for finding in findings})
+        self.assertIn("public_private_binding", {finding.code for finding in findings})
 
     def test_public_policy_rejects_real_secret_reference(self) -> None:
         policy = load_example("custody-policy.example.json")

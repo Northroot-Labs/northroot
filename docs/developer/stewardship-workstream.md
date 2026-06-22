@@ -39,6 +39,34 @@ state that can be rehydrated, state that is intentionally ignored, and state
 that must never be exported. That distinction is the practical reason this
 layer exists.
 
+## Service Registry
+
+Object custody is still too small to run a durable stewardship service by
+itself. The service layer needs a registry that binds a Northroot node to its
+projects, objects, destinations, replicas, permissions, legacy imports, and
+failure-mode policy.
+
+The public-safe registry contract is `northroot.steward.service-registry.v0`.
+It should answer, without exposing private paths:
+
+- which node owns the stewardship service;
+- which projects are registered under that node;
+- which objects belong to each project;
+- which project-level and object-level operations are allowed, blocked, or
+  require human clearance;
+- which destinations are primary stores, replicas, source bindings, or receipt
+  logs;
+- which replica checks require external delegated evidence;
+- how interrupted runs, disconnected storage, and power loss are resumed or
+  held safely;
+- which legacy machine durability profile inputs are being migrated through
+  symbolic refs.
+
+This registry is not a scheduler or transport. It is the durable control plane
+contract that lets steward prove whether the service is configured coherently
+before delegated tools are allowed to mutate backup repositories, schedules, or
+restore targets.
+
 ## Legacy Import Context
 
 The private Northroot-Labs environment currently has a legacy hourly machine

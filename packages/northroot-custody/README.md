@@ -26,6 +26,20 @@ Real paths, provider references, external volumes, LaunchAgent labels, logs,
 and backup receipt locations stay in private binding documents or deployment
 state. Public inventories use symbolic bindings only.
 
+The steward service registry is the next layer above a single inventory and
+policy. A `northroot.steward.service-registry.v0` document registers the node,
+projects, object-level and project-level permission sets, destinations,
+source-to-destination bindings, replicas, legacy import refs, and fail-closed
+resume policy. It is still a contract and verification surface, not a storage
+transport or scheduler.
+
+Registry failure handling should assume boring operational failures:
+disconnected storage, interrupted runs, power loss, stale generated artifacts,
+and partial delegated operations. The public contract requires symbolic refs,
+single-flight/lock strategy metadata, explicit resume behavior, and a
+`never-prune-without-retention-decision` style partial-run policy before
+replicas or legacy imports are considered safe.
+
 It is not a backup engine, scheduler, secret manager, storage transport, or
 monitoring stack. Execution is delegated to established tools such as `restic`,
 `resticprofile`, `launchd`, `systemd`, 1Password service-account based secret
@@ -53,6 +67,7 @@ nr-custody validate examples/verification-result.example.json --public-safe
 nr-custody validate examples/retention-decision.example.json --public-safe
 nr-custody validate examples/run-summary.example.json --public-safe
 nr-custody validate examples/command-plan.example.json --public-safe
+nr-custody validate examples/service-registry.example.json --public-safe
 nr-custody validate examples/secret-bindings.macos-keychain.example.json --public-safe
 nr-custody validate examples/repository-bindings.redacted.example.json --public-safe
 nr-custody render-plan \

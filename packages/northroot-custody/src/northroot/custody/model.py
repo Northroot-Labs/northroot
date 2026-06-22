@@ -23,6 +23,7 @@ RUN_SUMMARY_SCHEMA = "northroot.custody.run-summary.v0"
 SECRET_BINDINGS_SCHEMA = "northroot.custody.secret-bindings.v0"
 REPOSITORY_BINDINGS_SCHEMA = "northroot.custody.repository-bindings.v0"
 COMMAND_PLAN_SCHEMA = "northroot.steward.command-plan.v0"
+SERVICE_REGISTRY_SCHEMA = "northroot.steward.service-registry.v0"
 
 STATE_ROLES = {"authoritative", "generated", "ignored"}
 BOUNDARY_TYPES = {"sqlite-online-backup", "postgres-native-backup", "journal-seal", "filesystem"}
@@ -60,6 +61,51 @@ RUNTIME_ENV_PROVIDERS = {"macos-keychain", "env-command"}
 ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 OBJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:/-]*$")
 REPOSITORY_CHECK_STATUSES = {"ok", "failed", "not-run"}
+SERVICE_REF_PREFIXES = STORAGE_BINDING_PREFIXES + (
+    "logs://",
+    "node://",
+    "project://",
+    "receipt://",
+    "run-state://",
+    "scheduler://",
+    "state://",
+)
+SERVICE_DESTINATION_ROLES = {"primary", "replica", "source", "receipt-log"}
+SERVICE_ADAPTERS = ADAPTERS | {"external-delegated", "filesystem", "provider-native"}
+SERVICE_PERMISSION_SCOPES = {"project", "object"}
+SERVICE_PERMISSION_OPERATIONS = {
+    "evidence.record",
+    "evidence.report",
+    "legacy.import",
+    "offsite.report",
+    "preflight",
+    "replica.sync",
+    "report",
+    "restore",
+    "restore-drill",
+    "retention.evaluate",
+    "run",
+    "schedule.create",
+    "schedule.delete",
+    "schedule.install",
+    "schedule.status",
+    "schedule.uninstall",
+    "source.bind",
+    "status",
+    "verify",
+    "verify-state",
+}
+RESUME_LOCK_STRATEGIES = {"operation-lock-file", "scheduler-singleflight", "external-lock"}
+RESUME_FAILURE_POLICIES = {
+    "fail-closed-record-summary",
+    "resume-by-run-id",
+    "require-human-review",
+}
+PARTIAL_RUN_HANDLING = {
+    "never-prune-without-retention-decision",
+    "rerun-idempotent-operation",
+    "record-and-hold",
+}
 
 PUBLIC_FORBIDDEN_PATTERNS = (
     (re.compile(r"(^|[\"'\s])/(Users|Volumes|var|private|srv|home)/"), "real_machine_path"),
@@ -212,6 +258,36 @@ def _object_restore_classes(objects: list[dict[str, Any]]) -> dict[str, list[str
     for obj in objects:
         classes[str(obj["restore_class"])].append(str(obj["object_id"]))
     return classes
+
+
+def _validate_symbolic_ref(value: Any, *, path: str, name: str) -> list[Finding]:
+    if not _is_string(value):
+        return [_finding("missing_string", path, f"{name} is required")]
+    if not str(value).startswith(SERVICE_REF_PREFIXES):
+        return [
+            _finding(
+                "invalid_symbolic_ref",
+                path,
+                f"{name} must use one of {SERVICE_REF_PREFIXES}",
+            )
+        ]
+    return []
+
+
+def _validate_permission_operations(value: Any, *, path: str) -> list[Finding]:
+    findings: list[Finding] = []
+    if not isinstance(value, list) or not value:
+        return [_finding("permission_operations", path, "permission operations must be a non-empty list")]
+    for index, operation in enumerate(value):
+        if operation not in SERVICE_PERMISSION_OPERATIONS:
+            findings.append(
+                _finding(
+                    "invalid_permission_operation",
+                    f"{path}[{index}]",
+                    f"operation must be one of {sorted(SERVICE_PERMISSION_OPERATIONS)}",
+                )
+            )
+    return findings
 
 
 def find_public_private_bindings(payload: Any, path: str = "$") -> list[Finding]:
@@ -938,6 +1014,433 @@ def validate_command_plan(payload: dict[str, Any], *, public_safe: bool = False)
     return findings
 
 
+def validate_service_registry(payload: dict[str, Any], *, public_safe: bool = False) -> list[Finding]:
+    findings: list[Finding] = []
+    if payload.get("schema_version") != SERVICE_REGISTRY_SCHEMA:
+        findings.append(_finding("schema_version", "$.schema_version", f"expected {SERVICE_REGISTRY_SCHEMA}"))
+    findings.extend(_require_string(payload, "service_id", "$"))
+    findings.extend(_require_string(payload, "node_id", "$"))
+    findings.extend(_validate_symbolic_ref(payload.get("node_ref"), path="$.node_ref", name="node_ref"))
+
+    objects = payload.get("objects")
+    if not _is_object_list(objects):
+        findings.append(_finding("objects", "$.objects", "objects must be a non-empty list of custody objects"))
+    elif not objects:
+        findings.append(_finding("objects", "$.objects", "objects must be a non-empty list of custody objects"))
+    findings.extend(_validate_object_custody(objects, path="$.objects"))
+    object_ids = {
+        str(obj.get("object_id"))
+        for obj in objects or []
+        if isinstance(obj, dict) and _is_string(obj.get("object_id"))
+    }
+
+    destinations = payload.get("destinations")
+    destination_ids: set[str] = set()
+    if not _is_object_list(destinations):
+        findings.append(_finding("destinations", "$.destinations", "destinations must be a list of objects"))
+    else:
+        for index, destination in enumerate(destinations):
+            dest_path = f"$.destinations[{index}]"
+            destination_id = destination.get("destination_id")
+            if not _is_string(destination_id):
+                findings.append(_finding("missing_string", f"{dest_path}.destination_id", "destination_id is required"))
+            elif str(destination_id) in destination_ids:
+                findings.append(
+                    _finding(
+                        "duplicate_destination_id",
+                        f"{dest_path}.destination_id",
+                        f"duplicate destination_id: {destination_id}",
+                    )
+                )
+            else:
+                destination_ids.add(str(destination_id))
+            if destination.get("role") not in SERVICE_DESTINATION_ROLES:
+                findings.append(
+                    _finding(
+                        "invalid_destination_role",
+                        f"{dest_path}.role",
+                        f"role must be one of {sorted(SERVICE_DESTINATION_ROLES)}",
+                    )
+                )
+            if destination.get("adapter") not in SERVICE_ADAPTERS:
+                findings.append(
+                    _finding(
+                        "invalid_destination_adapter",
+                        f"{dest_path}.adapter",
+                        f"adapter must be one of {sorted(SERVICE_ADAPTERS)}",
+                    )
+                )
+            findings.extend(
+                _validate_symbolic_ref(
+                    destination.get("storage_binding"),
+                    path=f"{dest_path}.storage_binding",
+                    name="storage_binding",
+                )
+            )
+            if destination.get("visibility") not in VISIBILITY_CLASSES:
+                findings.append(
+                    _finding(
+                        "invalid_visibility",
+                        f"{dest_path}.visibility",
+                        f"visibility must be one of {sorted(VISIBILITY_CLASSES)}",
+                    )
+                )
+
+    permissions = payload.get("permissions")
+    permission_set_ids: set[str] = set()
+    project_permission_refs: list[tuple[str, str]] = []
+    if not _is_object_list(permissions):
+        findings.append(_finding("permissions", "$.permissions", "permissions must be a list of objects"))
+    else:
+        for index, permission in enumerate(permissions):
+            perm_path = f"$.permissions[{index}]"
+            permission_set_id = permission.get("permission_set_id")
+            if not _is_string(permission_set_id):
+                findings.append(
+                    _finding("missing_string", f"{perm_path}.permission_set_id", "permission_set_id is required")
+                )
+            elif str(permission_set_id) in permission_set_ids:
+                findings.append(
+                    _finding(
+                        "duplicate_permission_set_id",
+                        f"{perm_path}.permission_set_id",
+                        f"duplicate permission_set_id: {permission_set_id}",
+                    )
+                )
+            else:
+                permission_set_ids.add(str(permission_set_id))
+            scope = permission.get("scope")
+            if scope not in SERVICE_PERMISSION_SCOPES:
+                findings.append(
+                    _finding(
+                        "invalid_permission_scope",
+                        f"{perm_path}.scope",
+                        f"scope must be one of {sorted(SERVICE_PERMISSION_SCOPES)}",
+                    )
+                )
+            if scope == "object":
+                object_id = permission.get("object_id")
+                if object_id not in object_ids:
+                    findings.append(
+                        _finding(
+                            "unknown_permission_object",
+                            f"{perm_path}.object_id",
+                            f"unknown object_id: {object_id}",
+                        )
+                    )
+            elif scope == "project" and not _is_string(permission.get("project_id")):
+                findings.append(_finding("missing_string", f"{perm_path}.project_id", "project_id is required"))
+            elif scope == "project":
+                project_permission_refs.append((perm_path, str(permission.get("project_id"))))
+            findings.extend(
+                _validate_permission_operations(
+                    permission.get("allowed_operations"),
+                    path=f"{perm_path}.allowed_operations",
+                )
+            )
+            blocked = permission.get("blocked_operations", [])
+            if blocked is not None:
+                findings.extend(
+                    _validate_permission_operations(
+                        blocked,
+                        path=f"{perm_path}.blocked_operations",
+                    )
+                    if blocked
+                    else []
+                )
+            clearance = permission.get("requires_human_clearance", [])
+            if clearance is not None:
+                findings.extend(
+                    _validate_permission_operations(
+                        clearance,
+                        path=f"{perm_path}.requires_human_clearance",
+                    )
+                    if clearance
+                    else []
+                )
+
+    projects = payload.get("projects")
+    project_ids: set[str] = set()
+    if not _is_object_list(projects):
+        findings.append(_finding("projects", "$.projects", "projects must be a list of objects"))
+    else:
+        for index, project in enumerate(projects):
+            project_path = f"$.projects[{index}]"
+            project_id = project.get("project_id")
+            if not _is_string(project_id):
+                findings.append(_finding("missing_string", f"{project_path}.project_id", "project_id is required"))
+            elif str(project_id) in project_ids:
+                findings.append(
+                    _finding("duplicate_project_id", f"{project_path}.project_id", f"duplicate project_id: {project_id}")
+                )
+            else:
+                project_ids.add(str(project_id))
+            findings.extend(_require_string(project, "workspace_id", project_path))
+            project_node_ref = project.get("node_ref")
+            if project_node_ref is not None:
+                findings.extend(
+                    _validate_symbolic_ref(project_node_ref, path=f"{project_path}.node_ref", name="node_ref")
+                )
+            permission_set_ref = project.get("permission_set_ref")
+            if permission_set_ref not in permission_set_ids:
+                findings.append(
+                    _finding(
+                        "unknown_project_permission_set",
+                        f"{project_path}.permission_set_ref",
+                        f"unknown permission_set_ref: {permission_set_ref}",
+                    )
+                )
+            if not isinstance(project.get("object_ids"), list) or not project.get("object_ids"):
+                findings.append(
+                    _finding("project_object_ids", f"{project_path}.object_ids", "project must name at least one object")
+                )
+            else:
+                for obj_index, object_id in enumerate(project["object_ids"]):
+                    if object_id not in object_ids:
+                        findings.append(
+                            _finding(
+                                "unknown_project_object",
+                                f"{project_path}.object_ids[{obj_index}]",
+                                f"unknown object_id: {object_id}",
+                            )
+                        )
+
+    for perm_path, project_id in project_permission_refs:
+        if project_id not in project_ids:
+            findings.append(
+                _finding(
+                    "unknown_permission_project",
+                    f"{perm_path}.project_id",
+                    f"unknown project_id: {project_id}",
+                )
+            )
+
+    source_destinations = payload.get("source_destinations")
+    source_destination_ids: set[str] = set()
+    if not _is_object_list(source_destinations):
+        findings.append(
+            _finding(
+                "source_destinations",
+                "$.source_destinations",
+                "source_destinations must be a list of objects",
+            )
+        )
+    else:
+        for index, binding in enumerate(source_destinations):
+            binding_path = f"$.source_destinations[{index}]"
+            binding_id = binding.get("source_destination_id")
+            if not _is_string(binding_id):
+                findings.append(
+                    _finding(
+                        "missing_string",
+                        f"{binding_path}.source_destination_id",
+                        "source_destination_id is required",
+                    )
+                )
+            elif str(binding_id) in source_destination_ids:
+                findings.append(
+                    _finding(
+                        "duplicate_source_destination_id",
+                        f"{binding_path}.source_destination_id",
+                        f"duplicate source_destination_id: {binding_id}",
+                    )
+                )
+            else:
+                source_destination_ids.add(str(binding_id))
+            if binding.get("project_id") not in project_ids:
+                findings.append(
+                    _finding(
+                        "unknown_source_project",
+                        f"{binding_path}.project_id",
+                        f"unknown project_id: {binding.get('project_id')}",
+                    )
+                )
+            if binding.get("destination_id") not in destination_ids:
+                findings.append(
+                    _finding(
+                        "unknown_source_destination",
+                        f"{binding_path}.destination_id",
+                        f"unknown destination_id: {binding.get('destination_id')}",
+                    )
+                )
+            if binding.get("permission_set_ref") not in permission_set_ids:
+                findings.append(
+                    _finding(
+                        "unknown_source_permission_set",
+                        f"{binding_path}.permission_set_ref",
+                        f"unknown permission_set_ref: {binding.get('permission_set_ref')}",
+                    )
+                )
+            if not isinstance(binding.get("object_ids"), list) or not binding.get("object_ids"):
+                findings.append(
+                    _finding(
+                        "source_object_ids",
+                        f"{binding_path}.object_ids",
+                        "source destination must name at least one object",
+                    )
+                )
+            else:
+                for obj_index, object_id in enumerate(binding["object_ids"]):
+                    if object_id not in object_ids:
+                        findings.append(
+                            _finding(
+                                "unknown_source_object",
+                                f"{binding_path}.object_ids[{obj_index}]",
+                                f"unknown object_id: {object_id}",
+                            )
+                        )
+
+    resume_policy = payload.get("resume_policy")
+    resume_policy_id = None
+    if not isinstance(resume_policy, dict):
+        findings.append(_finding("resume_policy", "$.resume_policy", "resume_policy must be an object"))
+    else:
+        resume_policy_id = resume_policy.get("policy_id")
+        findings.extend(_require_string(resume_policy, "policy_id", "$.resume_policy"))
+        if resume_policy.get("lock_strategy") not in RESUME_LOCK_STRATEGIES:
+            findings.append(
+                _finding(
+                    "invalid_lock_strategy",
+                    "$.resume_policy.lock_strategy",
+                    f"lock_strategy must be one of {sorted(RESUME_LOCK_STRATEGIES)}",
+                )
+            )
+        for key in ("on_disconnected_storage", "on_power_loss", "on_interrupted_run"):
+            if resume_policy.get(key) not in RESUME_FAILURE_POLICIES:
+                findings.append(
+                    _finding(
+                        "invalid_resume_failure_policy",
+                        f"$.resume_policy.{key}",
+                        f"{key} must be one of {sorted(RESUME_FAILURE_POLICIES)}",
+                    )
+                )
+        if resume_policy.get("partial_run_handling") not in PARTIAL_RUN_HANDLING:
+            findings.append(
+                _finding(
+                    "invalid_partial_run_handling",
+                    "$.resume_policy.partial_run_handling",
+                    f"partial_run_handling must be one of {sorted(PARTIAL_RUN_HANDLING)}",
+                )
+            )
+
+    replicas = payload.get("replicas")
+    if not _is_object_list(replicas):
+        findings.append(_finding("replicas", "$.replicas", "replicas must be a list of objects"))
+    else:
+        seen_replicas: set[str] = set()
+        for index, replica in enumerate(replicas):
+            replica_path = f"$.replicas[{index}]"
+            replica_id = replica.get("replica_id")
+            if not _is_string(replica_id):
+                findings.append(_finding("missing_string", f"{replica_path}.replica_id", "replica_id is required"))
+            elif str(replica_id) in seen_replicas:
+                findings.append(
+                    _finding("duplicate_replica_id", f"{replica_path}.replica_id", f"duplicate replica_id: {replica_id}")
+                )
+            else:
+                seen_replicas.add(str(replica_id))
+            if replica.get("source_destination_id") not in source_destination_ids:
+                findings.append(
+                    _finding(
+                        "unknown_replica_source_destination",
+                        f"{replica_path}.source_destination_id",
+                        f"unknown source_destination_id: {replica.get('source_destination_id')}",
+                    )
+                )
+            if replica.get("destination_id") not in destination_ids:
+                findings.append(
+                    _finding(
+                        "unknown_replica_destination",
+                        f"{replica_path}.destination_id",
+                        f"unknown destination_id: {replica.get('destination_id')}",
+                    )
+                )
+            if replica.get("execution_model") != "external-delegated":
+                findings.append(
+                    _finding(
+                        "invalid_replica_execution_model",
+                        f"{replica_path}.execution_model",
+                        "replica execution_model must be external-delegated",
+                    )
+                )
+            if replica.get("resume_policy_ref") != resume_policy_id:
+                findings.append(
+                    _finding(
+                        "unknown_replica_resume_policy",
+                        f"{replica_path}.resume_policy_ref",
+                        f"unknown resume_policy_ref: {replica.get('resume_policy_ref')}",
+                    )
+                )
+            evidence = replica.get("required_evidence")
+            if not isinstance(evidence, list) or not evidence:
+                findings.append(
+                    _finding(
+                        "replica_required_evidence",
+                        f"{replica_path}.required_evidence",
+                        "replicas must name required evidence",
+                    )
+                )
+            else:
+                for evidence_index, item in enumerate(evidence):
+                    if item not in RETENTION_EVIDENCE:
+                        findings.append(
+                            _finding(
+                                "invalid_replica_evidence",
+                                f"{replica_path}.required_evidence[{evidence_index}]",
+                                f"evidence must be one of {sorted(RETENTION_EVIDENCE)}",
+                            )
+                        )
+
+    legacy_imports = payload.get("legacy_imports", [])
+    if not isinstance(legacy_imports, list):
+        findings.append(_finding("legacy_imports", "$.legacy_imports", "legacy_imports must be a list when present"))
+    else:
+        for index, legacy_import in enumerate(legacy_imports):
+            legacy_path = f"$.legacy_imports[{index}]"
+            if not isinstance(legacy_import, dict):
+                findings.append(_finding("legacy_imports", legacy_path, "legacy imports must be objects"))
+                continue
+            findings.extend(_require_string(legacy_import, "import_id", legacy_path))
+            if legacy_import.get("source") != "legacy-machine-durability":
+                findings.append(
+                    _finding(
+                        "invalid_legacy_import_source",
+                        f"{legacy_path}.source",
+                        "legacy import source must be legacy-machine-durability",
+                    )
+                )
+            for key in (
+                "scheduler_ref",
+                "machine_node_ref",
+                "project_nodes_ref",
+                "runner_state_ref",
+                "per_run_state_ref",
+            ):
+                findings.extend(
+                    _validate_symbolic_ref(legacy_import.get(key), path=f"{legacy_path}.{key}", name=key)
+                )
+            if legacy_import.get("import_mode") not in {"metadata-only", "sanitized-run-summaries"}:
+                findings.append(
+                    _finding(
+                        "invalid_legacy_import_mode",
+                        f"{legacy_path}.import_mode",
+                        "import_mode must be metadata-only or sanitized-run-summaries",
+                    )
+                )
+            if legacy_import.get("status") not in {"pending", "imported", "blocked"}:
+                findings.append(
+                    _finding(
+                        "invalid_legacy_import_status",
+                        f"{legacy_path}.status",
+                        "status must be pending, imported, or blocked",
+                    )
+                )
+
+    if public_safe:
+        findings.extend(find_public_private_bindings(payload))
+    return findings
+
+
 def build_run_summary(
     *,
     run_id: str,
@@ -980,4 +1483,6 @@ def validate_document(payload: dict[str, Any], *, public_safe: bool = False) -> 
         return validate_repository_bindings(payload, public_safe=public_safe)
     if schema == COMMAND_PLAN_SCHEMA:
         return validate_command_plan(payload, public_safe=public_safe)
+    if schema == SERVICE_REGISTRY_SCHEMA:
+        return validate_service_registry(payload, public_safe=public_safe)
     return [_finding("unknown_schema", "$.schema_version", f"unsupported custody schema: {schema}")]

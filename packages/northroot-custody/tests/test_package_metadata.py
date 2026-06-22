@@ -27,6 +27,7 @@ class PackageMetadataTests(unittest.TestCase):
             model.VERIFICATION_RESULT_SCHEMA,
             model.RETENTION_DECISION_SCHEMA,
             model.RUN_SUMMARY_SCHEMA,
+            model.SERVICE_REGISTRY_SCHEMA,
         }
         examples = [
             ROOT / "examples" / "workspace-inventory.example.json",
@@ -35,6 +36,7 @@ class PackageMetadataTests(unittest.TestCase):
             ROOT / "examples" / "verification-result.example.json",
             ROOT / "examples" / "retention-decision.example.json",
             ROOT / "examples" / "run-summary.example.json",
+            ROOT / "examples" / "service-registry.example.json",
         ]
 
         observed_schemas = set()

@@ -1,0 +1,209 @@
+{
+  "schema_version": "northroot.steward.service-registry.v0",
+  "service_id": "steward/example-node",
+  "node_id": "node-example",
+  "node_ref": "node://example",
+  "objects": [
+    {
+      "object_id": "repo/main",
+      "object_type": "repo",
+      "visibility": "public",
+      "storage_binding": "workspace://.",
+      "custody_policy": {
+        "backup": "metadata-only",
+        "retention": "git-remote-plus-steward-summary"
+      },
+      "redaction_policy": {
+        "public_summary": "name-and-commit-only"
+      },
+      "restore_class": "metadata-only"
+    },
+    {
+      "object_id": "state/sqlite",
+      "object_type": "sqlite",
+      "visibility": "private",
+      "storage_binding": "workspace://state/app.sqlite",
+      "custody_policy": {
+        "backup": "sqlite-online-backup",
+        "verification": "sample-restore"
+      },
+      "redaction_policy": {
+        "public_summary": "object-id-and-status"
+      },
+      "restore_class": "full-restore"
+    },
+    {
+      "object_id": "journals/main",
+      "object_type": "journal",
+      "visibility": "private",
+      "storage_binding": "journal://main",
+      "custody_policy": {
+        "backup": "journal-seal",
+        "verification": "journal-replay"
+      },
+      "redaction_policy": {
+        "public_summary": "object-id-and-seal-status"
+      },
+      "restore_class": "full-restore"
+    },
+    {
+      "object_id": "cache/runtime",
+      "object_type": "cache",
+      "visibility": "ephemeral",
+      "storage_binding": "cache://runtime",
+      "custody_policy": {
+        "backup": "excluded"
+      },
+      "redaction_policy": {
+        "public_summary": "excluded-cache-count"
+      },
+      "restore_class": "never-export"
+    },
+    {
+      "object_id": "secrets/restic-env",
+      "object_type": "env-file",
+      "visibility": "secret",
+      "storage_binding": "env://restic",
+      "custody_policy": {
+        "backup": "provider-rehydrated",
+        "verification": "binding-present"
+      },
+      "redaction_policy": {
+        "public_summary": "presence-only"
+      },
+      "restore_class": "rehydrate-from-provider"
+    }
+  ],
+  "projects": [
+    {
+      "project_id": "project/example",
+      "workspace_id": "example-workspace",
+      "node_ref": "node://example",
+      "permission_set_ref": "perm/project-example",
+      "object_ids": [
+        "repo/main",
+        "state/sqlite",
+        "journals/main",
+        "cache/runtime",
+        "secrets/restic-env"
+      ],
+      "source_destination_ids": [
+        "source/project-example-primary"
+      ],
+      "schedule_ref": "scheduler://steward/example-hourly"
+    }
+  ],
+  "permissions": [
+    {
+      "permission_set_id": "perm/project-example",
+      "scope": "project",
+      "project_id": "project/example",
+      "allowed_operations": [
+        "status",
+        "preflight",
+        "verify-state",
+        "report",
+        "run",
+        "verify",
+        "restore-drill",
+        "retention.evaluate",
+        "evidence.report",
+        "offsite.report"
+      ],
+      "requires_human_clearance": [
+        "restore",
+        "schedule.install",
+        "schedule.uninstall",
+        "schedule.delete"
+      ]
+    },
+    {
+      "permission_set_id": "perm/object-secrets",
+      "scope": "object",
+      "object_id": "secrets/restic-env",
+      "allowed_operations": [
+        "preflight",
+        "verify-state"
+      ],
+      "blocked_operations": [
+        "run",
+        "restore",
+        "restore-drill",
+        "evidence.record"
+      ]
+    }
+  ],
+  "destinations": [
+    {
+      "destination_id": "dest/local-primary",
+      "role": "primary",
+      "adapter": "resticprofile",
+      "storage_binding": "repository://local-primary",
+      "visibility": "private"
+    },
+    {
+      "destination_id": "dest/offsite-replica",
+      "role": "replica",
+      "adapter": "external-delegated",
+      "storage_binding": "repository://offsite-vault",
+      "visibility": "private"
+    },
+    {
+      "destination_id": "dest/receipt-log",
+      "role": "receipt-log",
+      "adapter": "filesystem",
+      "storage_binding": "receipt://backup-receipts",
+      "visibility": "private"
+    }
+  ],
+  "source_destinations": [
+    {
+      "source_destination_id": "source/project-example-primary",
+      "project_id": "project/example",
+      "destination_id": "dest/local-primary",
+      "permission_set_ref": "perm/project-example",
+      "object_ids": [
+        "repo/main",
+        "state/sqlite",
+        "journals/main"
+      ],
+      "consistency_boundary_ids": [
+        "sqlite-online-copy",
+        "journal-seal"
+      ]
+    }
+  ],
+  "replicas": [
+    {
+      "replica_id": "replica/project-example-offsite",
+      "source_destination_id": "source/project-example-primary",
+      "destination_id": "dest/offsite-replica",
+      "execution_model": "external-delegated",
+      "required_evidence": [
+        "verified_offsite_copy"
+      ],
+      "resume_policy_ref": "resume/fail-closed-v0"
+    }
+  ],
+  "resume_policy": {
+    "policy_id": "resume/fail-closed-v0",
+    "lock_strategy": "operation-lock-file",
+    "on_disconnected_storage": "fail-closed-record-summary",
+    "on_power_loss": "resume-by-run-id",
+    "on_interrupted_run": "resume-by-run-id",
+    "partial_run_handling": "never-prune-without-retention-decision"
+  },
+  "legacy_imports": [
+    {
+      "import_id": "legacy/machine-durability",
+      "source": "legacy-machine-durability",
+      "scheduler_ref": "scheduler://legacy-machine-durability",
+      "machine_node_ref": "node://legacy-machine",
+      "project_nodes_ref": "project://legacy-project-nodes",
+      "runner_state_ref": "run-state://legacy-machine-durability",
+      "per_run_state_ref": "state://legacy-machine-durability/runs",
+      "import_mode": "sanitized-run-summaries",
+      "status": "pending"
+    }
+  ]
+}
