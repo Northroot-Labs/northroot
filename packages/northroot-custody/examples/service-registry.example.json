@@ -104,6 +104,8 @@
         "verify-state",
         "report",
         "run",
+        "schedule.create",
+        "schedule.status",
         "verify",
         "restore-drill",
         "retention.evaluate",

@@ -428,6 +428,18 @@ class StewardTests(unittest.TestCase):
             self.assertTrue(authorized_registry_plan["ok"])
             self.assertTrue(authorized_registry_plan["authorization"]["allowed"])
             self.assertIn("--registry-state", authorized_registry_plan["argv"])
+            authorized_schedule_plan = steward.render_command_plan(
+                output_dir,
+                operation="schedule.create",
+                scheduler="launchd",
+                schedule_operation="run",
+                every_minutes=60,
+                registry_state=registry_dir,
+                project_id="project/example",
+            )
+            self.assertTrue(authorized_schedule_plan["ok"])
+            self.assertTrue(authorized_schedule_plan["authorization"]["allowed"])
+            self.assertIn("--registry-state", authorized_schedule_plan["argv"])
             denied_registry_plan = steward.render_command_plan(
                 output_dir,
                 operation="run",
@@ -1038,7 +1050,15 @@ class StewardTests(unittest.TestCase):
                 output_dir=output_dir,
                 scheduler="systemd",
                 every_minutes=30,
+                registry_state=registry_dir,
+                project_id="project/example",
             )
+            service_text = (output_dir / "schedules" / "northroot-steward.service").read_text(encoding="utf-8")
+            self.assertIn("--registry-state", service_text)
+            self.assertIn(str(registry_dir), service_text)
+            self.assertIn("--project-id project/example", service_text)
+            self.assertEqual(schedule["registry_state"], str(registry_dir))
+            self.assertEqual(schedule["project_id"], "project/example")
             deleted = steward.delete_schedule(output_dir)
             self.assertTrue(deleted["configured_before_delete"])
             self.assertTrue(deleted["deleted"])

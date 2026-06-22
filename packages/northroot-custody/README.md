@@ -167,7 +167,9 @@ nr-custody steward schedule create \
   --state /tmp/northroot-steward-example \
   --scheduler launchd \
   --operation run \
-  --every-minutes 60
+  --every-minutes 60 \
+  --registry-state /tmp/northroot-steward-registry \
+  --project-id project/example
 nr-custody steward schedule status --state /tmp/northroot-steward-example
 nr-custody steward schedule install --state /tmp/northroot-steward-example
 nr-custody steward schedule install --state /tmp/northroot-steward-example --execute
@@ -315,16 +317,23 @@ can be `run`, `verify`, or `restore-drill`. `schedule create` only renders
 templates; `schedule install --execute` delegates installation to `launchctl` or
 `systemctl --user` after preflight passes; `schedule uninstall --execute`
 removes the platform registration; `schedule delete` removes generated template
-files only when the schedule is not marked installed. Use `schedule delete
---force` only for operator-confirmed cleanup of stale generated files after the
-platform registration has already been removed. Refused deletion returns a
-non-zero exit status so scripts and agents cannot mistake a blocked cleanup for
-success. `--skip-preflight` is available for explicit operator-controlled
-exceptions. Executed operations fail closed when preflight is not ready and
-still write an auditable run summary with `delegated-preflight-failed` status.
-Scheduled operations do not invent a snapshot id; treat their evidence as
-general custody health unless the generated command is deliberately bound to a
-specific snapshot.
+files only when the schedule is not marked installed. `schedule create`,
+`schedule status`, `schedule install`, `schedule uninstall`, and
+`schedule delete` accept `--registry-state`, `--project-id`, and optional
+`--object-id`; when present, registry authorization runs before schedule state
+or platform registration is changed. Registry context supplied at schedule
+creation is persisted in `schedule.json`, used by later schedule subcommands,
+and rendered into the unattended scheduled command so hourly runs keep the same
+project/object policy context. Use `schedule delete --force` only for
+operator-confirmed cleanup of stale generated files after the platform
+registration has already been removed. Refused deletion returns a non-zero exit
+status so scripts and agents cannot mistake a blocked cleanup for success.
+`--skip-preflight` is available for explicit operator-controlled exceptions.
+Executed operations fail closed when preflight is not ready and still write an
+auditable run summary with `delegated-preflight-failed` status. Scheduled
+operations do not invent a snapshot id; treat their evidence as general custody
+health unless the generated command is deliberately bound to a specific
+snapshot.
 
 The generated schedule records its `runner_command` and preflight checks that
 the command is executable in the current environment. For unattended launchd or

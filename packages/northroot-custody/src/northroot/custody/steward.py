@@ -1833,6 +1833,12 @@ def render_command_plan(
             warnings.append("snapshot_id is required for restore-drill evidence to satisfy retention")
     elif operation == "schedule.create":
         argv.extend(["schedule", "create", "--state", state])
+        _append_registry_context_args(
+            argv,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
         if scheduler not in {"launchd", "systemd"}:
             missing_inputs.append("scheduler")
         else:
@@ -1849,8 +1855,20 @@ def render_command_plan(
             argv.extend(["--runner-command", runner_command])
     elif operation == "schedule.status":
         argv.extend(["schedule", "status", "--state", state])
+        _append_registry_context_args(
+            argv,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
     elif operation == "schedule.install":
         argv.extend(["schedule", "install", "--state", state])
+        _append_registry_context_args(
+            argv,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
         if execute:
             argv.append("--execute")
             delegated_platform_mutation = True
@@ -1860,11 +1878,23 @@ def render_command_plan(
         requires_preflight = not skip_preflight
     elif operation == "schedule.uninstall":
         argv.extend(["schedule", "uninstall", "--state", state])
+        _append_registry_context_args(
+            argv,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
         if execute:
             argv.append("--execute")
             delegated_platform_mutation = True
     elif operation == "schedule.delete":
         argv.extend(["schedule", "delete", "--state", state])
+        _append_registry_context_args(
+            argv,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
         if force:
             argv.append("--force")
             warnings.append("force is operator cleanup for stale generated files")
@@ -3659,7 +3689,30 @@ def load_plan(output_dir: Path) -> dict[str, Any]:
     return model.load_json(Path(str(installation["snapshot_plan_path"])))
 
 
-def _scheduled_operation_command(*, runner_command: str, output_dir: Path, operation: str) -> str:
+def _append_registry_context_args(
+    argv: list[str],
+    *,
+    registry_state: Path | None,
+    project_id: str | None,
+    object_id: str | None,
+) -> None:
+    if registry_state is not None:
+        argv.extend(["--registry-state", str(registry_state)])
+    if project_id:
+        argv.extend(["--project-id", project_id])
+    if object_id:
+        argv.extend(["--object-id", object_id])
+
+
+def _scheduled_operation_command(
+    *,
+    runner_command: str,
+    output_dir: Path,
+    operation: str,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> str:
     if operation not in SCHEDULE_OPERATIONS:
         raise ValueError(f"unsupported scheduled operation: {operation}")
     try:
@@ -3668,7 +3721,15 @@ def _scheduled_operation_command(*, runner_command: str, output_dir: Path, opera
         raise ValueError(f"runner_command is not shell-parseable: {err}") from err
     if not runner_args:
         raise ValueError("runner_command must not be empty")
-    return _command_string([*runner_args, operation, "--state", str(output_dir), "--execute"])
+    command = [*runner_args, operation, "--state", str(output_dir)]
+    _append_registry_context_args(
+        command,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
+    command.append("--execute")
+    return _command_string(command)
 
 
 def render_launchd_template(
@@ -3678,11 +3739,17 @@ def render_launchd_template(
     output_dir: Path,
     every_minutes: int,
     operation: str = "run",
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
 ) -> str:
     command = _scheduled_operation_command(
         runner_command=runner_command,
         output_dir=output_dir,
         operation=operation,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
     )
     return "\n".join(
         [
@@ -3710,11 +3777,22 @@ def render_launchd_template(
     )
 
 
-def render_systemd_service(*, runner_command: str, output_dir: Path, operation: str = "run") -> str:
+def render_systemd_service(
+    *,
+    runner_command: str,
+    output_dir: Path,
+    operation: str = "run",
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> str:
     command = _scheduled_operation_command(
         runner_command=runner_command,
         output_dir=output_dir,
         operation=operation,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
     )
     return "\n".join(
         [
@@ -3754,6 +3832,9 @@ def create_schedule(
     every_minutes: int,
     runner_command: str = DEFAULT_RUNNER_COMMAND,
     operation: str = "run",
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
 ) -> dict[str, Any]:
     if every_minutes <= 0:
         raise ValueError("every_minutes must be greater than zero")
@@ -3774,6 +3855,9 @@ def create_schedule(
                 output_dir=output_dir,
                 every_minutes=every_minutes,
                 operation=operation,
+                registry_state=registry_state,
+                project_id=project_id,
+                object_id=object_id,
             ),
             encoding="utf-8",
         )
@@ -3788,6 +3872,9 @@ def create_schedule(
                 runner_command=runner_command,
                 output_dir=output_dir,
                 operation=operation,
+                registry_state=registry_state,
+                project_id=project_id,
+                object_id=object_id,
             ),
             encoding="utf-8",
         )
@@ -3814,6 +3901,9 @@ def create_schedule(
         "generated_paths": generated_paths,
         "generated_artifacts": generated_artifacts,
         "runner_command": runner_command,
+        "registry_state": str(registry_state) if registry_state is not None else None,
+        "project_id": project_id,
+        "object_id": object_id,
         "installed": False,
         "execution_mode": "delegated",
     }

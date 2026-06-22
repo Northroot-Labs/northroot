@@ -771,6 +771,57 @@ class CliTests(unittest.TestCase):
                 )
                 self.assertEqual(cli.main(["steward", "schedule", "delete", "--state", str(output_dir)]), 0)
 
+                registry_bound_output_dir = Path(temp_dir) / "steward-registry-bound-schedule"
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "init",
+                            "--inventory",
+                            str(EXAMPLES / "workspace-inventory.example.json"),
+                            "--policy",
+                            str(EXAMPLES / "custody-policy.example.json"),
+                            "--secret-bindings",
+                            str(EXAMPLES / "secret-bindings.redacted.example.json"),
+                            "--repository-bindings",
+                            str(EXAMPLES / "repository-bindings.redacted.example.json"),
+                            "--output",
+                            str(registry_bound_output_dir),
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "schedule",
+                            "create",
+                            "--state",
+                            str(registry_bound_output_dir),
+                            "--scheduler",
+                            "launchd",
+                            "--operation",
+                            "run",
+                            "--every-minutes",
+                            "60",
+                            "--registry-state",
+                            str(registry_dir),
+                            "--project-id",
+                            "project/example",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(["steward", "schedule", "status", "--state", str(registry_bound_output_dir)]),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(["steward", "schedule", "install", "--state", str(registry_bound_output_dir)]),
+                    1,
+                )
+
             self.assertTrue((output_dir / "snapshot-plan.json").exists())
             self.assertTrue((output_dir / "resticprofile.yaml").exists())
             self.assertIn(
@@ -791,6 +842,8 @@ class CliTests(unittest.TestCase):
             self.assertIn('"failure_stage": "authorization"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.operation-recovery.v0"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.legacy-run-import-result.v0"', stdout.getvalue())
+            self.assertIn('"operation": "schedule.install"', stdout.getvalue())
+            self.assertIn('"decision": "human-clearance-required"', stdout.getvalue())
 
 
 if __name__ == "__main__":
