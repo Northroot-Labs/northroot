@@ -3892,7 +3892,8 @@ def create_schedule(
     if scheduler == "launchd":
         label = f"org.northroot.{profile_name}"
         schedule_path = schedules_dir / f"{label}.plist"
-        schedule_path.write_text(
+        schedule_sha256 = _atomic_write_text(
+            schedule_path,
             render_launchd_template(
                 label=label,
                 runner_command=runner_command,
@@ -3903,15 +3904,15 @@ def create_schedule(
                 project_id=project_id,
                 object_id=object_id,
             ),
-            encoding="utf-8",
         )
         generated_paths = [str(schedule_path)]
-        generated_artifacts = {"launchd_plist": _artifact(schedule_path)}
+        generated_artifacts = {"launchd_plist": {"path": str(schedule_path), "sha256": schedule_sha256}}
     elif scheduler == "systemd":
         service_name = f"northroot-{profile_name}"
         service_path = schedules_dir / f"{service_name}.service"
         timer_path = schedules_dir / f"{service_name}.timer"
-        service_path.write_text(
+        service_sha256 = _atomic_write_text(
+            service_path,
             render_systemd_service(
                 runner_command=runner_command,
                 output_dir=output_dir,
@@ -3920,17 +3921,16 @@ def create_schedule(
                 project_id=project_id,
                 object_id=object_id,
             ),
-            encoding="utf-8",
         )
-        timer_path.write_text(
+        timer_sha256 = _atomic_write_text(
+            timer_path,
             render_systemd_timer(service_name=service_name, every_minutes=every_minutes),
-            encoding="utf-8",
         )
         schedule_path = timer_path
         generated_paths = [str(service_path), str(timer_path)]
         generated_artifacts = {
-            "systemd_service": _artifact(service_path),
-            "systemd_timer": _artifact(timer_path),
+            "systemd_service": {"path": str(service_path), "sha256": service_sha256},
+            "systemd_timer": {"path": str(timer_path), "sha256": timer_sha256},
         }
     else:
         raise ValueError(f"unsupported scheduler: {scheduler}")
