@@ -1,0 +1,39 @@
+{
+  "schema_version": "northroot.custody.workspace-inventory.v0",
+  "workspace_id": "example-workspace",
+  "state_roots": [
+    {
+      "id": "sqlite-state",
+      "path": "workspace://state/app.sqlite",
+      "role": "authoritative"
+    },
+    {
+      "id": "journal-state",
+      "path": "workspace://journals/main.nrj",
+      "role": "authoritative"
+    },
+    {
+      "id": "cache-state",
+      "path": "workspace://cache",
+      "role": "ignored"
+    }
+  ],
+  "consistency_boundaries": [
+    {
+      "id": "sqlite-online-copy",
+      "type": "sqlite-online-backup",
+      "source_root_ids": [
+        "sqlite-state"
+      ],
+      "preflight_ref": "preflight://sqlite-online-backup"
+    },
+    {
+      "id": "journal-seal",
+      "type": "journal-seal",
+      "source_root_ids": [
+        "journal-state"
+      ],
+      "preflight_ref": "preflight://journal-seal"
+    }
+  ]
+}

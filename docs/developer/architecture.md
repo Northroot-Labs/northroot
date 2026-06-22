@@ -9,7 +9,8 @@ profiles, but they do not change kernel identity rules.
 
 ```text
 apps/northroot                 standalone CLI, outside Cargo workspace
-packages/northroot-durability  Python package: northroot.durability
+packages/northroot-custody     Python package: northroot.custody
+packages/northroot-durability  legacy compatibility boundary helpers
 
 crates/northroot-ag            sanitized ag-domain example over records
 crates/northroot-exchange      constrained handoff/result profile
@@ -83,10 +84,24 @@ private deployments, and operational runbooks stay outside this public repo.
 
 ## Promoted Packages
 
-`packages/northroot-durability` exposes the Python namespace
-`northroot.durability` for public-safe durability policy, naming, manifests, and
-public/private commit checks. It is not part of the Rust kernel and is tested by
-Python commands in `scripts/verify.sh`.
+`packages/northroot-custody` exposes the Python namespace `northroot.custody`
+for the reusable custody vocabulary and steward helper layer. It owns
+workspace inventories, custody policies, delegated snapshot plans, verification
+results, retention decisions, run summaries, and agent-safe capability reports.
+It does not implement a backup engine, scheduler, secret manager, storage
+transport, or monitoring stack. Those jobs are delegated to commodity tools
+such as `resticprofile`, `launchd`, `systemd`, 1Password service-account based
+secret resolution, macOS Keychain, offsite-copy tools, and external health
+monitors.
+
+`apps/northroot` exposes that package through `nr steward`. The long-form
+`northroot` binary remains available, but `nr` is the preferred operator
+spelling for node and steward commands.
+
+`packages/northroot-durability` remains only as a legacy compatibility package
+for public/private artifact boundary checks and simple copy manifests. New
+backup, restore, schedule, retention, and disaster-recovery workflows should
+use `northroot-custody` and `nr steward`.
 
 ## CLI Application
 

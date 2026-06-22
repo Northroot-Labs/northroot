@@ -1,0 +1,16 @@
+{
+  "external_evidence": [
+    "verified_offsite_copy"
+  ],
+  "repository_check": "ok",
+  "restore_observation": {
+    "byte_count": 7,
+    "exists": true,
+    "file_count": 1,
+    "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "target": "restore-target://example",
+    "verified": true
+  },
+  "restore_verified": true,
+  "schema_version": "northroot.custody.verification-result.v0"
+}

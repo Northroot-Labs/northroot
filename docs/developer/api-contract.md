@@ -46,13 +46,22 @@ workflow automation, and private deployment logic do not belong in this repo.
 
 | Package | Namespace | Responsibility |
 | --- | --- | --- |
-| `northroot-durability` | `northroot.durability` | durability naming, tiered policy, manifests, and public/private artifact checks |
+| `northroot-custody` | `northroot.custody` | custody inventory, policy, snapshot plan, verification result, retention decision, run summary, and steward helper contracts |
+| `northroot-durability` | `northroot.durability` | legacy compatibility helpers for public/private artifact checks and simple copy manifests; not the backup/DR operation model |
 
-The Python package is tested separately from Cargo:
+The Python packages are tested separately from Cargo:
 
 ```bash
+PYTHONPATH=packages/northroot-custody/src python3 -m unittest discover packages/northroot-custody/tests
 PYTHONPATH=packages/northroot-durability/src python3 -m unittest discover packages/northroot-durability/tests
 ```
+
+`northroot-custody` is the reusable stewardship surface. It defines public-safe
+contracts and delegates execution to commodity tools such as `resticprofile`,
+platform schedulers, 1Password service-account secret resolution, macOS
+Keychain, offsite-copy tools, and external health monitors. Future backup,
+restore, schedule, retention, and DR automation should call `nr steward` or the
+`northroot.custody` APIs rather than adding new durability vocabulary.
 
 ## Core Invariants
 

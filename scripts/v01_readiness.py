@@ -247,22 +247,22 @@ def check_removed_release_surfaces() -> dict[str, Any]:
 
 
 def check_cli_commands() -> dict[str, Any]:
-    main_rs = (ROOT / "apps/northroot/src/main.rs").read_text()
+    cli_source = (ROOT / "apps/northroot/src/lib.rs").read_text()
     missing = []
     for command in REQUIRED_CLI_COMMANDS:
         variant = "".join(part.capitalize() for part in command.split("-"))
-        if variant not in main_rs:
+        if variant not in cli_source:
             missing.append(command)
     removed_present = []
     for command in REMOVED_CLI_COMMANDS:
         variant = "".join(part.capitalize() for part in command.split("-"))
-        if variant in main_rs:
+        if variant in cli_source:
             removed_present.append(command)
     not_hidden = []
     for command in HIDDEN_INCUBATING_CLI_COMMANDS:
         variant = "".join(part.capitalize() for part in command.split("-"))
         pattern = rf"#\[command\(hide = true\)\]\s+{variant}\s*\{{"
-        if not re.search(pattern, main_rs):
+        if not re.search(pattern, cli_source):
             not_hidden.append(command)
     findings = []
     if missing:

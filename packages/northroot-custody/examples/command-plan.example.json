@@ -1,0 +1,36 @@
+{
+  "agent_guidance": {
+    "bind_placeholders_before_invocation": true,
+    "do_not_read_or_log_secret_values": true,
+    "do_not_shell_join_argv": true,
+    "execute_requires_explicit_flag": true
+  },
+  "argv": [
+    "nr",
+    "steward",
+    "report",
+    "--state",
+    ".northroot/steward",
+    "--snapshot-id",
+    "snap-001"
+  ],
+  "argv_style": "argv",
+  "execute_requested": false,
+  "force_requested": false,
+  "missing_inputs": [],
+  "ok": true,
+  "operation": "report",
+  "preflight_failed_codes": [],
+  "preflight_ready": null,
+  "refused_reasons": [],
+  "requires_preflight": false,
+  "schema_version": "northroot.steward.command-plan.v0",
+  "shell_required": false,
+  "side_effects": {
+    "delegates_platform_scheduler_mutation": false,
+    "mutates_backup_repository": false,
+    "writes_run_summary": false
+  },
+  "skip_preflight_requested": false,
+  "warnings": []
+}

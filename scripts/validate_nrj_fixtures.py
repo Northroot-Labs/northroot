@@ -81,6 +81,8 @@ def verify_with_cli(path: Path) -> list[str]:
             "--quiet",
             "--manifest-path",
             str(ROOT / "apps/northroot/Cargo.toml"),
+            "--bin",
+            "northroot",
             "--",
             "verify",
             str(path),
