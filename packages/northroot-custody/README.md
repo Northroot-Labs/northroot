@@ -105,6 +105,7 @@ nr-custody steward run \
   --project-id project/example \
   --snapshot-id snap-001 \
   --execute
+nr-custody steward recover-operation --state /tmp/northroot-steward-example
 nr-custody steward verify --state /tmp/northroot-steward-example --snapshot-id snap-001
 nr-custody steward restore \
   --state /tmp/northroot-steward-example \
@@ -217,6 +218,11 @@ Delegated `steward run`, `steward verify`, `steward restore`, and
 authorization runs before preflight or delegated tooling. Denied operations
 write a run summary with `delegated-authorization-denied` and do not call the
 external backup or restore command.
+
+Executed delegated operations are guarded by `steward-operation.lock.json` in
+the steward state directory. A stale lock blocks later execution with
+`delegated-operation-locked`; run `steward recover-operation --state ...` to
+record `delegated-interrupted-recovered` and clear the lock before retrying.
 
 `steward restore` is the bounded recovery path for an actual restore. It
 requires both `--snapshot-id` and `--target`, delegates to `resticprofile`, and

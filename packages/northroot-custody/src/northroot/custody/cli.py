@@ -56,6 +56,12 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     capabilities = steward_sub.add_parser("capabilities", help="Print agent-safe steward capability manifest.")
     capabilities.add_argument("--state", required=True)
 
+    recover_operation = steward_sub.add_parser(
+        "recover-operation",
+        help="Record and clear an interrupted delegated operation lock.",
+    )
+    recover_operation.add_argument("--state", required=True)
+
     command_plan = steward_sub.add_parser("command-plan", help="Plan a constrained agent-safe steward argv.")
     command_plan.add_argument("--state", required=True)
     command_plan.add_argument("--operation", choices=tuple(sorted(steward.COMMAND_PLAN_OPERATIONS)), required=True)
@@ -268,6 +274,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0 if verification["ready"] else 1
     if args.command == "steward" and args.steward_command == "capabilities":
         write_json(steward.render_capabilities(Path(args.state)))
+        return 0
+    if args.command == "steward" and args.steward_command == "recover-operation":
+        write_json(steward.recover_operation(Path(args.state)))
         return 0
     if args.command == "steward" and args.steward_command == "command-plan":
         plan = steward.render_command_plan(

@@ -7,7 +7,7 @@ import unittest
 from unittest import mock
 from pathlib import Path
 
-from northroot.custody import cli
+from northroot.custody import cli, steward
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -579,6 +579,33 @@ class CliTests(unittest.TestCase):
                     cli.main(["steward", "restore-drill", "--state", str(output_dir), "--snapshot-id", "snap-001"]),
                     0,
                 )
+                (output_dir / steward.OPERATION_LOCK_FILENAME).write_text(
+                    json.dumps(
+                        {
+                            "schema_version": "northroot.steward.operation-lock.v0",
+                            "operation_id": "cli-stale-operation",
+                            "operation": "verify",
+                            "state": str(output_dir),
+                            "command": "resticprofile --name steward check",
+                            "command_args": ["resticprofile", "--name", "steward", "check"],
+                            "snapshot_id": "snap-001",
+                            "restore_target": None,
+                            "registry_state": None,
+                            "project_id": None,
+                            "object_id": None,
+                            "pid": 999999,
+                            "started_at": "20260622T000000000000Z",
+                            "failure_policy": "fail-closed-record-summary-before-retry",
+                            "resume_hint": "run steward recover-operation before retrying delegated execution",
+                        },
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                self.assertEqual(cli.main(["steward", "recover-operation", "--state", str(output_dir)]), 0)
+                self.assertFalse((output_dir / steward.OPERATION_LOCK_FILENAME).exists())
                 self.assertEqual(
                     cli.main(
                         [
@@ -635,16 +662,19 @@ class CliTests(unittest.TestCase):
                 "password-command",
                 (output_dir / "resticprofile.yaml").read_text(encoding="utf-8"),
             )
-            latest_summary = sorted((output_dir / "run-summaries").glob("*.json"))[-1]
-            self.assertIn(
-                '"status": "delegated-rendered"',
-                latest_summary.read_text(encoding="utf-8"),
+            run_summaries = [
+                path.read_text(encoding="utf-8")
+                for path in sorted((output_dir / "run-summaries").glob("*.json"))
+            ]
+            self.assertTrue(
+                any('"status": "delegated-rendered"' in summary for summary in run_summaries),
             )
             self.assertIn(
                 '"operation": "verify"',
                 stdout.getvalue(),
             )
             self.assertIn('"failure_stage": "authorization"', stdout.getvalue())
+            self.assertIn('"schema_version": "northroot.steward.operation-recovery.v0"', stdout.getvalue())
 
 
 if __name__ == "__main__":

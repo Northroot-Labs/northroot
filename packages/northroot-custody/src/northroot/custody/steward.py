@@ -22,6 +22,7 @@ INSTALLATION_SCHEMA = "northroot.steward.installation.v0"
 DEFAULT_PROFILE_NAME = "steward"
 DEFAULT_RUNNER_COMMAND = "nr steward"
 RESTORE_DRILL_DIR = "restore-drills"
+OPERATION_LOCK_FILENAME = "steward-operation.lock.json"
 SCHEDULE_OPERATIONS = {"run", "verify", "restore-drill"}
 OPERATIONS = {"run", "verify", "restore", "restore-drill"}
 COMMAND_PLAN_OPERATIONS = {
@@ -138,6 +139,37 @@ def _file_sha256(path: Path) -> str:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
             digest.update(chunk)
     return digest.hexdigest()
+
+
+def _json_bytes(payload: dict[str, Any]) -> bytes:
+    return (json.dumps(payload, indent=2, sort_keys=True) + "\n").encode("utf-8")
+
+
+def _fsync_directory(path: Path) -> None:
+    if not path.exists():
+        return
+    flags = getattr(os, "O_DIRECTORY", 0) | os.O_RDONLY
+    try:
+        fd = os.open(path, flags)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _atomic_write_json(path: Path, payload: dict[str, Any]) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = _json_bytes(payload)
+    temp_path = path.with_name(f".{path.name}.{os.getpid()}.{_utc_stamp()}.tmp")
+    with temp_path.open("wb") as handle:
+        handle.write(data)
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, path)
+    _fsync_directory(path.parent)
+    return hashlib.sha256(data).hexdigest()
 
 
 def _artifact(path: Path) -> dict[str, str]:
@@ -1874,6 +1906,101 @@ def latest_run_summary_path(output_dir: Path) -> str | None:
     return str(summaries[-1])
 
 
+def operation_lock_path(output_dir: Path) -> Path:
+    return output_dir / OPERATION_LOCK_FILENAME
+
+
+def _operation_lock_payload(
+    *,
+    output_dir: Path,
+    operation: str,
+    command_args: list[str],
+    snapshot_id: str | None,
+    restore_target: Path | None,
+    registry_state: Path | None,
+    project_id: str | None,
+    object_id: str | None,
+) -> dict[str, Any]:
+    return {
+        "schema_version": "northroot.steward.operation-lock.v0",
+        "operation_id": f"{_utc_stamp()}-{operation}",
+        "operation": operation,
+        "state": str(output_dir),
+        "command": _command_string(command_args),
+        "command_args": command_args,
+        "snapshot_id": snapshot_id,
+        "restore_target": str(restore_target) if restore_target is not None else None,
+        "registry_state": str(registry_state) if registry_state is not None else None,
+        "project_id": project_id,
+        "object_id": object_id,
+        "pid": os.getpid(),
+        "started_at": _utc_stamp(),
+        "failure_policy": "fail-closed-record-summary-before-retry",
+        "resume_hint": "run steward recover-operation before retrying delegated execution",
+    }
+
+
+def _clear_operation_lock(lock_path: Path, *, expected_operation_id: str | None = None) -> None:
+    if not lock_path.exists():
+        return
+    if expected_operation_id is not None:
+        lock = model.load_json(lock_path)
+        if lock.get("operation_id") != expected_operation_id:
+            return
+    lock_path.unlink()
+    _fsync_directory(lock_path.parent)
+
+
+def recover_operation(output_dir: Path) -> dict[str, Any]:
+    lock_path = operation_lock_path(output_dir)
+    if not lock_path.exists():
+        return {
+            "schema_version": "northroot.steward.operation-recovery.v0",
+            "recovered": False,
+            "resume_required": False,
+            "lock_path": str(lock_path),
+            "lock": None,
+            "run_summary_path": None,
+            "cleared_lock": False,
+        }
+    installation = load_installation(output_dir)
+    lock = model.load_json(lock_path)
+    operation = str(lock.get("operation") or "run")
+    if operation not in OPERATIONS:
+        operation = "run"
+    operation_payload = {
+        "schema_version": "northroot.steward.operation.v0",
+        "profile_name": installation["profile_name"],
+        "operation": operation,
+        "execution_mode": "delegated",
+        "delegated_tool": installation["delegated_tool"],
+        "command": str(lock.get("command") or ""),
+        "execute_requested": True,
+        "executed": False,
+        "snapshot_id": lock.get("snapshot_id"),
+        "return_code": 75,
+        "error": "previous delegated operation was interrupted before completion",
+        "failure_stage": "interrupted-operation-lock",
+        "restore_observation": None,
+        "preflight": None,
+        "authorization": lock.get("authorization"),
+        "operation_lock": lock,
+        "operation_lock_path": str(lock_path),
+    }
+    summary_path = write_operation_summary(output_dir=output_dir, operation_payload=operation_payload)
+    expected_operation_id = str(lock.get("operation_id")) if lock.get("operation_id") else None
+    _clear_operation_lock(lock_path, expected_operation_id=expected_operation_id)
+    return {
+        "schema_version": "northroot.steward.operation-recovery.v0",
+        "recovered": True,
+        "resume_required": False,
+        "lock_path": str(lock_path),
+        "lock": lock,
+        "run_summary_path": str(summary_path),
+        "cleared_lock": not lock_path.exists(),
+    }
+
+
 def render_operation(
     output_dir: Path,
     operation: str,
@@ -1905,8 +2032,29 @@ def render_operation(
     restore_observation = None
     preflight_result = None
     authorization = None
+    operation_lock = None
+    acquired_lock_path = None
     if execute:
-        if registry_state is not None and not project_id:
+        current_lock_path = operation_lock_path(output_dir)
+        if current_lock_path.exists():
+            operation_lock = model.load_json(current_lock_path)
+            return_code = 75
+            error = "delegated operation lock exists; run steward recover-operation before retrying"
+            failure_stage = "operation-lock"
+        else:
+            operation_lock = _operation_lock_payload(
+                output_dir=output_dir,
+                operation=operation,
+                command_args=command_args,
+                snapshot_id=snapshot_id,
+                restore_target=restore_target,
+                registry_state=registry_state,
+                project_id=project_id,
+                object_id=object_id,
+            )
+            _atomic_write_json(current_lock_path, operation_lock)
+            acquired_lock_path = current_lock_path
+        if return_code is None and registry_state is not None and not project_id:
             return_code = 77
             error = "registry authorization requires --project-id"
             failure_stage = "authorization"
@@ -1923,7 +2071,11 @@ def render_operation(
                 "requires_human_clearance": False,
                 "matched_permission_sets": [],
             }
-        elif registry_state is not None:
+            if operation_lock is not None:
+                operation_lock["authorization"] = authorization
+                if acquired_lock_path is not None:
+                    _atomic_write_json(acquired_lock_path, operation_lock)
+        elif return_code is None and registry_state is not None:
             authorization = authorize_operation(
                 registry_state,
                 operation=operation,
@@ -1935,6 +2087,10 @@ def render_operation(
                 return_code = 77
                 error = f"registry authorization denied: {authorization['decision']}"
                 failure_stage = "authorization"
+            if operation_lock is not None:
+                operation_lock["authorization"] = authorization
+                if acquired_lock_path is not None:
+                    _atomic_write_json(acquired_lock_path, operation_lock)
         if return_code is not None:
             pass
         else:
@@ -2007,12 +2163,19 @@ def render_operation(
         "restore_observation": restore_observation,
         "preflight": preflight_result,
         "authorization": authorization,
+        "operation_lock": operation_lock,
+        "operation_lock_path": str(operation_lock_path(output_dir)) if execute else None,
     }
     summary_path = write_operation_summary(
         output_dir=output_dir,
         operation_payload=operation_payload,
     )
     operation_payload["run_summary_path"] = str(summary_path)
+    if acquired_lock_path is not None and operation_lock is not None:
+        expected_operation_id = (
+            str(operation_lock.get("operation_id")) if operation_lock.get("operation_id") else None
+        )
+        _clear_operation_lock(acquired_lock_path, expected_operation_id=expected_operation_id)
     return operation_payload
 
 
@@ -2104,7 +2267,11 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
         and restore_observation
         and restore_observation.get("verified")
     )
-    if execute_requested and not executed and operation_payload.get("failure_stage") == "authorization":
+    if execute_requested and not executed and operation_payload.get("failure_stage") == "operation-lock":
+        status = "delegated-operation-locked"
+    elif execute_requested and not executed and operation_payload.get("failure_stage") == "interrupted-operation-lock":
+        status = "delegated-interrupted-recovered"
+    elif execute_requested and not executed and operation_payload.get("failure_stage") == "authorization":
         status = "delegated-authorization-denied"
     elif execute_requested and not executed and operation_payload.get("failure_stage") == "runtime-env":
         status = "delegated-runtime-env-failed"
@@ -2139,6 +2306,8 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
         if isinstance(operation_payload.get("preflight"), dict)
         else None,
         "authorization": operation_payload.get("authorization"),
+        "operation_lock": operation_payload.get("operation_lock"),
+        "operation_lock_path": operation_payload.get("operation_lock_path"),
     }
     summary = model.build_run_summary(
         run_id=run_id,
@@ -2157,6 +2326,8 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
                 "failure_stage": operation_payload.get("failure_stage"),
                 "preflight": operation_payload.get("preflight"),
                 "authorization": operation_payload.get("authorization"),
+                "operation_lock": operation_payload.get("operation_lock"),
+                "operation_lock_path": operation_payload.get("operation_lock_path"),
             }
         ],
     )
