@@ -62,6 +62,14 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     )
     recover_operation.add_argument("--state", required=True)
 
+    import_legacy_runs = steward_sub.add_parser(
+        "import-legacy-runs",
+        help="Import sanitized legacy run summaries into steward state.",
+    )
+    import_legacy_runs.add_argument("--state", required=True)
+    import_legacy_runs.add_argument("--json", required=True)
+    import_legacy_runs.add_argument("--public-safe", action="store_true")
+
     command_plan = steward_sub.add_parser("command-plan", help="Plan a constrained agent-safe steward argv.")
     command_plan.add_argument("--state", required=True)
     command_plan.add_argument("--operation", choices=tuple(sorted(steward.COMMAND_PLAN_OPERATIONS)), required=True)
@@ -279,6 +287,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "steward" and args.steward_command == "recover-operation":
         write_json(steward.recover_operation(Path(args.state)))
         return 0
+    if args.command == "steward" and args.steward_command == "import-legacy-runs":
+        result = steward.import_legacy_run_summaries(
+            Path(args.state),
+            model.load_json(Path(args.json)),
+            public_safe=args.public_safe,
+        )
+        write_json(result)
+        return 1 if result.get("locked") else 0
     if args.command == "steward" and args.steward_command == "command-plan":
         plan = steward.render_command_plan(
             Path(args.state),

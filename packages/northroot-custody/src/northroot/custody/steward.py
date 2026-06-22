@@ -25,6 +25,7 @@ RESTORE_DRILL_DIR = "restore-drills"
 OPERATION_LOCK_FILENAME = "steward-operation.lock.json"
 SCHEDULE_OPERATIONS = {"run", "verify", "restore-drill"}
 OPERATIONS = {"run", "verify", "restore", "restore-drill"}
+RECOVERABLE_OPERATION_SUMMARY_OPERATIONS = OPERATIONS | {"legacy-run-import"}
 COMMAND_PLAN_OPERATIONS = {
     "status",
     "preflight",
@@ -1057,6 +1058,15 @@ def _agent_operation_contracts(output_dir: Path) -> list[dict[str, Any]]:
             "success_schema": "northroot.steward.evidence-record.v0",
             "allowed_evidence": sorted(model.EXTERNAL_RETENTION_EVIDENCE),
         },
+        {
+            "name": "import-legacy-runs",
+            "argv_template": ["nr", "steward", "import-legacy-runs", "--state", state, "--json", "{json}", "--public-safe"],
+            "required_inputs": ["json"],
+            "optional_inputs": ["public_safe"],
+            "side_effects": ["writes_run_summary", "uses_operation_lock"],
+            "requires_preflight": False,
+            "success_schema": "northroot.steward.legacy-run-import-result.v0",
+        },
     ]
 
 
@@ -1951,6 +1961,16 @@ def _clear_operation_lock(lock_path: Path, *, expected_operation_id: str | None 
     _fsync_directory(lock_path.parent)
 
 
+def _canonical_json(value: dict[str, Any]) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _run_summary_path(output_dir: Path, run_id: str) -> Path:
+    if not model.RUN_ID_PATTERN.match(run_id):
+        raise ValueError(f"run_id is not filesystem-safe: {run_id}")
+    return output_dir / "run-summaries" / f"{run_id}.json"
+
+
 def recover_operation(output_dir: Path) -> dict[str, Any]:
     lock_path = operation_lock_path(output_dir)
     if not lock_path.exists():
@@ -1966,7 +1986,7 @@ def recover_operation(output_dir: Path) -> dict[str, Any]:
     installation = load_installation(output_dir)
     lock = model.load_json(lock_path)
     operation = str(lock.get("operation") or "run")
-    if operation not in OPERATIONS:
+    if operation not in RECOVERABLE_OPERATION_SUMMARY_OPERATIONS:
         operation = "run"
     operation_payload = {
         "schema_version": "northroot.steward.operation.v0",
@@ -2246,6 +2266,125 @@ def record_external_evidence(
         "source": source,
         "artifact_ref": artifact_ref,
     }
+
+
+def import_legacy_run_summaries(
+    output_dir: Path,
+    legacy_run_import: dict[str, Any],
+    *,
+    public_safe: bool = False,
+) -> dict[str, Any]:
+    findings = model.validate_legacy_run_import(legacy_run_import, public_safe=public_safe)
+    errors = [finding for finding in findings if finding.severity == "error"]
+    if errors:
+        detail = "; ".join(f"{finding.path}: {finding.detail}" for finding in errors)
+        raise ValueError(f"invalid legacy run import: {detail}")
+
+    installation = load_installation(output_dir)
+    lock_path = operation_lock_path(output_dir)
+    if lock_path.exists():
+        return {
+            "schema_version": "northroot.steward.legacy-run-import-result.v0",
+            "imported": False,
+            "locked": True,
+            "resume_required": True,
+            "lock": model.load_json(lock_path),
+            "detail": "steward has an unresolved operation lock; run steward recover-operation first",
+        }
+
+    operation_id = f"{_utc_stamp()}-legacy-run-import"
+    lock = {
+        "schema_version": "northroot.steward.operation-lock.v0",
+        "operation_id": operation_id,
+        "operation": "legacy-run-import",
+        "state": str(output_dir),
+        "command": "steward import-legacy-runs",
+        "import_id": legacy_run_import["import_id"],
+        "pid": os.getpid(),
+        "started_at": _utc_stamp(),
+        "failure_policy": "fail-closed-record-summary-before-retry",
+        "resume_hint": "run steward recover-operation before retrying legacy run import",
+    }
+    _atomic_write_json(lock_path, lock)
+    inserted: list[str] = []
+    skipped_existing: list[str] = []
+    written_paths: list[str] = []
+    try:
+        summaries_dir = output_dir / "run-summaries"
+        summaries_dir.mkdir(parents=True, exist_ok=True)
+        pending_writes: list[tuple[Path, dict[str, Any]]] = []
+        for summary in legacy_run_import["run_summaries"]:
+            run_id = str(summary["run_id"])
+            summary_path = _run_summary_path(output_dir, run_id)
+            if summary_path.exists():
+                existing = model.load_json(summary_path)
+                if _canonical_json(existing) != _canonical_json(summary):
+                    raise ValueError(f"conflicting run_id: {run_id}")
+                skipped_existing.append(run_id)
+                written_paths.append(str(summary_path))
+                continue
+            pending_writes.append((summary_path, summary))
+
+        for summary_path, summary in pending_writes:
+            run_id = str(summary["run_id"])
+            _atomic_write_json(summary_path, summary)
+            inserted.append(run_id)
+            written_paths.append(str(summary_path))
+
+        operation_summary_path = None
+        if inserted:
+            import_summary = model.build_run_summary(
+                run_id=f"{_utc_stamp()}-legacy-run-import",
+                workspace_id=str(load_plan(output_dir).get("workspace_id", "unknown")),
+                status="legacy-run-imported",
+                snapshot_result={
+                    "operation": "legacy-run-import",
+                    "import_id": legacy_run_import["import_id"],
+                    "source": legacy_run_import["source"],
+                    "import_mode": legacy_run_import["import_mode"],
+                    "legacy_import_ref": legacy_run_import.get("legacy_import_ref"),
+                    "runner_state_ref": legacy_run_import.get("runner_state_ref"),
+                    "per_run_state_ref": legacy_run_import.get("per_run_state_ref"),
+                    "inserted_run_ids": inserted,
+                    "skipped_existing_run_ids": skipped_existing,
+                },
+                verification_result={
+                    "schema_version": model.VERIFICATION_RESULT_SCHEMA,
+                    "repository_check": "not-run",
+                    "restore_verified": False,
+                    "restore_observation": None,
+                    "external_evidence": [],
+                },
+                tool_invocations=[
+                    {
+                        "tool": "steward",
+                        "operation": "legacy-run-import",
+                        "import_id": legacy_run_import["import_id"],
+                        "inserted_run_ids": inserted,
+                        "skipped_existing_run_ids": skipped_existing,
+                    }
+                ],
+            )
+            operation_summary_path = _run_summary_path(output_dir, str(import_summary["run_id"]))
+            _atomic_write_json(operation_summary_path, import_summary)
+        _clear_operation_lock(lock_path, expected_operation_id=operation_id)
+        return {
+            "schema_version": "northroot.steward.legacy-run-import-result.v0",
+            "imported": True,
+            "locked": False,
+            "resume_required": False,
+            "profile_name": installation["profile_name"],
+            "import_id": legacy_run_import["import_id"],
+            "source": legacy_run_import["source"],
+            "import_mode": legacy_run_import["import_mode"],
+            "inserted_run_ids": inserted,
+            "skipped_existing_run_ids": skipped_existing,
+            "run_summary_paths": written_paths,
+            "operation_summary_path": str(operation_summary_path) if operation_summary_path else None,
+        }
+    except Exception:
+        _clear_operation_lock(lock_path, expected_operation_id=operation_id)
+        raise
 
 
 def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, Any]) -> Path:

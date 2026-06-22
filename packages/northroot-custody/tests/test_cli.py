@@ -283,6 +283,16 @@ class CliTests(unittest.TestCase):
                 self.assertEqual(
                     cli.main(
                         [
+                            "validate",
+                            str(EXAMPLES / "legacy-run-import.redacted.example.json"),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
                             "evaluate-retention",
                             "--policy",
                             str(EXAMPLES / "custody-policy.example.json"),
@@ -313,6 +323,20 @@ class CliTests(unittest.TestCase):
                             str(EXAMPLES / "secret-bindings.redacted.example.json"),
                             "--repository-bindings",
                             str(EXAMPLES / "repository-bindings.redacted.example.json"),
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "import-legacy-runs",
+                            "--state",
+                            str(output_dir),
+                            "--json",
+                            str(EXAMPLES / "legacy-run-import.redacted.example.json"),
+                            "--public-safe",
                         ]
                     ),
                     0,
@@ -708,6 +732,7 @@ class CliTests(unittest.TestCase):
             )
             self.assertIn('"failure_stage": "authorization"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.operation-recovery.v0"', stdout.getvalue())
+            self.assertIn('"schema_version": "northroot.steward.legacy-run-import-result.v0"', stdout.getvalue())
 
 
 if __name__ == "__main__":

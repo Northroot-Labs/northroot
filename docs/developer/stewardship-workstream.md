@@ -100,8 +100,10 @@ state, or import raw legacy run directories by itself. Private adapters should
 first extract those inputs into a sanitized
 `northroot.steward.legacy-profile-import.v0` bundle, then apply it through
 `steward registry import-legacy-profile` as one atomic registry mutation.
-Raw per-run evidence import remains a later adapter layer over the now-durable
-registry state.
+Historical per-run evidence follows the same public-safe boundary: private
+adapters extract raw run directories into
+`northroot.steward.legacy-run-import.v0`, and `steward import-legacy-runs`
+writes the sanitized run summaries into steward state under the operation lock.
 
 ## Legacy Import Context
 
@@ -139,10 +141,10 @@ The public output of that import should be symbolic and sanitized:
 ## Change Set Goal
 
 The active change set is converting the legacy hourly durability profile into
-the cleaner steward model. The public repo owns the sanitized import contract
-and registry mutation; private adapters own extracting raw local files into that
-contract. The workstream still needs to answer these questions with code, tests,
-and sanitized examples:
+the cleaner steward model. The public repo owns the sanitized import contracts,
+registry mutation, and run-summary import path; private adapters own extracting
+raw local files into those contracts. The workstream still needs to answer these
+questions with code, tests, and sanitized examples:
 
 1. How does a private legacy profile become a public-safe object custody
    inventory plus private bindings?

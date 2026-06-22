@@ -71,6 +71,7 @@ nr-custody validate examples/run-summary.example.json --public-safe
 nr-custody validate examples/command-plan.example.json --public-safe
 nr-custody validate examples/service-registry.example.json --public-safe
 nr-custody validate examples/legacy-profile-import.redacted.example.json --public-safe
+nr-custody validate examples/legacy-run-import.redacted.example.json --public-safe
 nr-custody validate examples/agent-delegation-policy.dogfood.example.json --public-safe
 nr-custody validate examples/secret-bindings.macos-keychain.example.json --public-safe
 nr-custody validate examples/repository-bindings.redacted.example.json --public-safe
@@ -106,6 +107,10 @@ nr-custody steward run \
   --project-id project/example \
   --snapshot-id snap-001 \
   --execute
+nr-custody steward import-legacy-runs \
+  --state /tmp/northroot-steward-example \
+  --json examples/legacy-run-import.redacted.example.json \
+  --public-safe
 nr-custody steward recover-operation --state /tmp/northroot-steward-example
 nr-custody steward verify --state /tmp/northroot-steward-example --snapshot-id snap-001
 nr-custody steward restore \
@@ -210,6 +215,14 @@ object custody entries, not raw LaunchAgent paths, machine-local state paths,
 volume names, secret values, or private receipts. Replaying an identical import
 skips existing entries; conflicting entries fail closed without changing the
 registry.
+
+`steward import-legacy-runs` imports sanitized historical run summaries from a
+legacy profile into the steward state's `run-summaries/` directory. It accepts
+`northroot.steward.legacy-run-import.v0` bundles, writes each run summary
+atomically, skips identical replays, rejects conflicting `run_id`s, and uses the
+steward operation lock so interrupted imports require `steward recover-operation`
+before retry. Imported summaries feed the same `evidence report` and retention
+checks as native steward runs.
 
 `steward registry authorize` is the deterministic permission gate for agents and
 automation. It evaluates a project operation, and optionally an object-scoped
