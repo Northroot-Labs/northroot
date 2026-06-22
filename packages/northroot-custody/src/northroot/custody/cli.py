@@ -73,6 +73,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     command_plan.add_argument("--force", action="store_true")
     command_plan.add_argument("--use-recorded-evidence", action="store_true")
     command_plan.add_argument("--skip-preflight", action="store_true")
+    command_plan.add_argument("--registry-state")
+    command_plan.add_argument("--project-id")
+    command_plan.add_argument("--object-id")
 
     report = steward_sub.add_parser("report", help="Render a consolidated read-only custody report.")
     report.add_argument("--state", required=True)
@@ -100,23 +103,35 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     run = steward_sub.add_parser("run", help="Render or execute the delegated backup run command.")
     run.add_argument("--state", required=True)
     run.add_argument("--snapshot-id", help="Snapshot id this run evidence should be bound to.")
+    run.add_argument("--registry-state")
+    run.add_argument("--project-id")
+    run.add_argument("--object-id")
     run.add_argument("--execute", action="store_true", help="Execute the delegated resticprofile command.")
 
     verify = steward_sub.add_parser("verify", help="Render or execute the delegated verification command.")
     verify.add_argument("--state", required=True)
     verify.add_argument("--snapshot-id", help="Snapshot id this verification evidence should be bound to.")
+    verify.add_argument("--registry-state")
+    verify.add_argument("--project-id")
+    verify.add_argument("--object-id")
     verify.add_argument("--execute", action="store_true", help="Execute the delegated resticprofile command.")
 
     restore = steward_sub.add_parser("restore", help="Render or execute a delegated recovery restore.")
     restore.add_argument("--state", required=True)
     restore.add_argument("--snapshot-id", required=True, help="Snapshot id to restore.")
     restore.add_argument("--target", required=True, help="Recovery restore target directory.")
+    restore.add_argument("--registry-state")
+    restore.add_argument("--project-id")
+    restore.add_argument("--object-id")
     restore.add_argument("--execute", action="store_true", help="Execute the delegated restore command.")
 
     restore_drill = steward_sub.add_parser("restore-drill", help="Render or execute a delegated restore drill.")
     restore_drill.add_argument("--state", required=True)
     restore_drill.add_argument("--snapshot-id", help="Snapshot id this restore evidence should be bound to.")
     restore_drill.add_argument("--target", help="Restore drill target directory.")
+    restore_drill.add_argument("--registry-state")
+    restore_drill.add_argument("--project-id")
+    restore_drill.add_argument("--object-id")
     restore_drill.add_argument("--execute", action="store_true", help="Execute the delegated restore command.")
 
     schedule = steward_sub.add_parser("schedule", help="Render scheduler templates.")
@@ -272,6 +287,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             force=args.force,
             use_recorded_evidence=args.use_recorded_evidence,
             skip_preflight=args.skip_preflight,
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
         )
         write_json(plan)
         return 0 if plan["ok"] else 1
@@ -303,6 +321,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             "run",
             execute=args.execute,
             snapshot_id=args.snapshot_id,
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
         )
         write_json(operation)
         return 1 if operation.get("return_code") not in (None, 0) else 0
@@ -312,6 +333,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             "verify",
             execute=args.execute,
             snapshot_id=args.snapshot_id,
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
         )
         write_json(operation)
         return 1 if operation.get("return_code") not in (None, 0) else 0
@@ -322,6 +346,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             execute=args.execute,
             restore_target=Path(args.target),
             snapshot_id=args.snapshot_id,
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
         )
         write_json(operation)
         return 1 if operation.get("return_code") not in (None, 0) else 0
@@ -332,6 +359,9 @@ def main(argv: Sequence[str] | None = None) -> int:
             execute=args.execute,
             restore_target=Path(args.target) if args.target else None,
             snapshot_id=args.snapshot_id,
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
         )
         write_json(operation)
         return 1 if operation.get("return_code") not in (None, 0) else 0

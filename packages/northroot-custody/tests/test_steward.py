@@ -7,7 +7,7 @@ import xml.etree.ElementTree as ET
 from unittest import mock
 from pathlib import Path
 
-from northroot.custody import model, steward
+from northroot.custody import model, registry, steward
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -186,6 +186,54 @@ class StewardTests(unittest.TestCase):
             self.assertIn("--execute", refused_restore_plan["argv"])
             self.assertTrue(refused_restore_plan["agent_guidance"]["do_not_shell_join_argv"])
             self.assertEqual(model.validate_command_plan(refused_restore_plan), [])
+
+            registry_dir = Path(temp_dir) / "registry"
+            registry.initialize_registry(
+                registry_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            authorized_registry_plan = steward.render_command_plan(
+                output_dir,
+                operation="run",
+                registry_state=registry_dir,
+                project_id="project/example",
+            )
+            self.assertTrue(authorized_registry_plan["ok"])
+            self.assertTrue(authorized_registry_plan["authorization"]["allowed"])
+            self.assertIn("--registry-state", authorized_registry_plan["argv"])
+            denied_registry_plan = steward.render_command_plan(
+                output_dir,
+                operation="run",
+                registry_state=registry_dir,
+                project_id="project/example",
+                object_id="secrets/restic-env",
+            )
+            self.assertFalse(denied_registry_plan["ok"])
+            self.assertEqual(denied_registry_plan["authorization"]["decision"], "blocked")
+            self.assertIn("registry authorization denied: blocked", denied_registry_plan["refused_reasons"])
+            missing_project_plan = steward.render_command_plan(
+                output_dir,
+                operation="run",
+                registry_state=registry_dir,
+            )
+            self.assertFalse(missing_project_plan["ok"])
+            self.assertIn("project_id", missing_project_plan["missing_inputs"])
+            denied_registry_execute = steward.render_operation(
+                output_dir,
+                "run",
+                execute=True,
+                registry_state=registry_dir,
+                project_id="project/example",
+                object_id="secrets/restic-env",
+            )
+            self.assertFalse(denied_registry_execute["executed"])
+            self.assertEqual(denied_registry_execute["return_code"], 77)
+            self.assertEqual(denied_registry_execute["failure_stage"], "authorization")
+            self.assertIsNone(denied_registry_execute["preflight"])
+            denied_summary = model.load_json(Path(str(denied_registry_execute["run_summary_path"])))
+            self.assertEqual(denied_summary["status"], "delegated-authorization-denied")
+            self.assertEqual(denied_summary["snapshot_result"]["authorization"]["decision"], "blocked")
 
             missing_schedule_plan = steward.render_command_plan(output_dir, operation="schedule.create")
             self.assertFalse(missing_schedule_plan["ok"])
