@@ -72,6 +72,7 @@ from .registry import (
     recover_registry,
     record_legacy_import,
     register_project,
+    registry_integrity_report,
     registry_status,
 )
 
@@ -118,6 +119,7 @@ __all__ = [
     "record_legacy_import",
     "recover_registry",
     "register_project",
+    "registry_integrity_report",
     "render_capabilities",
     "render_command_plan",
     "render_evidence_report",
