@@ -120,11 +120,43 @@ class CliTests(unittest.TestCase):
                         [
                             "steward",
                             "registry",
+                            "import-legacy-profile",
+                            "--state",
+                            str(state_dir),
+                            "--json",
+                            str(EXAMPLES / "legacy-profile-import.redacted.example.json"),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
                             "add-object",
                             "--state",
                             str(state_dir),
                             "--json",
                             str(object_path),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "authorize",
+                            "--state",
+                            str(state_dir),
+                            "--operation",
+                            "legacy.import",
+                            "--project-id",
+                            "project/legacy-import",
                             "--public-safe",
                         ]
                     ),
@@ -194,7 +226,8 @@ class CliTests(unittest.TestCase):
                     ),
                     1,
                 )
-            self.assertIn('"project_count": 2', stdout.getvalue())
+            self.assertIn('"project_count": 3', stdout.getvalue())
+            self.assertIn('"schema_version": "northroot.steward.legacy-profile-import-result.v0"', stdout.getvalue())
             self.assertIn('"decision": "allowed"', stdout.getvalue())
             self.assertIn('"decision": "not-allowed"', stdout.getvalue())
             self.assertTrue((state_dir / "registry-operations").exists())

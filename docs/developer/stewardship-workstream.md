@@ -96,8 +96,12 @@ If a machine stops mid-run, later executions fail closed until
 clears it for a deliberate retry.
 
 The registry still does not execute replica sync, inspect private LaunchAgent
-state, or import raw legacy run directories by itself. Those are the next
-adapter layers over the now-durable registry state.
+state, or import raw legacy run directories by itself. Private adapters should
+first extract those inputs into a sanitized
+`northroot.steward.legacy-profile-import.v0` bundle, then apply it through
+`steward registry import-legacy-profile` as one atomic registry mutation.
+Raw per-run evidence import remains a later adapter layer over the now-durable
+registry state.
 
 ## Legacy Import Context
 
@@ -134,9 +138,11 @@ The public output of that import should be symbolic and sanitized:
 
 ## Change Set Goal
 
-The next change set should convert the legacy hourly durability profile into the
-cleaner steward model. It should answer these questions with code, tests, and
-sanitized examples:
+The active change set is converting the legacy hourly durability profile into
+the cleaner steward model. The public repo owns the sanitized import contract
+and registry mutation; private adapters own extracting raw local files into that
+contract. The workstream still needs to answer these questions with code, tests,
+and sanitized examples:
 
 1. How does a private legacy profile become a public-safe object custody
    inventory plus private bindings?

@@ -469,6 +469,29 @@ def _append_unique(items: list[dict[str, Any]], key: str, value: dict[str, Any])
     items.append(value)
 
 
+def _canonical_payload(value: dict[str, Any]) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"))
+
+
+def _append_unique_or_same(
+    items: list[dict[str, Any]],
+    key: str,
+    value: dict[str, Any],
+    *,
+    counts: dict[str, int],
+) -> None:
+    identity = value.get(key)
+    for item in items:
+        if item.get(key) != identity:
+            continue
+        if _canonical_payload(item) == _canonical_payload(value):
+            counts["skipped_existing"] += 1
+            return
+        raise ValueError(f"conflicting {key}: {identity}")
+    items.append(value)
+    counts["inserted"] += 1
+
+
 def add_object(state_dir: Path, custody_object: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
     def mutator(registry: dict[str, Any]) -> None:
         _append_unique(registry.setdefault("objects", []), "object_id", custody_object)
@@ -545,3 +568,56 @@ def record_legacy_import(
         _append_unique(registry.setdefault("legacy_imports", []), "import_id", legacy_import)
 
     return mutate_registry(state_dir, operation="registry.legacy-import.record", mutator=mutator, public_safe=public_safe)
+
+
+def import_legacy_profile(
+    state_dir: Path,
+    legacy_profile_import: dict[str, Any],
+    *,
+    public_safe: bool = False,
+) -> dict[str, Any]:
+    findings = model.validate_legacy_profile_import(legacy_profile_import, public_safe=public_safe)
+    errors = [finding for finding in findings if finding.severity == "error"]
+    if errors:
+        detail = "; ".join(f"{finding.path}: {finding.detail}" for finding in errors)
+        raise ValueError(f"invalid legacy profile import: {detail}")
+
+    collection_specs = (
+        ("objects", "object_id"),
+        ("permissions", "permission_set_id"),
+        ("projects", "project_id"),
+        ("destinations", "destination_id"),
+        ("source_destinations", "source_destination_id"),
+        ("replicas", "replica_id"),
+        ("legacy_imports", "import_id"),
+    )
+    counts = {
+        key: {"inserted": 0, "skipped_existing": 0}
+        for key, _identity_key in collection_specs
+    }
+
+    def mutator(service_registry: dict[str, Any]) -> None:
+        for key, identity_key in collection_specs:
+            collection_counts = counts[key]
+            for item in legacy_profile_import.get(key, []):
+                _append_unique_or_same(
+                    service_registry.setdefault(key, []),
+                    identity_key,
+                    item,
+                    counts=collection_counts,
+                )
+
+    result = mutate_registry(
+        state_dir,
+        operation="registry.legacy-profile.import",
+        mutator=mutator,
+        public_safe=public_safe,
+    )
+    return {
+        **result,
+        "schema_version": "northroot.steward.legacy-profile-import-result.v0",
+        "import_id": legacy_profile_import["import_id"],
+        "source": legacy_profile_import["source"],
+        "import_mode": legacy_profile_import["import_mode"],
+        "imported_counts": counts,
+    }
