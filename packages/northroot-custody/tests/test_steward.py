@@ -1094,6 +1094,28 @@ class StewardTests(unittest.TestCase):
             self.assertTrue(forced_delete["force"])
             self.assertFalse(Path(str(schedule["schedule_path"])).exists())
 
+            orphan_path = output_dir / "schedules" / "northroot-steward.timer"
+            orphan_path.parent.mkdir(parents=True, exist_ok=True)
+            orphan_path.write_text("# interrupted schedule create\n", encoding="utf-8")
+            orphan_status = steward.schedule_status(output_dir)
+            self.assertFalse(orphan_status["configured"])
+            self.assertFalse(orphan_status["schedule_integrity"]["ok"])
+            self.assertEqual(orphan_status["schedule_integrity"]["status"], "orphaned-artifacts")
+            self.assertIn(str(orphan_path), orphan_status["schedule_integrity"]["orphaned_paths"])
+            with mock.patch.dict(os.environ, {"PATH": str(fake_bin), "OP_SERVICE_ACCOUNT_TOKEN": "dummy"}, clear=True):
+                orphan_preflight = steward.render_preflight(output_dir)
+            self.assertFalse(orphan_preflight["ready"])
+            self.assertIn("schedule_manifest_integrity_failed", {
+                check["code"] for check in orphan_preflight["checks"] if check["code"]
+            })
+            blocked_orphan_delete = steward.delete_schedule(output_dir)
+            self.assertFalse(blocked_orphan_delete["deleted"])
+            self.assertEqual(blocked_orphan_delete["schedule_integrity"]["status"], "orphaned-artifacts")
+            forced_orphan_delete = steward.delete_schedule(output_dir, force=True)
+            self.assertTrue(forced_orphan_delete["deleted"])
+            self.assertIn(str(orphan_path), forced_orphan_delete["removed_paths"])
+            self.assertFalse(orphan_path.exists())
+
             schedule = steward.create_schedule(
                 output_dir=output_dir,
                 scheduler="systemd",

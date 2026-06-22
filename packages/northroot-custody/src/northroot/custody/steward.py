@@ -232,10 +232,29 @@ def _write_schedule_manifest(output_dir: Path, schedule: dict[str, Any]) -> Path
     return manifest_path
 
 
+def _schedule_orphan_paths(output_dir: Path) -> list[str]:
+    schedules_dir = output_dir / "schedules"
+    if not schedules_dir.is_dir():
+        return []
+    protected_names = {SCHEDULE_MANIFEST_FILENAME, SCHEDULE_INDEX_FILENAME}
+    return sorted(str(path) for path in schedules_dir.iterdir() if path.is_file() and path.name not in protected_names)
+
+
 def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
     manifest_path = _schedule_manifest_path(output_dir)
     index_path = _schedule_index_path(output_dir)
     if not manifest_path.exists() and not index_path.exists():
+        orphaned_paths = _schedule_orphan_paths(output_dir)
+        if orphaned_paths:
+            return {
+                "schema_version": "northroot.steward.schedule-integrity.v0",
+                "ok": False,
+                "manifest_path": str(manifest_path),
+                "index_path": str(index_path),
+                "status": "orphaned-artifacts",
+                "detail": "schedule artifacts exist without a schedule manifest; use schedule delete --force after confirming platform registration state",
+                "orphaned_paths": orphaned_paths,
+            }
         return {
             "schema_version": "northroot.steward.schedule-integrity.v0",
             "ok": True,
@@ -1037,9 +1056,9 @@ def render_preflight(output_dir: Path) -> dict[str, Any]:
                 )
 
     schedule = schedule_status(output_dir)
-    if schedule.get("configured"):
-        schedule_integrity = schedule.get("schedule_integrity")
-        schedule_integrity_ok = isinstance(schedule_integrity, dict) and bool(schedule_integrity.get("ok"))
+    schedule_integrity = schedule.get("schedule_integrity")
+    schedule_integrity_ok = isinstance(schedule_integrity, dict) and bool(schedule_integrity.get("ok"))
+    if schedule.get("configured") or not schedule_integrity_ok:
         checks.append(
             _check(
                 "schedule_manifest_integrity",
@@ -1055,6 +1074,7 @@ def render_preflight(output_dir: Path) -> dict[str, Any]:
                 "schema_version": "northroot.steward.preflight.v0",
                 "profile_name": installation["profile_name"],
                 "ready": False,
+                "schedule": schedule,
                 "checks": checks,
             }
         schedule_artifacts = schedule.get("generated_artifacts")
@@ -4148,7 +4168,7 @@ def delete_schedule(output_dir: Path, *, force: bool = False) -> dict[str, Any]:
     status = schedule_status(output_dir)
     removed: list[str] = []
     schedules_dir = output_dir / "schedules"
-    if status.get("configured") and not status.get("schedule_integrity", {}).get("ok") and not force:
+    if not status.get("schedule_integrity", {}).get("ok") and not force:
         return _schedule_integrity_error_result(
             schema_version="northroot.steward.schedule-delete.v0",
             status=status,
