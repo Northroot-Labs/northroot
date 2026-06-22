@@ -303,6 +303,9 @@ Executed delegated operations are guarded by `steward-operation.lock.json` in
 the steward state directory. A stale lock blocks later execution with
 `delegated-operation-locked`; run `steward recover-operation --state ...` to
 record `delegated-interrupted-recovered` and clear the lock before retrying.
+Unreadable or partially written operation locks also fail closed; recovery
+records `delegated-invalid-lock-recovered` with the lock digest/error before
+clearing the lock.
 `steward verify-state`, `steward report`, and `steward command-plan` also fail
 closed around that lock so automation cannot treat interrupted steward state as
 safe to resume blindly.
