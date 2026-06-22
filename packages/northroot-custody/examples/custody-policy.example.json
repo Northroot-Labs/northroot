@@ -1,0 +1,34 @@
+{
+  "schema_version": "northroot.custody.policy.v0",
+  "policy_id": "example-policy",
+  "workspace_id": "example-workspace",
+  "destinations": [
+    {
+      "id": "local-restic-profile",
+      "adapter": "resticprofile",
+      "repository_ref": "repository://local-primary",
+      "secret_ref": "secret://restic/local-password"
+    },
+    {
+      "id": "offsite-restic-copy",
+      "adapter": "resticprofile",
+      "repository_ref": "repository://offsite-vault"
+    }
+  ],
+  "verification": {
+    "required_modes": [
+      "repository-check",
+      "sample-restore",
+      "journal-replay"
+    ]
+  },
+  "retention": {
+    "keep_daily": 7,
+    "keep_weekly": 4,
+    "prune_requires": [
+      "verified_snapshot",
+      "verified_offsite_copy",
+      "restore_drill"
+    ]
+  }
+}

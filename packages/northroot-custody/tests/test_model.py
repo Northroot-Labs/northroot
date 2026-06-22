@@ -1,0 +1,232 @@
+import json
+import unittest
+from pathlib import Path
+
+from northroot.custody import model
+
+
+ROOT = Path(__file__).resolve().parents[1]
+EXAMPLES = ROOT / "examples"
+
+
+def load_example(name: str) -> dict[str, object]:
+    return json.loads((EXAMPLES / name).read_text(encoding="utf-8"))
+
+
+class CustodyModelTests(unittest.TestCase):
+    def test_public_examples_validate(self) -> None:
+        self.assertEqual(
+            model.validate_workspace_inventory(
+                load_example("workspace-inventory.example.json"),
+                public_safe=True,
+            ),
+            [],
+        )
+        self.assertEqual(
+            model.validate_custody_policy(
+                load_example("custody-policy.example.json"),
+                public_safe=True,
+            ),
+            [],
+        )
+        self.assertEqual(
+            model.validate_secret_bindings(
+                load_example("secret-bindings.redacted.example.json"),
+                public_safe=True,
+            ),
+            [],
+        )
+        self.assertEqual(
+            model.validate_repository_bindings(
+                load_example("repository-bindings.redacted.example.json"),
+                public_safe=True,
+            ),
+            [],
+        )
+        self.assertEqual(
+            model.validate_secret_bindings(
+                load_example("secret-bindings.macos-keychain.example.json"),
+                public_safe=True,
+            ),
+            [],
+        )
+        self.assertEqual(
+            model.validate_command_plan(
+                load_example("command-plan.example.json"),
+                public_safe=True,
+            ),
+            [],
+        )
+
+    def test_render_snapshot_plan_delegates_to_resticprofile(self) -> None:
+        plan = model.render_snapshot_plan(
+            load_example("workspace-inventory.example.json"),
+            load_example("custody-policy.example.json"),
+        )
+
+        self.assertEqual(plan["schema_version"], model.SNAPSHOT_PLAN_SCHEMA)
+        self.assertEqual(plan["adapter"], "resticprofile")
+        self.assertFalse(plan["execution"]["custom_backup_engine"])
+        self.assertIn("sample-restore", plan["verification_required"])
+        self.assertIn("restore_drill", plan["retention_prune_requires"])
+        self.assertEqual(plan["destinations"][0]["secret_ref"], "secret://restic/local-password")
+
+    def test_public_policy_rejects_real_secret_reference(self) -> None:
+        policy = load_example("custody-policy.example.json")
+        policy["destinations"][0]["secret_ref"] = "op://Northroot/restic/password"
+
+        findings = model.validate_custody_policy(policy, public_safe=True)
+
+        self.assertIn("invalid_secret_ref", {finding.code for finding in findings})
+        self.assertIn("public_private_binding", {finding.code for finding in findings})
+
+    def test_public_secret_bindings_reject_real_onepassword_reference(self) -> None:
+        bindings = load_example("secret-bindings.redacted.example.json")
+        bindings["bindings"][0]["command"] = ["op", "read", "op://Northroot/restic/password"]
+
+        findings = model.validate_secret_bindings(bindings, public_safe=True)
+
+        self.assertIn("public_private_binding", {finding.code for finding in findings})
+
+    def test_blocked_private_bindings_fixture_is_valid_but_not_public_safe(self) -> None:
+        bindings = load_example("private-bindings.blocked.example.json")
+
+        normal_findings = model.validate_secret_bindings(bindings)
+        public_findings = model.validate_secret_bindings(bindings, public_safe=True)
+
+        self.assertEqual(normal_findings, [])
+        self.assertIn("public_private_binding", {finding.code for finding in public_findings})
+
+    def test_secret_bindings_require_unattended_command(self) -> None:
+        bindings = load_example("secret-bindings.redacted.example.json")
+        bindings["bindings"][0]["interactive"] = True
+
+        findings = model.validate_secret_bindings(bindings)
+
+        self.assertIn("interactive_secret_binding", {finding.code for finding in findings})
+
+    def test_runtime_env_bindings_require_unattended_command(self) -> None:
+        bindings = load_example("secret-bindings.redacted.example.json")
+        bindings["runtime_env"][0]["interactive"] = True
+
+        findings = model.validate_secret_bindings(bindings)
+
+        self.assertIn("interactive_runtime_env_binding", {finding.code for finding in findings})
+
+    def test_public_safe_validation_rejects_private_bindings(self) -> None:
+        inventory = load_example("workspace-inventory.example.json")
+        inventory["state_roots"][0]["path"] = "/Volumes/X9 Pro/private-state"
+
+        findings = model.validate_workspace_inventory(inventory, public_safe=True)
+
+        self.assertIn("public_private_binding", {finding.code for finding in findings})
+
+    def test_run_summary_warns_without_restore_verification(self) -> None:
+        findings = model.validate_run_summary(
+            {
+                "schema_version": model.RUN_SUMMARY_SCHEMA,
+                "run_id": "run-001",
+                "workspace_id": "example-workspace",
+                "status": "snapshot-complete",
+                "snapshot_result": {"snapshot_ids": ["snap-001"]},
+                "verification_result": {
+                    "schema_version": model.VERIFICATION_RESULT_SCHEMA,
+                    "repository_check": "ok",
+                    "restore_verified": False,
+                },
+            }
+        )
+
+        self.assertIn("restore_not_verified", {finding.code for finding in findings})
+
+    def test_command_plan_rejects_shell_and_inconsistent_success(self) -> None:
+        command_plan = load_example("command-plan.example.json")
+        command_plan["shell_required"] = True
+        command_plan["argv_style"] = "shell"
+        command_plan["missing_inputs"] = ["snapshot_id"]
+
+        findings = model.validate_command_plan(command_plan)
+
+        self.assertIn("shell_required", {finding.code for finding in findings})
+        self.assertIn("argv_style", {finding.code for finding in findings})
+        self.assertIn("ok_with_missing_inputs", {finding.code for finding in findings})
+
+    def test_verification_result_is_first_class_contract(self) -> None:
+        result = {
+            "schema_version": model.VERIFICATION_RESULT_SCHEMA,
+            "repository_check": "ok",
+            "restore_verified": True,
+            "restore_observation": {
+                "target": "restore-target://example",
+                "exists": True,
+                "file_count": 1,
+                "byte_count": 7,
+                "manifest_sha256": "0" * 64,
+                "verified": True,
+            },
+            "external_evidence": ["verified_offsite_copy"],
+        }
+
+        self.assertEqual(model.validate_verification_result(result, public_safe=True), [])
+        self.assertEqual(model.validate_document(result, public_safe=True), [])
+
+    def test_retention_decision_blocks_prune_until_required_evidence_exists(self) -> None:
+        policy = load_example("custody-policy.example.json")
+
+        blocked = model.evaluate_retention(
+            policy,
+            snapshot_id="snap-001",
+            available_evidence=["verified_snapshot"],
+        )
+        allowed = model.evaluate_retention(
+            policy,
+            snapshot_id="snap-001",
+            available_evidence=["verified_snapshot", "verified_offsite_copy", "restore_drill"],
+        )
+
+        self.assertFalse(blocked["allowed"])
+        self.assertEqual(blocked["missing_evidence"], ["verified_offsite_copy", "restore_drill"])
+        self.assertTrue(allowed["allowed"])
+        self.assertEqual(model.validate_retention_decision(allowed, public_safe=True), [])
+
+    def test_build_run_summary_with_verified_restore_and_retention_decision(self) -> None:
+        policy = load_example("custody-policy.example.json")
+        retention_decision = model.evaluate_retention(
+            policy,
+            snapshot_id="snap-001",
+            available_evidence=["verified_snapshot", "verified_offsite_copy", "restore_drill"],
+        )
+        summary = model.build_run_summary(
+            run_id="run-001",
+            workspace_id="example-workspace",
+            status="verified",
+            snapshot_result={"snapshot_ids": ["snap-001"]},
+            verification_result={
+                "schema_version": model.VERIFICATION_RESULT_SCHEMA,
+                "repository_check": "ok",
+                "restore_verified": True,
+                "restore_observation": {
+                    "target": "restore-target://example",
+                    "exists": True,
+                    "file_count": 1,
+                    "byte_count": 7,
+                    "manifest_sha256": "0" * 64,
+                    "verified": True,
+                },
+            },
+            retention_decision=retention_decision,
+            tool_invocations=[
+                {
+                    "tool": "resticprofile",
+                    "operation": "backup",
+                    "executed": False
+                }
+            ],
+        )
+
+        self.assertEqual(summary["schema_version"], model.RUN_SUMMARY_SCHEMA)
+        self.assertEqual(model.validate_run_summary(summary, public_safe=True), [])
+
+
+if __name__ == "__main__":
+    unittest.main()

@@ -1,0 +1,55 @@
+{
+  "retention_decision": {
+    "allowed": true,
+    "available_evidence": [
+      "verified_snapshot",
+      "verified_offsite_copy",
+      "restore_drill"
+    ],
+    "missing_evidence": [],
+    "policy_id": "example-policy",
+    "required_evidence": [
+      "verified_snapshot",
+      "verified_offsite_copy",
+      "restore_drill"
+    ],
+    "schema_version": "northroot.custody.retention-decision.v0",
+    "snapshot_id": "snap-001",
+    "workspace_id": "example-workspace"
+  },
+  "run_id": "run-001",
+  "schema_version": "northroot.custody.run-summary.v0",
+  "snapshot_result": {
+    "delegated_tool": "resticprofile",
+    "execute_requested": true,
+    "executed": true,
+    "operation": "restore-drill",
+    "snapshot_id": "snap-001"
+  },
+  "status": "delegated-ok",
+  "tool_invocations": [
+    {
+      "executed": true,
+      "operation": "restore-drill",
+      "return_code": 0,
+      "tool": "resticprofile"
+    }
+  ],
+  "verification_result": {
+    "external_evidence": [
+      "verified_offsite_copy"
+    ],
+    "repository_check": "ok",
+    "restore_observation": {
+      "byte_count": 7,
+      "exists": true,
+      "file_count": 1,
+      "manifest_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "target": "restore-target://example",
+      "verified": true
+    },
+    "restore_verified": true,
+    "schema_version": "northroot.custody.verification-result.v0"
+  },
+  "workspace_id": "example-workspace"
+}

@@ -7,6 +7,7 @@ pub mod journal;
 pub mod node;
 pub mod read;
 pub mod record;
+pub mod steward;
 pub mod verify;
 pub mod verify_bundle;
 pub mod work;

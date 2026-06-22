@@ -47,6 +47,8 @@ lcov.info
 *.log
 *.tmp
 *.bak
+*.pyc
+**/__pycache__/
 *.pid
 *.pid.lock
 pids/
@@ -95,5 +97,4 @@ fixtures/event-id/
 fixtures/nrj/
 
 !fixtures/nrj/*.nrj
-
 

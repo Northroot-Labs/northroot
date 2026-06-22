@@ -1,4 +1,4 @@
-"""Northroot durability policy CLI."""
+"""Legacy Northroot public/private boundary helper CLI."""
 
 from __future__ import annotations
 
@@ -27,11 +27,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
 
-    sub.add_parser("roots", help="Print canonical durability root names.")
-    modes = sub.add_parser("modes", help="Print tiered backup mode policy.")
+    sub.add_parser("roots", help="Print legacy compatibility root names.")
+    modes = sub.add_parser("modes", help="Print legacy backup-mode boundary policy.")
     modes.add_argument("--output")
 
-    normalize = sub.add_parser("normalize-root", help="Normalize a legacy durability folder name.")
+    normalize = sub.add_parser("normalize-root", help="Normalize a legacy compatibility folder name.")
     normalize.add_argument("name")
 
     public = sub.add_parser("public-check", help="Evaluate a JSON list of artifact classifications.")

@@ -1,0 +1,13 @@
+{
+  "schema_version": "northroot.custody.repository-bindings.v0",
+  "bindings": [
+    {
+      "repository_ref": "repository://local-primary",
+      "target": "repository-target://local-primary"
+    },
+    {
+      "repository_ref": "repository://offsite-vault",
+      "target": "repository-target://offsite-vault"
+    }
+  ]
+}

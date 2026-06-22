@@ -3,15 +3,15 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "northroot-durability"
+name = "northroot-custody"
 version = "0.1.0"
-description = "Legacy Northroot public/private boundary helpers and simple copy manifests."
+description = "Northroot custody contracts, delegated snapshot plans, and steward profile helpers."
 requires-python = ">=3.11"
 readme = "README.md"
 license = { text = "MIT" }
 
 [project.scripts]
-northroot-durability = "northroot.durability.cli:main"
+nr-custody = "northroot.custody.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]

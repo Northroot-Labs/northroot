@@ -19,7 +19,7 @@ The repository is intentionally split by layer:
 - **Capability/profile crates**: governance, execution, exchange, and sanitized
   ag-domain examples.
 - **Promoted packages**: importable non-Rust capabilities such as
-  `northroot.durability`.
+  `northroot.custody`.
 - **Standalone CLI**: operator-facing commands in `apps/northroot`.
 
 The public kernel proves what was recorded and whether it verifies. It does not
@@ -51,7 +51,9 @@ bash scripts/codex_setup.sh
 bash scripts/codex_verify.sh
 ```
 
-The CLI binary is produced under `apps/northroot/target/release/northroot`.
+The CLI binaries are produced under `apps/northroot/target/release/northroot`
+and `apps/northroot/target/release/nr`. `nr` is the short operator spelling;
+`northroot` remains the long-form binary name.
 
 ## CLI Surface
 
@@ -72,6 +74,24 @@ northroot node init --slug local-node
 northroot node status --json
 ```
 
+Steward custody commands are the promoted backup/restore/scheduling surface.
+They are exposed through the same CLI, with `nr` as the preferred short form:
+
+```bash
+nr steward init --inventory inventory.json --policy custody-policy.json --output .northroot/steward
+nr steward preflight --state .northroot/steward
+nr steward run --state .northroot/steward --execute
+nr steward verify --state .northroot/steward --snapshot-id snap-001 --execute
+nr steward restore-drill --state .northroot/steward --snapshot-id snap-001 --execute
+nr steward report --state .northroot/steward --snapshot-id snap-001
+nr steward schedule create --state .northroot/steward --scheduler launchd --operation verify --every-minutes 60
+```
+
+Steward delegates operational work to `resticprofile`, platform schedulers,
+1Password or macOS Keychain secret resolution, offsite-copy tools, and external
+monitors. Northroot owns the contracts, readiness checks, command surface, and
+auditable summaries; it is not a custom backup engine or secret manager.
+
 Hidden operator/development command groups also exist for record streams,
 structural journal helpers, work-ledger dogfood, and bundle verification. Those
 commands are incubating support surfaces, not stable kernel semantics.
@@ -91,7 +111,8 @@ northroot/
 │   ├── northroot-exchange/    # constrained handoff/result profile
 │   └── northroot-ag/          # sanitized ag-domain example over records
 ├── packages/
-│   └── northroot-durability/  # Python package: northroot.durability
+│   ├── northroot-custody/     # Python package: northroot.custody
+│   └── northroot-durability/  # Legacy compatibility boundary helpers
 ├── apps/
 │   └── northroot/             # standalone CLI; not a workspace member
 ├── schemas/                   # public JSON schemas
@@ -111,7 +132,8 @@ Promoted or incubating layers over the kernel:
 
 - `northroot-record`, `northroot-node`, `northroot-state-eval`
 - `northroot-governance`, `northroot-execution`, `northroot-exchange`, `northroot-ag`
-- `northroot-durability`
+- `northroot-custody`
+- `northroot-durability` compatibility helpers
 - hidden CLI support commands
 
 Private deployments, SaaS adapters, client workflows, real receipts, local
@@ -140,11 +162,16 @@ once other projects should import them through the `northroot.*` namespace. Lab
 custody, local machine state, and promotion evidence stay in the Northroot-Labs
 refinery.
 
-Current package:
+Current packages:
 
-- `northroot-durability`: Python distribution exposing `northroot.durability`
-  for public-safe durability policy, naming, manifests, and public/private
-  commit checks.
+- `northroot-custody`: Python distribution exposing `northroot.custody` for
+  public-safe custody contracts, delegated snapshot plans, retention gates,
+  restore verification, run summaries, and the `steward` helper layer used by
+  `nr steward`.
+- `northroot-durability`: legacy compatibility distribution exposing
+  `northroot.durability` for public/private boundary checks and simple copy
+  manifests. New backup, restore, scheduling, and disaster-recovery workflows
+  should use `northroot-custody` and `nr steward`.
 
 ## License
 

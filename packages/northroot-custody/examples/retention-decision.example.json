@@ -1,0 +1,18 @@
+{
+  "allowed": true,
+  "available_evidence": [
+    "verified_snapshot",
+    "verified_offsite_copy",
+    "restore_drill"
+  ],
+  "missing_evidence": [],
+  "policy_id": "example-policy",
+  "required_evidence": [
+    "verified_snapshot",
+    "verified_offsite_copy",
+    "restore_drill"
+  ],
+  "schema_version": "northroot.custody.retention-decision.v0",
+  "snapshot_id": "snap-001",
+  "workspace_id": "example-workspace"
+}

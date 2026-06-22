@@ -1,0 +1,74 @@
+{
+  "adapter": "resticprofile",
+  "consistency_boundaries": [
+    {
+      "id": "sqlite-online-copy",
+      "preflight_ref": "preflight://sqlite-online-backup",
+      "source_root_ids": [
+        "sqlite-state"
+      ],
+      "type": "sqlite-online-backup"
+    },
+    {
+      "id": "journal-seal",
+      "preflight_ref": "preflight://journal-seal",
+      "source_root_ids": [
+        "journal-state"
+      ],
+      "type": "journal-seal"
+    }
+  ],
+  "destinations": [
+    {
+      "adapter": "resticprofile",
+      "id": "local-restic-profile",
+      "repository_ref": "repository://local-primary",
+      "secret_ref": "secret://restic/local-password"
+    },
+    {
+      "adapter": "resticprofile",
+      "id": "offsite-restic-copy",
+      "repository_ref": "repository://offsite-vault"
+    }
+  ],
+  "excludes": [
+    "workspace://cache"
+  ],
+  "execution": {
+    "custom_backup_engine": false,
+    "kind": "delegated",
+    "tool": "resticprofile"
+  },
+  "policy_id": "example-policy",
+  "retention": {
+    "keep_daily": 7,
+    "keep_weekly": 4,
+    "prune_requires": [
+      "verified_snapshot",
+      "verified_offsite_copy",
+      "restore_drill"
+    ]
+  },
+  "retention_prune_requires": [
+    "verified_snapshot",
+    "verified_offsite_copy",
+    "restore_drill"
+  ],
+  "schema_version": "northroot.custody.snapshot-plan.v0",
+  "sources": [
+    {
+      "id": "sqlite-state",
+      "path": "workspace://state/app.sqlite"
+    },
+    {
+      "id": "journal-state",
+      "path": "workspace://journals/main.nrj"
+    }
+  ],
+  "verification_required": [
+    "repository-check",
+    "sample-restore",
+    "journal-replay"
+  ],
+  "workspace_id": "example-workspace"
+}
