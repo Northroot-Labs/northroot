@@ -118,8 +118,148 @@ def _write_operation_summary(state_dir: Path, summary: dict[str, Any]) -> Path:
     return path
 
 
+def _operation_summary_paths(state_dir: Path) -> list[Path]:
+    out_dir = operation_dir(state_dir)
+    if not out_dir.is_dir():
+        return []
+    return sorted(out_dir.glob("*.json"))
+
+
 def load_registry(state_dir: Path) -> dict[str, Any]:
     return _read_json(registry_path(state_dir))
+
+
+def _check(name: str, ok: bool, detail: str, *, code: str | None = None) -> dict[str, Any]:
+    return {
+        "name": name,
+        "status": "ok" if ok else "error",
+        "code": None if ok else code,
+        "detail": detail,
+    }
+
+
+def registry_integrity_report(state_dir: Path, *, public_safe: bool = False) -> dict[str, Any]:
+    path = registry_path(state_dir)
+    lock = _load_lock(state_dir)
+    registry: dict[str, Any] | None = None
+    registry_error: str | None = None
+    findings: list[dict[str, str]] = []
+    if path.is_file():
+        try:
+            registry = load_registry(state_dir)
+            findings = [finding.as_dict() for finding in model.validate_service_registry(registry, public_safe=public_safe)]
+        except Exception as exc:  # noqa: BLE001 - integrity reports should return structured failure context
+            registry_error = str(exc)
+
+    summaries: list[dict[str, Any]] = []
+    invalid_summaries: list[dict[str, str]] = []
+    for summary_path in _operation_summary_paths(state_dir):
+        try:
+            summary = _read_json(summary_path)
+        except Exception as exc:  # noqa: BLE001 - continue reporting all readable and unreadable summaries
+            invalid_summaries.append({"path": str(summary_path), "error": str(exc)})
+            continue
+        if summary.get("schema_version") != "northroot.steward.registry-operation.v0":
+            invalid_summaries.append({"path": str(summary_path), "error": "unexpected registry operation schema"})
+            continue
+        summary = {**summary, "summary_path": str(summary_path)}
+        summaries.append(summary)
+
+    proving_statuses = {"completed", "recovered-after-interruption"}
+    completed = [
+        summary
+        for summary in summaries
+        if summary.get("status") in proving_statuses and isinstance(summary.get("registry_sha256"), str)
+    ]
+    latest = completed[-1] if completed else None
+    current_sha256 = _file_sha256(path)
+    expected_sha256 = str(latest["registry_sha256"]) if latest is not None else None
+    error_count = len([finding for finding in findings if finding.get("severity") == "error"])
+    registry_present = path.is_file()
+    registry_readable = registry_present and registry_error is None and registry is not None
+    registry_valid = registry_readable and error_count == 0
+    operation_log_present = bool(summaries or invalid_summaries)
+    operation_log_readable = not invalid_summaries
+    registry_matches_latest_operation = bool(expected_sha256 and current_sha256 == expected_sha256)
+    protected_state_ok = bool(
+        registry_present
+        and registry_valid
+        and operation_log_present
+        and operation_log_readable
+        and registry_matches_latest_operation
+    )
+    checks = [
+        _check(
+            "registry_present",
+            registry_present,
+            f"service registry exists at {path}" if registry_present else "service registry is missing",
+            code="missing_service_registry",
+        ),
+        _check(
+            "registry_readable",
+            registry_readable,
+            "service registry is readable" if registry_readable else f"service registry is unreadable: {registry_error}",
+            code="unreadable_service_registry",
+        ),
+        _check(
+            "registry_valid",
+            registry_valid,
+            "service registry validates"
+            if registry_valid
+            else f"service registry has {error_count} validation error(s)",
+            code="invalid_service_registry",
+        ),
+        _check(
+            "operation_log_present",
+            operation_log_present,
+            "registry operation log has at least one summary"
+            if operation_log_present
+            else "registry operation log is missing",
+            code="missing_registry_operation_log",
+        ),
+        _check(
+            "operation_log_readable",
+            operation_log_readable,
+            "registry operation summaries are readable"
+            if operation_log_readable
+            else "one or more registry operation summaries are unreadable or invalid",
+            code="invalid_registry_operation_log",
+        ),
+        _check(
+            "registry_matches_latest_operation",
+            registry_matches_latest_operation,
+            "registry digest matches latest completed operation summary"
+            if registry_matches_latest_operation
+            else "registry digest does not match latest completed operation summary",
+            code="registry_digest_mismatch",
+        ),
+        _check(
+            "registry_unlocked",
+            lock is None,
+            "no unresolved registry operation lock" if lock is None else "registry has an unresolved operation lock",
+            code="registry_operation_lock_present",
+        ),
+    ]
+    return {
+        "schema_version": "northroot.steward.registry-integrity.v0",
+        "configured": registry_present,
+        "ready": protected_state_ok and lock is None,
+        "protected_state_ok": protected_state_ok,
+        "resume_required": lock is not None,
+        "registry_path": str(path),
+        "registry_sha256": current_sha256,
+        "expected_registry_sha256": expected_sha256,
+        "latest_operation_summary_path": latest.get("summary_path") if latest is not None else None,
+        "operation_summary_count": len(summaries),
+        "completed_operation_summary_count": len(completed),
+        "failed_operation_summary_count": len([summary for summary in summaries if summary.get("status") == "failed"]),
+        "invalid_operation_summaries": invalid_summaries,
+        "lock": lock,
+        "finding_count": len(findings),
+        "error_count": error_count,
+        "findings": findings,
+        "checks": checks,
+    }
 
 
 def registry_status(state_dir: Path, *, public_safe: bool = False) -> dict[str, Any]:
@@ -146,12 +286,16 @@ def registry_status(state_dir: Path, *, public_safe: bool = False) -> dict[str, 
     registry = load_registry(state_dir)
     findings = model.validate_service_registry(registry, public_safe=public_safe)
     error_count = len([finding for finding in findings if finding.severity == "error"])
+    integrity = registry_integrity_report(state_dir, public_safe=public_safe)
     return {
         "schema_version": "northroot.steward.registry-status.v0",
         "configured": True,
-        "ready": error_count == 0 and lock is None,
+        "ready": error_count == 0 and integrity["ready"],
         "registry_path": str(path),
         "registry_sha256": _file_sha256(path),
+        "expected_registry_sha256": integrity["expected_registry_sha256"],
+        "protected_state_ok": integrity["protected_state_ok"],
+        "integrity": integrity,
         "lock": lock,
         "resume_required": lock is not None,
         "finding_count": len(findings),

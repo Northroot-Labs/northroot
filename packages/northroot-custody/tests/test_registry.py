@@ -115,6 +115,8 @@ class RegistryTests(unittest.TestCase):
 
             status = registry.registry_status(state_dir, public_safe=True)
             self.assertTrue(status["ready"])
+            self.assertTrue(status["protected_state_ok"])
+            self.assertEqual(status["registry_sha256"], status["expected_registry_sha256"])
             self.assertEqual(status["node_id"], "node-example")
             self.assertEqual(status["project_count"], 1)
             self.assertEqual(status["object_count"], 5)
@@ -234,6 +236,7 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(model.validate_service_registry(final_registry, public_safe=True), [])
             final_status = registry.registry_status(state_dir, public_safe=True)
             self.assertTrue(final_status["ready"])
+            self.assertTrue(final_status["integrity"]["protected_state_ok"])
             self.assertEqual(final_status["project_count"], 2)
             self.assertEqual(final_status["replica_count"], 2)
             self.assertEqual(final_status["legacy_import_count"], 2)
@@ -266,6 +269,42 @@ class RegistryTests(unittest.TestCase):
             self.assertTrue(recovered["recovered"])
             self.assertFalse((state_dir / "service-registry.lock.json").exists())
             self.assertTrue(registry.registry_status(state_dir, public_safe=True)["ready"])
+
+    def test_registry_integrity_detects_valid_but_unproven_state_change(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            registry.initialize_registry(
+                state_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            before = registry.registry_integrity_report(state_dir, public_safe=True)
+            self.assertTrue(before["ready"])
+            self.assertTrue(before["protected_state_ok"])
+
+            tampered = registry.load_registry(state_dir)
+            tampered["service_id"] = "steward/tampered-but-structurally-valid"
+            write_json(state_dir / "service-registry.json", tampered)
+
+            integrity = registry.registry_integrity_report(state_dir, public_safe=True)
+            self.assertFalse(integrity["ready"])
+            self.assertFalse(integrity["protected_state_ok"])
+            self.assertNotEqual(integrity["registry_sha256"], integrity["expected_registry_sha256"])
+            self.assertIn(
+                "registry_digest_mismatch",
+                {check["code"] for check in integrity["checks"] if check["code"]},
+            )
+            status = registry.registry_status(state_dir, public_safe=True)
+            self.assertFalse(status["ready"])
+            self.assertFalse(status["protected_state_ok"])
+            authorization = registry.authorize_operation(
+                state_dir,
+                operation="run",
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertFalse(authorization["allowed"])
+            self.assertEqual(authorization["decision"], "invalid-registry")
 
     def test_public_safe_mutation_rejects_raw_private_paths_without_corrupting_registry(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

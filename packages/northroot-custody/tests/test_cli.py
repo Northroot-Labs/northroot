@@ -120,6 +120,19 @@ class CliTests(unittest.TestCase):
                         [
                             "steward",
                             "registry",
+                            "verify",
+                            "--state",
+                            str(state_dir),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
                             "import-legacy-profile",
                             "--state",
                             str(state_dir),

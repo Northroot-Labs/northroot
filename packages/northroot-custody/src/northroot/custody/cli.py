@@ -195,6 +195,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     registry_status = registry_sub.add_parser("status")
     registry_status.add_argument("--state", required=True)
     registry_status.add_argument("--public-safe", action="store_true")
+    registry_verify = registry_sub.add_parser("verify")
+    registry_verify.add_argument("--state", required=True)
+    registry_verify.add_argument("--public-safe", action="store_true")
     registry_authorize = registry_sub.add_parser("authorize")
     registry_authorize.add_argument("--state", required=True)
     registry_authorize.add_argument("--operation", choices=tuple(sorted(model.SERVICE_PERMISSION_OPERATIONS)), required=True)
@@ -459,6 +462,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         status = registry.registry_status(Path(args.state), public_safe=args.public_safe)
         write_json(status)
         return 0 if status["ready"] else 1
+    if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "verify":
+        integrity = registry.registry_integrity_report(Path(args.state), public_safe=args.public_safe)
+        write_json(integrity)
+        return 0 if integrity["ready"] else 1
     if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "authorize":
         authorization = registry.authorize_operation(
             Path(args.state),

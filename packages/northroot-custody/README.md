@@ -135,6 +135,7 @@ nr-custody steward registry init \
   --registry examples/service-registry.example.json \
   --public-safe
 nr-custody steward registry status --state /tmp/northroot-steward-registry --public-safe
+nr-custody steward registry verify --state /tmp/northroot-steward-registry --public-safe
 nr-custody steward registry authorize \
   --state /tmp/northroot-steward-registry \
   --operation run \
@@ -202,11 +203,15 @@ record evidence.
 registry. `registry init` validates and installs a public-safe registry
 document. Mutation commands append object custody entries, project/object
 permissions, registered projects, destinations, source bindings, replicas, and
-legacy import records through atomic writes. If a machine dies or the process is
-interrupted while a registry mutation lock exists, later mutations fail closed
-until `registry recover` validates the current registry and records the
-interrupted operation. Recovery removes the lock only when the registry still
-validates.
+legacy import records through atomic writes. Each successful mutation records a
+registry operation summary with the resulting registry digest. `registry verify`
+checks the live registry against that operation log, so a structurally valid but
+unrecorded registry edit is not treated as protected state. `registry status`,
+`registry authorize`, and mutation commands depend on that proof before treating
+the registry as ready. If a machine dies or the process is interrupted while a
+registry mutation lock exists, later mutations fail closed until
+`registry recover` validates the current registry and records the interrupted
+operation. Recovery removes the lock only when the registry still validates.
 
 `steward registry import-legacy-profile` applies a sanitized legacy migration
 bundle such as `examples/legacy-profile-import.redacted.example.json` as one
