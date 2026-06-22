@@ -39,6 +39,9 @@ class StewardTests(unittest.TestCase):
             self.assertTrue((output_dir / "run-summaries" / "legacy-run-001.json").exists())
             self.assertFalse(steward.operation_lock_path(output_dir).exists())
             evidence = steward.render_evidence_report(output_dir, snapshot_id="legacy-snap-001")
+            self.assertTrue(evidence["run_summary_integrity"]["ok"])
+            summary_index = model.load_json(output_dir / "run-summaries" / "index.json")
+            self.assertEqual(summary_index["schema_version"], steward.RUN_SUMMARY_INDEX_SCHEMA)
             self.assertEqual(
                 evidence["available_evidence"],
                 ["restore_drill", "verified_offsite_copy", "verified_snapshot"],
@@ -709,6 +712,28 @@ class StewardTests(unittest.TestCase):
             self.assertIn("verified_snapshot", stale_retention["missing_evidence"])
             self.assertIn("verified_offsite_copy", stale_retention["missing_evidence"])
             self.assertIn("restore_drill", stale_retention["missing_evidence"])
+            tampered_summary_path = Path(str(evidence_record["run_summary_path"]))
+            tampered_summary = model.load_json(tampered_summary_path)
+            tampered_summary["snapshot_result"]["detail"] = "operator hand edit after steward indexing"
+            tampered_summary_path.write_text(
+                json.dumps(tampered_summary, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            tampered_evidence = steward.render_evidence_report(output_dir, snapshot_id="snap-001")
+            self.assertFalse(tampered_evidence["run_summary_integrity"]["ok"])
+            self.assertNotIn("verified_offsite_copy", tampered_evidence["available_evidence"])
+            self.assertIn("verified_snapshot", tampered_evidence["available_evidence"])
+            self.assertIn("restore_drill", tampered_evidence["available_evidence"])
+            tampered_observations = {
+                observation["summary_path"]: observation for observation in tampered_evidence["observations"]
+            }
+            self.assertEqual(tampered_observations[str(tampered_summary_path)]["status"], "digest-mismatch")
+            with mock.patch.dict(os.environ, {"PATH": str(fake_bin), "OP_SERVICE_ACCOUNT_TOKEN": "dummy"}, clear=True):
+                tampered_state_verification = steward.render_state_verification(output_dir, snapshot_id="snap-001")
+            self.assertFalse(tampered_state_verification["ready"])
+            self.assertIn("run_summary_integrity_failed", {
+                check["code"] for check in tampered_state_verification["checks"] if check["code"]
+            })
             with self.assertRaises(ValueError):
                 steward.record_external_evidence(
                     output_dir,

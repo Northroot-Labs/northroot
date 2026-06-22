@@ -26,6 +26,8 @@ DEFAULT_DOGFOOD_POLICY_ID = "agent-delegation/dogfood-default"
 DEFAULT_DOGFOOD_REPOSITORY_REF = "repository://northroot"
 RESTORE_DRILL_DIR = "restore-drills"
 OPERATION_LOCK_FILENAME = "steward-operation.lock.json"
+RUN_SUMMARY_INDEX_FILENAME = "index.json"
+RUN_SUMMARY_INDEX_SCHEMA = "northroot.steward.run-summary-index.v0"
 SCHEDULE_OPERATIONS = {"run", "verify", "restore-drill"}
 OPERATIONS = {"run", "verify", "restore", "restore-drill"}
 RECOVERABLE_OPERATION_SUMMARY_OPERATIONS = OPERATIONS | {"legacy-run-import"}
@@ -1997,6 +1999,7 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
             "secret_bindings_schema": model.SECRET_BINDINGS_SCHEMA,
             "verification_result_schema": model.VERIFICATION_RESULT_SCHEMA,
             "run_summary_schema": model.RUN_SUMMARY_SCHEMA,
+            "run_summary_index_schema": RUN_SUMMARY_INDEX_SCHEMA,
             "retention_decision_schema": model.RETENTION_DECISION_SCHEMA,
             "agent_delegation_policy_schema": model.AGENT_DELEGATION_POLICY_SCHEMA,
         },
@@ -2028,6 +2031,7 @@ def render_state_verification(output_dir: Path, *, snapshot_id: str | None = Non
     preflight = render_preflight(output_dir)
     capabilities = render_capabilities(output_dir)
     evidence_report = render_evidence_report(output_dir, snapshot_id=snapshot_id)
+    run_summary_integrity = evidence_report["run_summary_integrity"]
     operation_lock = _operation_lock_status(output_dir)
     schedule = status["schedule"]
     failed_codes = sorted(
@@ -2125,6 +2129,14 @@ def render_state_verification(output_dir: Path, *, snapshot_id: str | None = Non
             else "unresolved steward operation lock requires recover-operation",
             code=None if not operation_lock["locked"] else "steward_operation_lock_present",
         ),
+        _check(
+            "run_summary_integrity",
+            bool(run_summary_integrity["ok"]),
+            "run summaries match the steward digest index"
+            if run_summary_integrity["ok"]
+            else "run summaries failed steward digest index verification",
+            code=None if run_summary_integrity["ok"] else "run_summary_integrity_failed",
+        ),
     ]
     if retention_decision is not None:
         checks.append(
@@ -2155,6 +2167,7 @@ def render_state_verification(output_dir: Path, *, snapshot_id: str | None = Non
         "retention_evidence_ready": retention_decision["allowed"] if retention_decision is not None else None,
         "retention_decision": retention_decision,
         "evidence_report": evidence_report,
+        "run_summary_integrity": run_summary_integrity,
         "checks": checks,
     }
 
@@ -2246,14 +2259,267 @@ def iter_run_summaries(output_dir: Path) -> list[Path]:
     summaries_dir = output_dir / "run-summaries"
     if not summaries_dir.is_dir():
         return []
-    return sorted(summaries_dir.glob("*.json"), key=lambda path: path.stat().st_mtime)
+    return sorted(
+        (path for path in summaries_dir.glob("*.json") if path.name != RUN_SUMMARY_INDEX_FILENAME),
+        key=lambda path: path.stat().st_mtime,
+    )
+
+
+def _run_summary_index_path(output_dir: Path) -> Path:
+    return output_dir / "run-summaries" / RUN_SUMMARY_INDEX_FILENAME
+
+
+def _load_run_summary_index(output_dir: Path) -> dict[str, Any]:
+    index_path = _run_summary_index_path(output_dir)
+    if not index_path.exists():
+        return {
+            "schema_version": RUN_SUMMARY_INDEX_SCHEMA,
+            "updated_at": None,
+            "entries": [],
+        }
+    index = model.load_json(index_path)
+    if index.get("schema_version") != RUN_SUMMARY_INDEX_SCHEMA:
+        raise ValueError(f"run summary index schema_version must be {RUN_SUMMARY_INDEX_SCHEMA}")
+    if not isinstance(index.get("entries"), list):
+        raise ValueError("run summary index entries must be a list")
+    return index
+
+
+def _write_run_summary_index(output_dir: Path, entries: list[dict[str, Any]]) -> None:
+    payload = {
+        "schema_version": RUN_SUMMARY_INDEX_SCHEMA,
+        "updated_at": _utc_stamp(),
+        "entries": sorted(entries, key=lambda entry: str(entry.get("run_id", ""))),
+    }
+    _atomic_write_json(_run_summary_index_path(output_dir), payload)
+
+
+def _index_run_summary(output_dir: Path, summary_path: Path, *, run_id: str, sha256: str | None = None) -> None:
+    index = _load_run_summary_index(output_dir)
+    entries = [
+        entry
+        for entry in index.get("entries", [])
+        if isinstance(entry, dict) and entry.get("path") != summary_path.name and entry.get("run_id") != run_id
+    ]
+    entries.append(
+        {
+            "run_id": run_id,
+            "path": summary_path.name,
+            "sha256": sha256 or _file_sha256(summary_path),
+            "indexed_at": _utc_stamp(),
+        }
+    )
+    _write_run_summary_index(output_dir, entries)
+
+
+def _write_indexed_run_summary(output_dir: Path, summary: dict[str, Any]) -> Path:
+    findings = model.validate_run_summary(summary)
+    errors = [finding for finding in findings if finding.severity == "error"]
+    if errors:
+        detail = "; ".join(f"{finding.path}: {finding.detail}" for finding in errors)
+        raise ValueError(f"invalid run summary: {detail}")
+    run_id = str(summary["run_id"])
+    summary_path = _run_summary_path(output_dir, run_id)
+    sha256 = _atomic_write_json(summary_path, summary)
+    _index_run_summary(output_dir, summary_path, run_id=run_id, sha256=sha256)
+    return summary_path
+
+
+def render_run_summary_integrity(output_dir: Path) -> dict[str, Any]:
+    summaries = iter_run_summaries(output_dir)
+    index_path = _run_summary_index_path(output_dir)
+    observations: list[dict[str, Any]] = []
+    if not summaries and not index_path.exists():
+        return {
+            "schema_version": "northroot.steward.run-summary-integrity.v0",
+            "ok": True,
+            "index_path": str(index_path),
+            "observations": [],
+        }
+    try:
+        index = _load_run_summary_index(output_dir)
+    except (OSError, ValueError, json.JSONDecodeError) as err:
+        return {
+            "schema_version": "northroot.steward.run-summary-integrity.v0",
+            "ok": False,
+            "index_path": str(index_path),
+            "observations": [
+                {
+                    "summary_path": str(index_path),
+                    "status": "invalid-index",
+                    "detail": str(err),
+                }
+            ],
+        }
+    entries_by_path: dict[str, dict[str, Any]] = {}
+    duplicate_paths: set[str] = set()
+    for entry in index.get("entries", []):
+        if not isinstance(entry, dict) or not isinstance(entry.get("path"), str):
+            observations.append(
+                {
+                    "summary_path": str(index_path),
+                    "status": "invalid-index-entry",
+                    "detail": "run summary index entries must include path strings",
+                }
+            )
+            continue
+        path_name = str(entry["path"])
+        if path_name in entries_by_path:
+            duplicate_paths.add(path_name)
+        entries_by_path[path_name] = entry
+    summary_names = {path.name for path in summaries}
+    for path_name, entry in sorted(entries_by_path.items()):
+        if path_name == RUN_SUMMARY_INDEX_FILENAME:
+            observations.append(
+                {
+                    "summary_path": str(index_path),
+                    "status": "invalid-index-entry",
+                    "detail": "run summary index may not index itself",
+                }
+            )
+            continue
+        if path_name not in summary_names:
+            observations.append(
+                {
+                    "summary_path": str(output_dir / "run-summaries" / path_name),
+                    "run_id": entry.get("run_id"),
+                    "status": "missing-summary",
+                    "detail": "indexed run summary is missing",
+                }
+            )
+    for summary_path in summaries:
+        entry = entries_by_path.get(summary_path.name)
+        if entry is None:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": None,
+                    "status": "unindexed",
+                    "detail": "run summary is not present in the steward digest index",
+                }
+            )
+            continue
+        if summary_path.name in duplicate_paths:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": entry.get("run_id"),
+                    "status": "duplicate-index-entry",
+                    "detail": "run summary has duplicate digest index entries",
+                }
+            )
+            continue
+        expected_sha = entry.get("sha256")
+        if not isinstance(expected_sha, str) or not expected_sha:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": entry.get("run_id"),
+                    "status": "invalid-index-entry",
+                    "detail": "run summary index entry is missing sha256",
+                }
+            )
+            continue
+        try:
+            actual_sha = _file_sha256(summary_path)
+        except OSError as err:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": entry.get("run_id"),
+                    "status": "unreadable",
+                    "detail": str(err),
+                }
+            )
+            continue
+        if actual_sha != expected_sha:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": entry.get("run_id"),
+                    "status": "digest-mismatch",
+                    "detail": "run summary digest does not match the steward digest index",
+                    "expected_sha256": expected_sha,
+                    "actual_sha256": actual_sha,
+                }
+            )
+            continue
+        try:
+            summary = model.load_json(summary_path)
+        except (OSError, ValueError, json.JSONDecodeError) as err:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": entry.get("run_id"),
+                    "status": "invalid-json",
+                    "detail": str(err),
+                }
+            )
+            continue
+        findings = model.validate_run_summary(summary)
+        errors = [finding for finding in findings if finding.severity == "error"]
+        indexed_run_id = entry.get("run_id")
+        summary_run_id = summary.get("run_id")
+        if indexed_run_id != summary_run_id:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": summary_run_id,
+                    "status": "run-id-mismatch",
+                    "detail": "run summary run_id does not match the steward digest index",
+                    "indexed_run_id": indexed_run_id,
+                }
+            )
+        elif errors:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": summary_run_id,
+                    "status": "invalid-summary",
+                    "detail": "; ".join(f"{finding.path}: {finding.detail}" for finding in errors),
+                }
+            )
+        else:
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": summary_run_id,
+                    "status": "ok",
+                    "sha256": actual_sha,
+                }
+            )
+    ok = all(observation.get("status") == "ok" for observation in observations)
+    return {
+        "schema_version": "northroot.steward.run-summary-integrity.v0",
+        "ok": ok,
+        "index_path": str(index_path),
+        "observations": observations,
+    }
 
 
 def render_evidence_report(output_dir: Path, *, snapshot_id: str | None = None) -> dict[str, Any]:
     plan = load_plan(output_dir)
+    integrity = render_run_summary_integrity(output_dir)
+    integrity_by_path = {
+        str(observation.get("summary_path")): observation
+        for observation in integrity.get("observations", [])
+        if isinstance(observation, dict) and observation.get("summary_path")
+    }
     observations: list[dict[str, Any]] = []
     evidence: set[str] = set()
     for summary_path in iter_run_summaries(output_dir):
+        integrity_observation = integrity_by_path.get(str(summary_path))
+        if integrity_observation and integrity_observation.get("status") != "ok":
+            observations.append(
+                {
+                    "summary_path": str(summary_path),
+                    "run_id": integrity_observation.get("run_id"),
+                    "status": integrity_observation.get("status"),
+                    "evidence": [],
+                    "integrity_detail": integrity_observation.get("detail"),
+                }
+            )
+            continue
         try:
             summary = model.load_json(summary_path)
         except (OSError, ValueError, json.JSONDecodeError) as err:
@@ -2315,6 +2581,7 @@ def render_evidence_report(output_dir: Path, *, snapshot_id: str | None = None) 
         "available_evidence": available,
         "required_evidence": required,
         "missing_evidence": [item for item in required if item not in available],
+        "run_summary_integrity": integrity,
         "observations": observations,
     }
 
@@ -2379,7 +2646,10 @@ def latest_run_summary_path(output_dir: Path) -> str | None:
     summaries_dir = output_dir / "run-summaries"
     if not summaries_dir.is_dir():
         return None
-    summaries = sorted(summaries_dir.glob("*.json"), key=lambda path: path.stat().st_mtime)
+    summaries = sorted(
+        (path for path in summaries_dir.glob("*.json") if path.name != RUN_SUMMARY_INDEX_FILENAME),
+        key=lambda path: path.stat().st_mtime,
+    )
     if not summaries:
         return None
     return str(summaries[-1])
@@ -2722,10 +2992,7 @@ def record_external_evidence(
             }
         ],
     )
-    summaries_dir = output_dir / "run-summaries"
-    summaries_dir.mkdir(parents=True, exist_ok=True)
-    summary_path = summaries_dir / f"{run_id}.json"
-    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    summary_path = _write_indexed_run_summary(output_dir, summary)
     return {
         "schema_version": "northroot.steward.evidence-record.v0",
         "run_summary_path": str(summary_path),
@@ -2782,6 +3049,7 @@ def import_legacy_run_summaries(
         summaries_dir = output_dir / "run-summaries"
         summaries_dir.mkdir(parents=True, exist_ok=True)
         pending_writes: list[tuple[Path, dict[str, Any]]] = []
+        existing_to_index: list[tuple[Path, str]] = []
         for summary in legacy_run_import["run_summaries"]:
             run_id = str(summary["run_id"])
             summary_path = _run_summary_path(output_dir, run_id)
@@ -2789,14 +3057,18 @@ def import_legacy_run_summaries(
                 existing = model.load_json(summary_path)
                 if _canonical_json(existing) != _canonical_json(summary):
                     raise ValueError(f"conflicting run_id: {run_id}")
+                existing_to_index.append((summary_path, run_id))
                 skipped_existing.append(run_id)
                 written_paths.append(str(summary_path))
                 continue
             pending_writes.append((summary_path, summary))
 
+        for summary_path, run_id in existing_to_index:
+            _index_run_summary(output_dir, summary_path, run_id=run_id)
+
         for summary_path, summary in pending_writes:
             run_id = str(summary["run_id"])
-            _atomic_write_json(summary_path, summary)
+            _write_indexed_run_summary(output_dir, summary)
             inserted.append(run_id)
             written_paths.append(str(summary_path))
 
@@ -2835,7 +3107,7 @@ def import_legacy_run_summaries(
                 ],
             )
             operation_summary_path = _run_summary_path(output_dir, str(import_summary["run_id"]))
-            _atomic_write_json(operation_summary_path, import_summary)
+            _write_indexed_run_summary(output_dir, import_summary)
         _clear_operation_lock(lock_path, expected_operation_id=operation_id)
         return {
             "schema_version": "northroot.steward.legacy-run-import-result.v0",
@@ -2939,11 +3211,7 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
             }
         ],
     )
-    summaries_dir = output_dir / "run-summaries"
-    summaries_dir.mkdir(parents=True, exist_ok=True)
-    summary_path = summaries_dir / f"{run_id}.json"
-    summary_path.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    return summary_path
+    return _write_indexed_run_summary(output_dir, summary)
 
 
 def load_plan(output_dir: Path) -> dict[str, Any]:

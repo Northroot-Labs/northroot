@@ -193,6 +193,13 @@ document. With `--snapshot-id`, it also evaluates whether recorded evidence is
 sufficient for that snapshot's retention gate. It does not execute backups,
 install schedules, run restore drills, or record evidence.
 
+Steward run summaries are indexed in `run-summaries/index.json` with
+`northroot.steward.run-summary-index.v0` digest entries. Evidence reports only
+trust summaries that match this index, and `steward verify-state` fails closed
+with `run_summary_integrity_failed` when summaries are missing from the index,
+missing from disk, or digest-mismatched. This keeps retention evidence tied to
+steward-recorded state instead of loose JSON files.
+
 `steward report` is the read-only operator and agent report. It composes status,
 preflight, schedule state, evidence, offsite copy status, retention readiness,
 and recommended next actions into `northroot.steward.report.v0`. It is not a
@@ -226,8 +233,9 @@ legacy profile into the steward state's `run-summaries/` directory. It accepts
 `northroot.steward.legacy-run-import.v0` bundles, writes each run summary
 atomically, skips identical replays, rejects conflicting `run_id`s, and uses the
 steward operation lock so interrupted imports require `steward recover-operation`
-before retry. Imported summaries feed the same `evidence report` and retention
-checks as native steward runs.
+before retry. Imported summaries are added to the steward run-summary digest
+index and feed the same `evidence report` and retention checks as native steward
+runs.
 
 `steward registry authorize` is the deterministic permission gate for agents and
 automation. It evaluates a project operation, and optionally an object-scoped
