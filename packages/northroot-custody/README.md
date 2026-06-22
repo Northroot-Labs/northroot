@@ -311,7 +311,13 @@ characters do not break unattended execution. If the runner executable path
 contains spaces, quote it inside `--runner-command`, for example
 `--runner-command "'/opt/Northroot Tools/nr' steward"`. Generated schedule
 templates are also hashed in `schedule.json`; preflight fails if a rendered
-launchd plist or systemd unit/timer drifts after creation.
+launchd plist or systemd unit/timer drifts after creation. The `schedule.json`
+manifest itself is indexed in `schedules/schedule-index.json` with
+`northroot.steward.schedule-index.v0`, and schedule install, uninstall, delete,
+and preflight fail closed if that manifest is unindexed, missing, or
+digest-mismatched. Use `schedule delete --force` only for explicit cleanup of
+stale local schedule files after the platform registration has already been
+handled.
 
 `steward capabilities` is the agent-facing contract. Agents should inspect that
 manifest and call the listed custody operations instead of constructing direct
