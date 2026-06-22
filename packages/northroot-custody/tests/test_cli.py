@@ -21,6 +21,148 @@ def write_fake_executable(directory: Path, name: str, body: str = "#!/bin/sh\nex
 
 
 class CliTests(unittest.TestCase):
+    def test_steward_registry_cli_manages_service_registry_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            state_dir = temp_path / "registry-state"
+            object_path = temp_path / "object.json"
+            permission_path = temp_path / "permission.json"
+            project_path = temp_path / "project.json"
+
+            object_path.write_text(
+                json.dumps(
+                    {
+                        "object_id": "artifact/cli-release-bundle",
+                        "object_type": "artifact-dir",
+                        "visibility": "private",
+                        "storage_binding": "artifact://cli-release-bundle",
+                        "custody_policy": {
+                            "backup": "delegated",
+                            "verification": "sample-restore",
+                        },
+                        "redaction_policy": {
+                            "public_summary": "object-id-and-status",
+                        },
+                        "restore_class": "full-restore",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            permission_path.write_text(
+                json.dumps(
+                    {
+                        "permission_set_id": "perm/cli-project",
+                        "scope": "project",
+                        "project_id": "project/cli",
+                        "allowed_operations": [
+                            "status",
+                            "preflight",
+                            "verify-state",
+                            "report",
+                            "run",
+                            "verify",
+                            "restore-drill",
+                            "retention.evaluate",
+                            "evidence.report",
+                        ],
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            project_path.write_text(
+                json.dumps(
+                    {
+                        "project_id": "project/cli",
+                        "workspace_id": "cli-workspace",
+                        "node_ref": "node://example",
+                        "permission_set_ref": "perm/cli-project",
+                        "object_ids": [
+                            "repo/main",
+                            "artifact/cli-release-bundle",
+                        ],
+                        "source_destination_ids": [
+                            "source/cli-primary",
+                        ],
+                        "schedule_ref": "scheduler://steward/cli-hourly",
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "init",
+                            "--state",
+                            str(state_dir),
+                            "--registry",
+                            str(EXAMPLES / "service-registry.example.json"),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "add-object",
+                            "--state",
+                            str(state_dir),
+                            "--json",
+                            str(object_path),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "register-project",
+                            "--state",
+                            str(state_dir),
+                            "--project-json",
+                            str(project_path),
+                            "--permission-json",
+                            str(permission_path),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "status",
+                            "--state",
+                            str(state_dir),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+            self.assertIn('"project_count": 2', stdout.getvalue())
+            self.assertTrue((state_dir / "registry-operations").exists())
+
     def test_validate_render_plan_and_steward_flow(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "steward"

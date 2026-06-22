@@ -67,6 +67,20 @@ contract that lets steward prove whether the service is configured coherently
 before delegated tools are allowed to mutate backup repositories, schedules, or
 restore targets.
 
+The current `steward registry` implementation manages this document as durable
+state. It initializes a registry from a validated JSON document, reports counts
+and validation findings, appends projects and their permission sets atomically,
+appends objects, destinations, source bindings, replicas, and legacy import
+records, and records operation summaries for each mutation. Registry writes are
+atomic and guarded by a single operation lock. If a process dies or the machine
+goes offline while the lock exists, later mutations fail closed until
+`steward registry recover` validates the current registry and records the
+interruption.
+
+The registry still does not execute replica sync, inspect private LaunchAgent
+state, or import raw legacy run directories by itself. Those are the next
+adapter layers over the now-durable registry state.
+
 ## Legacy Import Context
 
 The private Northroot-Labs environment currently has a legacy hourly machine

@@ -30,8 +30,10 @@ The steward service registry is the next layer above a single inventory and
 policy. A `northroot.steward.service-registry.v0` document registers the node,
 projects, object-level and project-level permission sets, destinations,
 source-to-destination bindings, replicas, legacy import refs, and fail-closed
-resume policy. It is still a contract and verification surface, not a storage
-transport or scheduler.
+resume policy. `steward registry` stores that document as durable state with
+atomic writes, a single operation lock, operation summaries, and
+recover-before-next-mutation behavior. It is still a contract and verification
+surface, not a storage transport or scheduler.
 
 Registry failure handling should assume boring operational failures:
 disconnected storage, interrupted runs, power loss, stale generated artifacts,
@@ -114,6 +116,21 @@ nr-custody steward retention evaluate \
   --state /tmp/northroot-steward-example \
   --snapshot-id snap-001 \
   --use-recorded-evidence
+nr-custody steward registry init \
+  --state /tmp/northroot-steward-registry \
+  --registry examples/service-registry.example.json \
+  --public-safe
+nr-custody steward registry status --state /tmp/northroot-steward-registry --public-safe
+nr-custody steward registry add-object \
+  --state /tmp/northroot-steward-registry \
+  --json /tmp/object-custody.json \
+  --public-safe
+nr-custody steward registry register-project \
+  --state /tmp/northroot-steward-registry \
+  --project-json /tmp/project.json \
+  --permission-json /tmp/project-permission.json \
+  --public-safe
+nr-custody steward registry recover --state /tmp/northroot-steward-registry --public-safe
 nr-custody steward schedule create \
   --state /tmp/northroot-steward-example \
   --scheduler launchd \
@@ -157,6 +174,16 @@ preflight, schedule state, evidence, offsite copy status, retention readiness,
 and recommended next actions into `northroot.steward.report.v0`. It is not a
 gate and does not execute backups, install schedules, run restore drills, or
 record evidence.
+
+`steward registry` is the durable state-management surface for the service
+registry. `registry init` validates and installs a public-safe registry
+document. Mutation commands append object custody entries, project/object
+permissions, registered projects, destinations, source bindings, replicas, and
+legacy import records through atomic writes. If a machine dies or the process is
+interrupted while a registry mutation lock exists, later mutations fail closed
+until `registry recover` validates the current registry and records the
+interrupted operation. Recovery removes the lock only when the registry still
+validates.
 
 `steward restore` is the bounded recovery path for an actual restore. It
 requires both `--snapshot-id` and `--target`, delegates to `resticprofile`, and
