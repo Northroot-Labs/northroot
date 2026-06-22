@@ -400,6 +400,28 @@ only to render runnable resticprofile repository targets. Public policy keeps
 repository targets symbolic; real local paths and remote repository URLs stay in
 private deployment state.
 
+Repository bindings may also include an optional noninteractive
+`availability_check`:
+
+```json
+{
+  "repository_ref": "repository://local-primary",
+  "target": "repository-target://local-primary",
+  "availability_check": {
+    "mode": "probe-command",
+    "command": ["storage-probe", "repository://local-primary"],
+    "interactive": false,
+    "timeout_seconds": 5
+  }
+}
+```
+
+When configured, `steward preflight` runs the probe as a read-only availability
+check. A missing command, non-zero exit, or timeout marks the repository storage
+unavailable and blocks unattended execution before delegated backup or restore
+commands can run. This is the private deployment hook for disconnected external
+storage, offline mounts, or unavailable network repositories.
+
 Real machine paths, external-drive names, repository URLs, 1Password item
 references, tokens, passwords, and live run summaries belong in private
 deployment repos such as `Northroot-Labs`.

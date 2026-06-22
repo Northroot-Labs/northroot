@@ -431,6 +431,37 @@ def _runner_command_available(runner_command: str) -> bool:
     return _executable_available(args)
 
 
+def _run_probe_command(command: list[str], *, timeout_seconds: int) -> dict[str, Any]:
+    if not _executable_available(command):
+        return {
+            "ok": False,
+            "return_code": None,
+            "detail": f"{command[0] if command else 'probe'} is not executable",
+            "failure": "missing_probe_command",
+        }
+    try:
+        completed = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=timeout_seconds,
+        )
+    except subprocess.TimeoutExpired:
+        return {
+            "ok": False,
+            "return_code": None,
+            "detail": f"probe timed out after {timeout_seconds}s",
+            "failure": "probe_timeout",
+        }
+    return {
+        "ok": completed.returncode == 0,
+        "return_code": completed.returncode,
+        "detail": "probe succeeded" if completed.returncode == 0 else f"probe exited {completed.returncode}",
+        "failure": None if completed.returncode == 0 else "probe_failed",
+    }
+
+
 def _runtime_env_for_execution(secret_bindings: dict[str, Any] | None) -> dict[str, str]:
     env = dict(os.environ)
     if not secret_bindings:
@@ -589,6 +620,22 @@ def render_preflight(output_dir: Path) -> dict[str, Any]:
                     code=None if target else "missing_repository_binding",
                 )
             )
+            availability_check = model.repository_binding_availability_check(repository_ref, repository_bindings)
+            if availability_check:
+                probe = _run_probe_command(
+                    availability_check["command"],
+                    timeout_seconds=int(availability_check["timeout_seconds"]),
+                )
+                checks.append(
+                    _check(
+                        f"repository_availability:{repository_ref}",
+                        bool(probe["ok"]),
+                        f"{repository_ref} storage is available"
+                        if probe["ok"]
+                        else f"{repository_ref} storage is unavailable: {probe['detail']}",
+                        code=None if probe["ok"] else "repository_storage_unavailable",
+                    )
+                )
     required_secret_refs = sorted(
         {
             str(destination["secret_ref"])

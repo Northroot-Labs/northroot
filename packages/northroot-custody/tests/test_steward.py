@@ -491,12 +491,64 @@ class StewardTests(unittest.TestCase):
                 "exit 0\n",
             )
             write_fake_executable(fake_bin, "op")
+            write_fake_executable(
+                fake_bin,
+                "storage-probe",
+                "#!/bin/sh\n"
+                "if [ \"$1\" = \"ok\" ]; then\n"
+                "  exit 0\n"
+                "fi\n"
+                "exit 2\n",
+            )
+            available_repository_bindings_path = Path(temp_dir) / "repository-bindings-available.json"
+            unavailable_repository_bindings_path = Path(temp_dir) / "repository-bindings-unavailable.json"
+            repository_bindings = model.load_json(EXAMPLES / "repository-bindings.redacted.example.json")
+            for binding in repository_bindings["bindings"]:
+                binding["availability_check"] = {
+                    "mode": "probe-command",
+                    "command": ["storage-probe", "ok"],
+                    "interactive": False,
+                    "timeout_seconds": 5,
+                }
+            available_repository_bindings_path.write_text(
+                json.dumps(repository_bindings, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            unavailable_repository_bindings = model.load_json(EXAMPLES / "repository-bindings.redacted.example.json")
+            unavailable_repository_bindings["bindings"][0]["availability_check"] = {
+                "mode": "probe-command",
+                "command": ["storage-probe", "missing"],
+                "interactive": False,
+                "timeout_seconds": 5,
+            }
+            unavailable_repository_bindings_path.write_text(
+                json.dumps(unavailable_repository_bindings, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            available_storage_output_dir = Path(temp_dir) / "steward-available-storage"
+            unavailable_storage_output_dir = Path(temp_dir) / "steward-unavailable-storage"
+            steward.init_steward(
+                inventory_path=EXAMPLES / "workspace-inventory.example.json",
+                policy_path=EXAMPLES / "custody-policy.example.json",
+                output_dir=available_storage_output_dir,
+                secret_bindings_path=EXAMPLES / "secret-bindings.redacted.example.json",
+                repository_bindings_path=available_repository_bindings_path,
+            )
+            steward.init_steward(
+                inventory_path=EXAMPLES / "workspace-inventory.example.json",
+                policy_path=EXAMPLES / "custody-policy.example.json",
+                output_dir=unavailable_storage_output_dir,
+                secret_bindings_path=EXAMPLES / "secret-bindings.redacted.example.json",
+                repository_bindings_path=unavailable_repository_bindings_path,
+            )
             with mock.patch.dict(
                 os.environ,
                 {"PATH": str(fake_bin), "OP_SERVICE_ACCOUNT_TOKEN": "dummy"},
                 clear=True,
             ):
                 preflight = steward.render_preflight(output_dir)
+                available_storage_preflight = steward.render_preflight(available_storage_output_dir)
+                unavailable_storage_preflight = steward.render_preflight(unavailable_storage_output_dir)
                 executed_unscoped_verify = steward.render_operation(output_dir, "verify", execute=True)
                 executed_verify = steward.render_operation(
                     output_dir,
@@ -533,6 +585,14 @@ class StewardTests(unittest.TestCase):
                 tampered_preflight = steward.render_preflight(tampered_output_dir)
                 tampered_verification = steward.render_state_verification(tampered_output_dir)
             self.assertTrue(preflight["ready"])
+            self.assertTrue(available_storage_preflight["ready"])
+            self.assertFalse(unavailable_storage_preflight["ready"])
+            self.assertIn("repository_availability:repository://local-primary", {
+                check["name"] for check in available_storage_preflight["checks"]
+            })
+            self.assertIn("repository_storage_unavailable", {
+                check["code"] for check in unavailable_storage_preflight["checks"] if check["code"]
+            })
             self.assertEqual(preflight["schema_version"], "northroot.steward.preflight.v0")
             self.assertFalse(tampered_preflight["ready"])
             self.assertIn("generated_artifact_drift", {

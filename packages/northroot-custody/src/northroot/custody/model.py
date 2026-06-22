@@ -65,6 +65,7 @@ ENV_NAME_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 OBJECT_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:/-]*$")
 RUN_ID_PATTERN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]*$")
 REPOSITORY_CHECK_STATUSES = {"ok", "failed", "not-run"}
+REPOSITORY_AVAILABILITY_CHECK_MODES = {"probe-command"}
 SERVICE_REF_PREFIXES = STORAGE_BINDING_PREFIXES + (
     "logs://",
     "node://",
@@ -856,6 +857,50 @@ def validate_repository_bindings(payload: dict[str, Any], *, public_safe: bool =
                 seen_refs.add(str(repository_ref))
             if not _is_string(binding.get("target")):
                 findings.append(_finding("missing_string", f"{binding_path}.target", "target is required"))
+            availability_check = binding.get("availability_check")
+            if availability_check is not None:
+                if not isinstance(availability_check, dict):
+                    findings.append(
+                        _finding(
+                            "availability_check",
+                            f"{binding_path}.availability_check",
+                            "availability_check must be an object when present",
+                        )
+                    )
+                else:
+                    if availability_check.get("mode") not in REPOSITORY_AVAILABILITY_CHECK_MODES:
+                        findings.append(
+                            _finding(
+                                "invalid_repository_availability_mode",
+                                f"{binding_path}.availability_check.mode",
+                                f"mode must be one of {sorted(REPOSITORY_AVAILABILITY_CHECK_MODES)}",
+                            )
+                        )
+                    if not _is_string_list(availability_check.get("command")):
+                        findings.append(
+                            _finding(
+                                "invalid_repository_availability_command",
+                                f"{binding_path}.availability_check.command",
+                                "availability_check.command must be a non-empty string list",
+                            )
+                        )
+                    if availability_check.get("interactive") is not False:
+                        findings.append(
+                            _finding(
+                                "interactive_repository_availability_check",
+                                f"{binding_path}.availability_check.interactive",
+                                "repository availability checks must explicitly set interactive to false",
+                            )
+                        )
+                    timeout = availability_check.get("timeout_seconds", 5)
+                    if not isinstance(timeout, int) or timeout <= 0 or timeout > 60:
+                        findings.append(
+                            _finding(
+                                "invalid_repository_availability_timeout",
+                                f"{binding_path}.availability_check.timeout_seconds",
+                                "timeout_seconds must be an integer between 1 and 60",
+                            )
+                        )
 
     if public_safe:
         findings.extend(find_public_private_bindings(payload))
@@ -917,6 +962,26 @@ def repository_binding_target(repository_ref: str, bindings: dict[str, Any] | No
     if not _is_string(target):
         return None
     return str(target)
+
+
+def repository_binding_availability_check(repository_ref: str, bindings: dict[str, Any] | None) -> dict[str, Any] | None:
+    binding = resolve_repository_binding(repository_ref, bindings)
+    if not binding:
+        return None
+    availability_check = binding.get("availability_check")
+    if not isinstance(availability_check, dict):
+        return None
+    command = availability_check.get("command")
+    if availability_check.get("mode") != "probe-command" or not _is_string_list(command):
+        return None
+    timeout_seconds = availability_check.get("timeout_seconds", 5)
+    if not isinstance(timeout_seconds, int) or timeout_seconds <= 0 or timeout_seconds > 60:
+        return None
+    return {
+        "mode": "probe-command",
+        "command": [str(part) for part in command],
+        "timeout_seconds": timeout_seconds,
+    }
 
 
 def evaluate_retention(
