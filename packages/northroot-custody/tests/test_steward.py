@@ -234,6 +234,52 @@ class StewardTests(unittest.TestCase):
             denied_summary = model.load_json(Path(str(denied_registry_execute["run_summary_path"])))
             self.assertEqual(denied_summary["status"], "delegated-authorization-denied")
             self.assertEqual(denied_summary["snapshot_result"]["authorization"]["decision"], "blocked")
+            self.assertFalse(steward.operation_lock_path(output_dir).exists())
+
+            stale_lock = {
+                "schema_version": "northroot.steward.operation-lock.v0",
+                "operation_id": "test-stale-operation",
+                "operation": "verify",
+                "state": str(output_dir),
+                "command": "resticprofile --name steward check",
+                "command_args": ["resticprofile", "--name", "steward", "check"],
+                "snapshot_id": "snap-locked",
+                "restore_target": None,
+                "registry_state": str(registry_dir),
+                "project_id": "project/example",
+                "object_id": "workspace/example",
+                "pid": 999999,
+                "started_at": "20260622T000000000000Z",
+                "failure_policy": "fail-closed-record-summary-before-retry",
+                "resume_hint": "run steward recover-operation before retrying delegated execution",
+            }
+            steward.operation_lock_path(output_dir).write_text(
+                json.dumps(stale_lock, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            blocked_by_lock = steward.render_operation(output_dir, "verify", execute=True)
+            self.assertFalse(blocked_by_lock["executed"])
+            self.assertEqual(blocked_by_lock["return_code"], 75)
+            self.assertEqual(blocked_by_lock["failure_stage"], "operation-lock")
+            self.assertIsNone(blocked_by_lock["preflight"])
+            self.assertTrue(steward.operation_lock_path(output_dir).exists())
+            locked_summary = model.load_json(Path(str(blocked_by_lock["run_summary_path"])))
+            self.assertEqual(locked_summary["status"], "delegated-operation-locked")
+            self.assertEqual(
+                locked_summary["snapshot_result"]["operation_lock"]["operation_id"],
+                "test-stale-operation",
+            )
+            recovered_lock = steward.recover_operation(output_dir)
+            self.assertTrue(recovered_lock["recovered"])
+            self.assertTrue(recovered_lock["cleared_lock"])
+            self.assertFalse(steward.operation_lock_path(output_dir).exists())
+            recovery_lock_summary = model.load_json(Path(str(recovered_lock["run_summary_path"])))
+            self.assertEqual(recovery_lock_summary["status"], "delegated-interrupted-recovered")
+            self.assertEqual(
+                recovery_lock_summary["snapshot_result"]["operation_lock"]["operation_id"],
+                "test-stale-operation",
+            )
+            self.assertFalse(steward.recover_operation(output_dir)["recovered"])
 
             missing_schedule_plan = steward.render_command_plan(output_dir, operation="schedule.create")
             self.assertFalse(missing_schedule_plan["ok"])
@@ -341,6 +387,7 @@ class StewardTests(unittest.TestCase):
             self.assertTrue(executed_verify["executed"])
             self.assertTrue(executed_restore["executed"])
             self.assertTrue(executed_recovery_restore["executed"])
+            self.assertFalse(steward.operation_lock_path(output_dir).exists())
             restore_summary = model.load_json(Path(str(executed_restore["run_summary_path"])))
             self.assertEqual(restore_summary["snapshot_result"]["snapshot_id"], "snap-001")
             restore_observation = restore_summary["verification_result"]["restore_observation"]

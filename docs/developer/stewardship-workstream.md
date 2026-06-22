@@ -90,6 +90,11 @@ registry state, project id, and optional object id, authorization runs before
 preflight and before any external delegated tool is called. Denials are recorded
 as run summaries rather than disappearing as local control-flow.
 
+Delegated execution has its own operation lock in the steward state directory.
+If a machine stops mid-run, later executions fail closed until
+`steward recover-operation` records the interrupted lock as a run summary and
+clears it for a deliberate retry.
+
 The registry still does not execute replica sync, inspect private LaunchAgent
 state, or import raw legacy run directories by itself. Those are the next
 adapter layers over the now-durable registry state.
