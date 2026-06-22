@@ -160,3 +160,9 @@ feat: add profile event validation
 fix: reject duplicate record keys before import
 docs: refresh setup guide
 ```
+
+Commit authorship should identify whether work was human-only, agent-only, or
+human plus agent. Human+agent commits should use the human's GitHub-linked
+identity with a `Co-authored-by: Codex <codex@northroot.local>` trailer. Pure
+agent commits should use `Codex <codex@northroot.local>` as the repo-local Git
+identity. See [Git Authorship](docs/developer/git-authorship.md).

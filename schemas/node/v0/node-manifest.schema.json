@@ -8,10 +8,41 @@
   "properties": {
     "schema": { "const": "northroot.node-manifest.v0" },
     "node_id": { "type": "string", "pattern": "^node:.+" },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,94}[a-z0-9]$|^[a-z0-9]$" },
+    "scope": { "enum": ["user-machine", "org", "service", "workspace"] },
     "resource_namespace": { "type": "string", "minLength": 1 },
     "entity_namespace": { "type": "string", "minLength": 1 },
     "journal_path": { "type": "string", "pattern": "^journal(/.*)?$" },
     "vault_path": { "type": "string", "pattern": "^vault(/.*)?$" },
-    "state_path": { "type": "string", "pattern": "^state(/.*)?$" }
+    "state_path": { "type": "string", "pattern": "^state(/.*)?$" },
+    "index": {
+      "type": "object",
+      "required": ["kind", "uri"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": { "enum": ["sqlite", "postgres"] },
+        "uri": {
+          "type": "string",
+          "pattern": "^(sqlite|postgres)://.+$"
+        }
+      }
+    },
+    "object_stores": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "uri", "role"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]{0,94}[a-z0-9]$|^[a-z0-9]$" },
+          "kind": { "enum": ["fs", "s3", "r2", "restic"] },
+          "uri": {
+            "type": "string",
+            "pattern": "^(fs|s3|r2|restic)://.+$"
+          },
+          "role": { "enum": ["primary", "archive", "cache"] }
+        }
+      }
+    }
   }
 }
