@@ -170,17 +170,32 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     create.add_argument("--operation", choices=tuple(sorted(steward.SCHEDULE_OPERATIONS)), default="run")
     create.add_argument("--every-minutes", type=int, required=True)
     create.add_argument("--runner-command", default=steward.DEFAULT_RUNNER_COMMAND)
+    create.add_argument("--registry-state")
+    create.add_argument("--project-id")
+    create.add_argument("--object-id")
     status = schedule_sub.add_parser("status")
     status.add_argument("--state", required=True)
+    status.add_argument("--registry-state")
+    status.add_argument("--project-id")
+    status.add_argument("--object-id")
     install = schedule_sub.add_parser("install")
     install.add_argument("--state", required=True)
+    install.add_argument("--registry-state")
+    install.add_argument("--project-id")
+    install.add_argument("--object-id")
     install.add_argument("--execute", action="store_true")
     install.add_argument("--skip-preflight", action="store_true")
     uninstall = schedule_sub.add_parser("uninstall")
     uninstall.add_argument("--state", required=True)
+    uninstall.add_argument("--registry-state")
+    uninstall.add_argument("--project-id")
+    uninstall.add_argument("--object-id")
     uninstall.add_argument("--execute", action="store_true")
     delete = schedule_sub.add_parser("delete")
     delete.add_argument("--state", required=True)
+    delete.add_argument("--registry-state")
+    delete.add_argument("--project-id")
+    delete.add_argument("--object-id")
     delete.add_argument("--force", action="store_true")
 
     retention_steward = steward_sub.add_parser("retention", help="Evaluate steward retention gates.")
@@ -256,6 +271,74 @@ def _registry_mutation_result(fn, *, state: str, json_path: str, public_safe: bo
             "lock": exc.lock,
             "detail": "service registry has an unresolved operation lock; run steward registry recover first",
         }
+
+
+def _schedule_registry_context(
+    args: argparse.Namespace,
+    *,
+    status: dict[str, object] | None = None,
+) -> tuple[Path | None, str | None, str | None]:
+    registry_state = getattr(args, "registry_state", None)
+    project_id = getattr(args, "project_id", None)
+    object_id = getattr(args, "object_id", None)
+    trusted_status = status if isinstance(status, dict) and status.get("schedule_integrity", {}).get("ok") else None
+    if registry_state is None and trusted_status is not None:
+        registry_state = trusted_status.get("registry_state")
+    if project_id is None and trusted_status is not None:
+        project_id = trusted_status.get("project_id")
+    if object_id is None and trusted_status is not None:
+        object_id = trusted_status.get("object_id")
+    return (
+        Path(str(registry_state)) if registry_state else None,
+        str(project_id) if project_id else None,
+        str(object_id) if object_id else None,
+    )
+
+
+def _authorize_schedule_context(
+    args: argparse.Namespace,
+    *,
+    operation: str,
+    status: dict[str, object] | None = None,
+) -> dict[str, object] | None:
+    registry_state, project_id, object_id = _schedule_registry_context(args, status=status)
+    if registry_state is None and project_id is None and object_id is None:
+        return None
+    if registry_state is None:
+        return {
+            "schema_version": "northroot.steward.schedule-authorization.v0",
+            "operation": operation,
+            "allowed": False,
+            "decision": "missing-registry-state",
+            "reason": "registry_state is required when project_id or object_id is supplied",
+        }
+    if not project_id:
+        return {
+            "schema_version": "northroot.steward.schedule-authorization.v0",
+            "operation": operation,
+            "registry_state": str(registry_state),
+            "object_id": object_id,
+            "allowed": False,
+            "decision": "missing-project-id",
+            "reason": "project_id is required when registry_state is supplied",
+        }
+    return registry.authorize_operation(
+        registry_state,
+        operation=operation,
+        project_id=project_id,
+        object_id=object_id,
+        public_safe=True,
+    )
+
+
+def _schedule_authorization_denied_result(operation: str, authorization: dict[str, object]) -> dict[str, object]:
+    return {
+        "schema_version": "northroot.steward.schedule-authorization.v0",
+        "operation": operation,
+        "ok": False,
+        "authorization": authorization,
+        "error": f"registry authorization denied: {authorization.get('decision')}",
+    }
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -431,32 +514,70 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(operation)
         return 1 if operation.get("return_code") not in (None, 0) else 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "create":
+        authorization = _authorize_schedule_context(args, operation="schedule.create")
+        if authorization is not None and not authorization["allowed"]:
+            write_json(_schedule_authorization_denied_result("schedule.create", authorization))
+            return 1
+        registry_state, project_id, object_id = _schedule_registry_context(args)
         schedule = steward.create_schedule(
             output_dir=Path(args.state),
             scheduler=args.scheduler,
             every_minutes=args.every_minutes,
             runner_command=args.runner_command,
             operation=args.operation,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
         )
+        if authorization is not None:
+            schedule["authorization"] = authorization
         write_json(schedule)
         return 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "status":
-        write_json(steward.schedule_status(Path(args.state)))
+        status = steward.schedule_status(Path(args.state))
+        authorization = _authorize_schedule_context(args, operation="schedule.status", status=status)
+        if authorization is not None and not authorization["allowed"]:
+            write_json(_schedule_authorization_denied_result("schedule.status", authorization))
+            return 1
+        if authorization is not None:
+            status["authorization"] = authorization
+        write_json(status)
         return 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "install":
+        status = steward.schedule_status(Path(args.state))
+        authorization = _authorize_schedule_context(args, operation="schedule.install", status=status)
+        if authorization is not None and not authorization["allowed"]:
+            write_json(_schedule_authorization_denied_result("schedule.install", authorization))
+            return 1
         result = steward.install_schedule(
             Path(args.state),
             execute=args.execute,
             require_preflight=not args.skip_preflight,
         )
+        if authorization is not None:
+            result["authorization"] = authorization
         write_json(result)
         return 1 if result.get("return_code") not in (None, 0) else 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "uninstall":
+        status = steward.schedule_status(Path(args.state))
+        authorization = _authorize_schedule_context(args, operation="schedule.uninstall", status=status)
+        if authorization is not None and not authorization["allowed"]:
+            write_json(_schedule_authorization_denied_result("schedule.uninstall", authorization))
+            return 1
         result = steward.uninstall_schedule(Path(args.state), execute=args.execute)
+        if authorization is not None:
+            result["authorization"] = authorization
         write_json(result)
         return 1 if result.get("return_code") not in (None, 0) else 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "delete":
+        status = steward.schedule_status(Path(args.state))
+        authorization = _authorize_schedule_context(args, operation="schedule.delete", status=status)
+        if authorization is not None and not authorization["allowed"]:
+            write_json(_schedule_authorization_denied_result("schedule.delete", authorization))
+            return 1
         result = steward.delete_schedule(Path(args.state), force=args.force)
+        if authorization is not None:
+            result["authorization"] = authorization
         write_json(result)
         return 0 if result.get("deleted") is True else 1
     if args.command == "steward" and args.steward_command == "retention" and args.retention_command == "evaluate":
