@@ -240,8 +240,10 @@ checks both the live registry digest and the operation-log digest index,
 so a structurally valid but unrecorded registry edit, or a hand-edited operation
 summary, is not treated as protected state. `registry status`, `registry
 authorize`, and mutation commands depend on that proof before treating the
-registry as ready. If a machine dies or the process is interrupted while a
-registry mutation lock exists, later mutations fail closed until
+registry as ready. Unreadable or corrupted registry JSON is reported as
+structured not-ready state and authorization returns `invalid-registry` instead
+of allowing automation to proceed. If a machine dies or the process is
+interrupted while a registry mutation lock exists, later mutations fail closed until
 `registry recover` validates the current registry and records the interrupted
 operation. Mutation locks include the registry digest observed before the
 mutation started; recovery records `resume_state` as
