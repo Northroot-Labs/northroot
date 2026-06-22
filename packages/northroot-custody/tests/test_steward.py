@@ -1,4 +1,5 @@
 import json
+import hashlib
 import os
 import shlex
 import tempfile
@@ -18,6 +19,10 @@ def write_fake_executable(directory: Path, name: str, body: str = "#!/bin/sh\nex
     path = directory / name
     path.write_text(body, encoding="utf-8")
     path.chmod(0o755)
+
+
+def file_sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
 class StewardTests(unittest.TestCase):
@@ -1014,6 +1019,10 @@ class StewardTests(unittest.TestCase):
                 sorted(schedule["generated_artifacts"]),
                 ["systemd_service", "systemd_timer"],
             )
+            for artifact in schedule["generated_artifacts"].values():
+                artifact_path = Path(str(artifact["path"]))
+                self.assertEqual(artifact["sha256"], file_sha256(artifact_path))
+            self.assertFalse(list((output_dir / "schedules").glob(".*.tmp")))
             self.assertTrue(Path(str(schedule["schedule_path"])).exists())
             self.assertIn(
                 "--execute",
@@ -1112,6 +1121,9 @@ class StewardTests(unittest.TestCase):
             )
             self.assertEqual(verify_schedule["operation"], "verify")
             self.assertEqual(sorted(verify_schedule["generated_artifacts"]), ["launchd_plist"])
+            verify_artifact = verify_schedule["generated_artifacts"]["launchd_plist"]
+            self.assertEqual(verify_artifact["sha256"], file_sha256(Path(str(verify_artifact["path"]))))
+            self.assertFalse(list((output_dir / "schedules").glob(".*.tmp")))
             launchd_template = (output_dir / "schedules" / "org.northroot.steward.plist").read_text(encoding="utf-8")
             self.assertIn("nr steward verify --state", launchd_template)
             self.assertIn("--execute", launchd_template)
