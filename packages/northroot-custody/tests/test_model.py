@@ -222,6 +222,24 @@ class CustodyModelTests(unittest.TestCase):
 
         self.assertIn("public_private_binding", {finding.code for finding in findings})
 
+    def test_repository_bindings_validate_noninteractive_availability_probe(self) -> None:
+        bindings = load_example("repository-bindings.redacted.example.json")
+        bindings["bindings"][0]["availability_check"] = {
+            "mode": "probe-command",
+            "command": ["storage-probe", "repository://local-primary"],
+            "interactive": False,
+            "timeout_seconds": 5,
+        }
+
+        self.assertEqual(model.validate_repository_bindings(bindings, public_safe=True), [])
+
+        bindings["bindings"][0]["availability_check"]["interactive"] = True
+        bindings["bindings"][0]["availability_check"]["timeout_seconds"] = 0
+        findings = model.validate_repository_bindings(bindings, public_safe=True)
+
+        self.assertIn("interactive_repository_availability_check", {finding.code for finding in findings})
+        self.assertIn("invalid_repository_availability_timeout", {finding.code for finding in findings})
+
     def test_blocked_private_bindings_fixture_is_valid_but_not_public_safe(self) -> None:
         bindings = load_example("private-bindings.blocked.example.json")
 
