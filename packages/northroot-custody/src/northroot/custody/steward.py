@@ -1707,6 +1707,18 @@ def _operation_lock_status(output_dir: Path) -> dict[str, Any]:
     }
 
 
+def _unreadable_operation_lock(lock_path: Path, error: str) -> dict[str, Any]:
+    return {
+        "schema_version": "northroot.steward.operation-lock.v0",
+        "unreadable": True,
+        "lock_path": str(lock_path),
+        "lock_sha256": _file_sha256(lock_path) if lock_path.is_file() else None,
+        "error": error,
+        "failure_policy": "fail-closed-record-summary-before-retry",
+        "resume_hint": "recover-operation will record and clear this unreadable lock before retry",
+    }
+
+
 def _dogfood_allowed_operations(output_dir: Path) -> list[dict[str, Any]]:
     del output_dir
     return [
@@ -3193,10 +3205,24 @@ def recover_operation(output_dir: Path) -> dict[str, Any]:
             "cleared_lock": False,
         }
     installation = load_installation(output_dir)
-    lock = model.load_json(lock_path)
+    lock_status = _operation_lock_status(output_dir)
+    lock_error = lock_status.get("error") if isinstance(lock_status.get("error"), str) else None
+    lock = (
+        _unreadable_operation_lock(lock_path, lock_error)
+        if lock_error is not None
+        else lock_status.get("lock")
+    )
+    if not isinstance(lock, dict):
+        lock = _unreadable_operation_lock(lock_path, "operation lock did not parse as an object")
     operation = str(lock.get("operation") or "run")
     if operation not in RECOVERABLE_OPERATION_SUMMARY_OPERATIONS:
         operation = "run"
+    failure_stage = "invalid-operation-lock" if lock.get("unreadable") else "interrupted-operation-lock"
+    error = (
+        f"previous delegated operation lock was unreadable: {lock.get('error')}"
+        if lock.get("unreadable")
+        else "previous delegated operation was interrupted before completion"
+    )
     operation_payload = {
         "schema_version": "northroot.steward.operation.v0",
         "profile_name": installation["profile_name"],
@@ -3208,8 +3234,8 @@ def recover_operation(output_dir: Path) -> dict[str, Any]:
         "executed": False,
         "snapshot_id": lock.get("snapshot_id"),
         "return_code": 75,
-        "error": "previous delegated operation was interrupted before completion",
-        "failure_stage": "interrupted-operation-lock",
+        "error": error,
+        "failure_stage": failure_stage,
         "restore_observation": None,
         "preflight": None,
         "authorization": lock.get("authorization"),
@@ -3218,7 +3244,11 @@ def recover_operation(output_dir: Path) -> dict[str, Any]:
     }
     summary_path = write_operation_summary(output_dir=output_dir, operation_payload=operation_payload)
     expected_operation_id = str(lock.get("operation_id")) if lock.get("operation_id") else None
-    _clear_operation_lock(lock_path, expected_operation_id=expected_operation_id)
+    if lock.get("unreadable"):
+        lock_path.unlink(missing_ok=True)
+        _fsync_directory(lock_path.parent)
+    else:
+        _clear_operation_lock(lock_path, expected_operation_id=expected_operation_id)
     return {
         "schema_version": "northroot.steward.operation-recovery.v0",
         "recovered": True,
@@ -3266,9 +3296,19 @@ def render_operation(
     if execute:
         current_lock_path = operation_lock_path(output_dir)
         if current_lock_path.exists():
-            operation_lock = model.load_json(current_lock_path)
+            lock_status = _operation_lock_status(output_dir)
+            lock_error = lock_status.get("error") if isinstance(lock_status.get("error"), str) else None
+            operation_lock = (
+                _unreadable_operation_lock(current_lock_path, lock_error)
+                if lock_error is not None
+                else lock_status.get("lock")
+            )
             return_code = 75
-            error = "delegated operation lock exists; run steward recover-operation before retrying"
+            error = (
+                "delegated operation lock is unreadable; run steward recover-operation before retrying"
+                if lock_error is not None
+                else "delegated operation lock exists; run steward recover-operation before retrying"
+            )
             failure_stage = "operation-lock"
         else:
             operation_lock = _operation_lock_payload(
@@ -3489,12 +3529,14 @@ def import_legacy_run_summaries(
     installation = load_installation(output_dir)
     lock_path = operation_lock_path(output_dir)
     if lock_path.exists():
+        lock_status = _operation_lock_status(output_dir)
         return {
             "schema_version": "northroot.steward.legacy-run-import-result.v0",
             "imported": False,
             "locked": True,
             "resume_required": True,
-            "lock": model.load_json(lock_path),
+            "lock": lock_status.get("lock"),
+            "lock_error": lock_status.get("error"),
             "detail": "steward has an unresolved operation lock; run steward recover-operation first",
         }
 
@@ -3621,6 +3663,8 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
         status = "delegated-operation-locked"
     elif execute_requested and not executed and operation_payload.get("failure_stage") == "interrupted-operation-lock":
         status = "delegated-interrupted-recovered"
+    elif execute_requested and not executed and operation_payload.get("failure_stage") == "invalid-operation-lock":
+        status = "delegated-invalid-lock-recovered"
     elif execute_requested and not executed and operation_payload.get("failure_stage") == "authorization":
         status = "delegated-authorization-denied"
     elif execute_requested and not executed and operation_payload.get("failure_stage") == "runtime-env":

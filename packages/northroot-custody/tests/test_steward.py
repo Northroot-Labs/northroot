@@ -94,6 +94,45 @@ class StewardTests(unittest.TestCase):
             recovered_summary = model.load_json(Path(str(recovered["run_summary_path"])))
             self.assertEqual(recovered_summary["snapshot_result"]["operation"], "legacy-run-import")
 
+    def test_unreadable_operation_lock_fails_closed_and_recovers_with_summary(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "steward"
+            steward.init_steward(
+                inventory_path=EXAMPLES / "workspace-inventory.example.json",
+                policy_path=EXAMPLES / "custody-policy.example.json",
+                output_dir=output_dir,
+            )
+            legacy_import = model.load_json(EXAMPLES / "legacy-run-import.redacted.example.json")
+            lock_path = steward.operation_lock_path(output_dir)
+            lock_path.write_text("{not-json\n", encoding="utf-8")
+
+            locked_import = steward.import_legacy_run_summaries(output_dir, legacy_import, public_safe=True)
+            blocked_operation = steward.render_operation(output_dir, "verify", execute=True)
+
+            self.assertFalse(locked_import["imported"])
+            self.assertTrue(locked_import["locked"])
+            self.assertIsNone(locked_import["lock"])
+            self.assertIsInstance(locked_import["lock_error"], str)
+            self.assertEqual(blocked_operation["return_code"], 75)
+            self.assertEqual(blocked_operation["failure_stage"], "operation-lock")
+            self.assertTrue(blocked_operation["operation_lock"]["unreadable"])
+            blocked_summary = model.load_json(Path(str(blocked_operation["run_summary_path"])))
+            self.assertEqual(blocked_summary["status"], "delegated-operation-locked")
+            self.assertTrue(blocked_summary["snapshot_result"]["operation_lock"]["unreadable"])
+            self.assertTrue(lock_path.exists())
+
+            recovered = steward.recover_operation(output_dir)
+
+            self.assertTrue(recovered["recovered"])
+            self.assertTrue(recovered["cleared_lock"])
+            self.assertFalse(lock_path.exists())
+            recovery_summary = model.load_json(Path(str(recovered["run_summary_path"])))
+            self.assertEqual(recovery_summary["status"], "delegated-invalid-lock-recovered")
+            self.assertEqual(recovery_summary["snapshot_result"]["failure_stage"], "invalid-operation-lock")
+            self.assertTrue(recovery_summary["snapshot_result"]["operation_lock"]["unreadable"])
+            self.assertTrue(steward.render_run_summary_integrity(output_dir)["ok"])
+            self.assertFalse(steward.recover_operation(output_dir)["recovered"])
+
     def test_state_verification_and_report_include_registry_policy_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "steward"
