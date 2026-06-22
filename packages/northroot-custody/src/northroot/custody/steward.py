@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 from xml.sax.saxutils import escape as xml_escape
 
-from . import model
+from . import model, registry
 from .registry import authorize_operation
 
 
@@ -2361,13 +2361,71 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
     }
 
 
-def render_state_verification(output_dir: Path, *, snapshot_id: str | None = None) -> dict[str, Any]:
+def _render_registry_context(
+    registry_state: Path | None,
+    *,
+    project_id: str | None,
+    object_id: str | None,
+    operation: str,
+) -> dict[str, Any] | None:
+    if registry_state is None:
+        return None
+    status = registry.registry_status(registry_state, public_safe=True)
+    authorization = None
+    missing_project_id = bool(object_id and not project_id)
+    if project_id is not None:
+        authorization = authorize_operation(
+            registry_state,
+            operation=operation,
+            project_id=project_id,
+            object_id=object_id,
+            public_safe=True,
+        )
+    ready = bool(status["ready"] and not missing_project_id and (authorization is None or authorization["allowed"]))
+    if not status["ready"]:
+        decision = "invalid-registry"
+    elif missing_project_id:
+        decision = "missing-project-id"
+    elif authorization is not None:
+        decision = str(authorization["decision"])
+    else:
+        decision = "registry-ready"
+    return {
+        "schema_version": "northroot.steward.registry-context.v0",
+        "operation": operation,
+        "ready": ready,
+        "decision": decision,
+        "registry_state": str(registry_state),
+        "project_id": project_id,
+        "object_id": object_id,
+        "registry_ready": bool(status["ready"]),
+        "protected_state_ok": bool(status.get("protected_state_ok")),
+        "resume_required": bool(status.get("resume_required")),
+        "status": status,
+        "authorization": authorization,
+    }
+
+
+def render_state_verification(
+    output_dir: Path,
+    *,
+    snapshot_id: str | None = None,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> dict[str, Any]:
     status = render_status(output_dir)
     preflight = render_preflight(output_dir)
     capabilities = render_capabilities(output_dir)
     evidence_report = render_evidence_report(output_dir, snapshot_id=snapshot_id)
     run_summary_integrity = evidence_report["run_summary_integrity"]
     operation_lock = _operation_lock_status(output_dir)
+    registry_context = _render_registry_context(
+        registry_state,
+        project_id=project_id,
+        object_id=object_id,
+        operation="verify-state",
+    )
     schedule = status["schedule"]
     failed_codes = sorted(
         str(check["code"])
@@ -2473,6 +2531,24 @@ def render_state_verification(output_dir: Path, *, snapshot_id: str | None = Non
             code=None if run_summary_integrity["ok"] else "run_summary_integrity_failed",
         ),
     ]
+    if registry_context is not None:
+        registry_code = None
+        if not registry_context["registry_ready"]:
+            registry_code = "registry_not_ready"
+        elif registry_context["decision"] == "missing-project-id":
+            registry_code = "registry_project_required"
+        elif not registry_context["ready"]:
+            registry_code = "registry_authorization_failed"
+        checks.append(
+            _check(
+                "registry_context",
+                bool(registry_context["ready"]),
+                "service registry is ready for verify-state"
+                if registry_context["ready"]
+                else f"service registry proof failed: {registry_context['decision']}",
+                code=registry_code,
+            )
+        )
     if retention_decision is not None:
         checks.append(
             _check(
@@ -2485,16 +2561,21 @@ def render_state_verification(output_dir: Path, *, snapshot_id: str | None = Non
             )
         )
     ready = all(check["status"] == "ok" for check in checks)
+    registry_allows_execution = registry_context is None or bool(registry_context["ready"])
     return {
         "schema_version": "northroot.steward.state-verification.v0",
         "profile_name": status["profile_name"],
         "ready": ready,
-        "safe_to_execute": bool(preflight["ready"] and not operation_lock["locked"]),
-        "safe_to_install_schedule": bool(preflight["ready"] and schedule.get("configured") and not operation_lock["locked"]),
+        "safe_to_execute": bool(preflight["ready"] and not operation_lock["locked"] and registry_allows_execution),
+        "safe_to_install_schedule": bool(
+            preflight["ready"] and schedule.get("configured") and not operation_lock["locked"] and registry_allows_execution
+        ),
         "preflight_ready": bool(preflight["ready"]),
         "preflight_failed_codes": failed_codes,
         "operation_lock": operation_lock,
         "operation_resume_required": bool(operation_lock["resume_required"]),
+        "registry_context": registry_context,
+        "registry_ready": registry_context["ready"] if registry_context is not None else None,
         "schedule_configured": bool(schedule.get("configured")),
         "schedule_installed": bool(schedule.get("installed")),
         "latest_run_summary_path": status["latest_run_summary_path"],
@@ -2507,11 +2588,24 @@ def render_state_verification(output_dir: Path, *, snapshot_id: str | None = Non
     }
 
 
-def render_report(output_dir: Path, *, snapshot_id: str | None = None) -> dict[str, Any]:
+def render_report(
+    output_dir: Path,
+    *,
+    snapshot_id: str | None = None,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> dict[str, Any]:
     status = render_status(output_dir)
     preflight = render_preflight(output_dir)
     evidence_report = render_evidence_report(output_dir, snapshot_id=snapshot_id)
     operation_lock = _operation_lock_status(output_dir)
+    registry_context = _render_registry_context(
+        registry_state,
+        project_id=project_id,
+        object_id=object_id,
+        operation="report",
+    )
     offsite_report = render_offsite_report(output_dir, snapshot_id=snapshot_id) if snapshot_id else None
     retention_decision = (
         evaluate_retention(
@@ -2533,6 +2627,15 @@ def render_report(output_dir: Path, *, snapshot_id: str | None = None) -> dict[s
         recommended_actions.append("fix preflight failures before executing scheduled custody operations")
     if operation_lock["locked"]:
         recommended_actions.append("run steward recover-operation before retrying steward execution")
+    if registry_context is not None and not registry_context["ready"]:
+        if registry_context["resume_required"]:
+            recommended_actions.append("recover the service registry before relying on steward policy authorization")
+        elif not registry_context["registry_ready"]:
+            recommended_actions.append("repair service registry integrity before relying on steward policy authorization")
+        elif registry_context["decision"] == "missing-project-id":
+            recommended_actions.append("provide project_id when checking object-scoped steward registry authorization")
+        else:
+            recommended_actions.append("update service registry permissions or request human clearance before steward operations")
     if retention_decision is not None and retention_decision.get("missing_evidence"):
         missing = ", ".join(str(item) for item in retention_decision["missing_evidence"])
         recommended_actions.append(f"collect required snapshot evidence before prune/offload: {missing}")
@@ -2551,6 +2654,8 @@ def render_report(output_dir: Path, *, snapshot_id: str | None = None) -> dict[s
         "preflight_ready": bool(preflight["ready"]),
         "operation_lock": operation_lock,
         "operation_resume_required": bool(operation_lock["resume_required"]),
+        "registry_context": registry_context,
+        "registry_ready": registry_context["ready"] if registry_context is not None else None,
         "schedule": status["schedule"],
         "latest_run_summary_path": status["latest_run_summary_path"],
         "retention_evidence_ready": retention_decision["allowed"] if retention_decision is not None else None,

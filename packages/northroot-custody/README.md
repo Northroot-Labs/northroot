@@ -100,6 +100,14 @@ nr-custody steward command-plan \
 nr-custody steward preflight --state /tmp/northroot-steward-example
 nr-custody steward report --state /tmp/northroot-steward-example --snapshot-id snap-001
 nr-custody steward verify-state --state /tmp/northroot-steward-example --snapshot-id snap-001
+nr-custody steward verify-state \
+  --state /tmp/northroot-steward-example \
+  --registry-state /tmp/northroot-steward-registry \
+  --project-id project/example
+nr-custody steward report \
+  --state /tmp/northroot-steward-example \
+  --registry-state /tmp/northroot-steward-registry \
+  --project-id project/example
 nr-custody steward run --state /tmp/northroot-steward-example --snapshot-id snap-001
 nr-custody steward run \
   --state /tmp/northroot-steward-example \
@@ -197,6 +205,12 @@ document. With `--snapshot-id`, it also evaluates whether recorded evidence is
 sufficient for that snapshot's retention gate. It does not execute backups,
 install schedules, run restore drills, or record evidence.
 
+Pass `--registry-state` to include service-registry integrity in the aggregate
+state check. Pass `--project-id` and optional `--object-id` to also prove the
+registry authorizes `verify-state` for that project/object context. A tampered,
+unindexed, locked, or unauthorized registry makes the aggregate check fail
+closed.
+
 Steward run summaries are indexed in `run-summaries/index.json` with
 `northroot.steward.run-summary-index.v0` digest entries. Evidence reports only
 trust summaries that match this index, and `steward verify-state` fails closed
@@ -208,7 +222,9 @@ steward-recorded state instead of loose JSON files.
 preflight, schedule state, evidence, offsite copy status, retention readiness,
 and recommended next actions into `northroot.steward.report.v0`. It is not a
 gate and does not execute backups, install schedules, run restore drills, or
-record evidence.
+record evidence. It accepts the same registry context flags as `verify-state`
+and includes registry readiness, protected-state status, authorization decision,
+and repair guidance when the policy proof is not usable.
 
 `steward registry` is the durable state-management surface for the service
 registry. `registry init` validates and installs a public-safe registry

@@ -94,6 +94,84 @@ class StewardTests(unittest.TestCase):
             recovered_summary = model.load_json(Path(str(recovered["run_summary_path"])))
             self.assertEqual(recovered_summary["snapshot_result"]["operation"], "legacy-run-import")
 
+    def test_state_verification_and_report_include_registry_policy_context(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "steward"
+            registry_dir = Path(temp_dir) / "registry"
+            steward.init_steward(
+                inventory_path=EXAMPLES / "workspace-inventory.example.json",
+                policy_path=EXAMPLES / "custody-policy.example.json",
+                output_dir=output_dir,
+                secret_bindings_path=EXAMPLES / "secret-bindings.redacted.example.json",
+                repository_bindings_path=EXAMPLES / "repository-bindings.redacted.example.json",
+            )
+            registry.initialize_registry(
+                registry_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            fake_bin = Path(temp_dir) / "bin"
+            fake_bin.mkdir()
+            write_fake_executable(fake_bin, "resticprofile")
+            write_fake_executable(fake_bin, "op")
+
+            with mock.patch.dict(
+                os.environ,
+                {"PATH": str(fake_bin), "OP_SERVICE_ACCOUNT_TOKEN": "dummy"},
+                clear=True,
+            ):
+                verified = steward.render_state_verification(
+                    output_dir,
+                    registry_state=registry_dir,
+                    project_id="project/example",
+                    object_id="secrets/restic-env",
+                )
+                report = steward.render_report(
+                    output_dir,
+                    registry_state=registry_dir,
+                    project_id="project/example",
+                )
+
+            self.assertTrue(verified["ready"])
+            self.assertTrue(verified["safe_to_execute"])
+            self.assertTrue(verified["registry_context"]["ready"])
+            self.assertEqual(verified["registry_context"]["authorization"]["decision"], "allowed")
+            self.assertTrue(report["registry_ready"])
+            self.assertEqual(report["registry_context"]["authorization"]["decision"], "allowed")
+
+            registry_path = registry.registry_path(registry_dir)
+            tampered_registry = model.load_json(registry_path)
+            tampered_registry["service_id"] = "steward/tampered"
+            registry_path.write_text(json.dumps(tampered_registry, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+            with mock.patch.dict(
+                os.environ,
+                {"PATH": str(fake_bin), "OP_SERVICE_ACCOUNT_TOKEN": "dummy"},
+                clear=True,
+            ):
+                tampered_verified = steward.render_state_verification(
+                    output_dir,
+                    registry_state=registry_dir,
+                    project_id="project/example",
+                )
+                tampered_report = steward.render_report(
+                    output_dir,
+                    registry_state=registry_dir,
+                    project_id="project/example",
+                )
+
+            self.assertFalse(tampered_verified["ready"])
+            self.assertFalse(tampered_verified["safe_to_execute"])
+            self.assertFalse(tampered_verified["registry_context"]["registry_ready"])
+            self.assertIn(
+                "registry_not_ready",
+                {check["code"] for check in tampered_verified["checks"] if check["code"]},
+            )
+            self.assertIn(
+                "repair service registry integrity before relying on steward policy authorization",
+                tampered_report["recommended_actions"],
+            )
+
     def test_init_status_run_and_schedule_are_delegated(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "steward"
@@ -424,6 +502,7 @@ class StewardTests(unittest.TestCase):
                 "run steward recover-operation before retrying steward execution",
                 locked_report["recommended_actions"],
             )
+
             locked_execute_plan = steward.render_command_plan(output_dir, operation="verify", execute=True)
             self.assertFalse(locked_execute_plan["ok"])
             self.assertIn(
