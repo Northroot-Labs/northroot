@@ -355,9 +355,11 @@ unit/timer drifts after creation. The `schedule.json` manifest itself is
 indexed in `schedules/schedule-index.json` with
 `northroot.steward.schedule-index.v0`, and schedule install, uninstall, delete,
 and preflight fail closed if that manifest is unindexed, missing, or
-digest-mismatched. Use `schedule delete --force` only for explicit cleanup of
-stale local schedule files after the platform registration has already been
-handled.
+digest-mismatched. If generated scheduler files exist without a schedule
+manifest, steward reports `orphaned-artifacts` and requires
+`schedule delete --force` after the platform registration state has been
+confirmed. Use `schedule delete --force` only for explicit cleanup of stale
+local schedule files after the platform registration has already been handled.
 
 `steward capabilities` is the agent-facing contract. Agents should inspect that
 manifest and call the listed custody operations instead of constructing direct
