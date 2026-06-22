@@ -1903,7 +1903,7 @@ def validate_agent_delegation_policy(payload: dict[str, Any], *, public_safe: bo
                     _finding("required_metadata", f"{agent_path}.required_metadata", "required_metadata must be an object")
                 )
             else:
-                for key in ("author_identity", "committer_identity", "provenance_headers"):
+                for key in ("author_identity", "committer_identity", "provenance_headers", "commit_trailers"):
                     if key == "provenance_headers":
                         if not _is_string_list(metadata.get(key)):
                             findings.append(
@@ -1913,6 +1913,65 @@ def validate_agent_delegation_policy(payload: dict[str, Any], *, public_safe: bo
                                     "provenance_headers must be a non-empty string list",
                                 )
                             )
+                        else:
+                            required_headers = {
+                                "Agent-Id",
+                                "Agent-Policy-Id",
+                                "Agent-Branch",
+                                "Agent-Verification",
+                                "Agent-Coauthorship",
+                            }
+                            missing_headers = sorted(required_headers - set(str(item) for item in metadata[key]))
+                            if missing_headers:
+                                findings.append(
+                                    _finding(
+                                        "missing_provenance_headers",
+                                        f"{agent_path}.required_metadata.provenance_headers",
+                                        f"missing required provenance headers: {', '.join(missing_headers)}",
+                                    )
+                                )
+                    elif key == "commit_trailers":
+                        trailers = metadata.get(key)
+                        if not isinstance(trailers, dict):
+                            findings.append(
+                                _finding(
+                                    "commit_trailers",
+                                    f"{agent_path}.required_metadata.commit_trailers",
+                                    "commit_trailers must be an object",
+                                )
+                            )
+                        else:
+                            for trailer_key in (
+                                "Agent-Id",
+                                "Agent-Policy-Id",
+                                "Agent-Branch",
+                                "Agent-Verification",
+                                "Agent-Coauthorship",
+                            ):
+                                if not _is_string(trailers.get(trailer_key)):
+                                    findings.append(
+                                        _finding(
+                                            "missing_commit_trailer",
+                                            f"{agent_path}.required_metadata.commit_trailers.{trailer_key}",
+                                            f"{trailer_key} trailer is required",
+                                        )
+                                    )
+                            if trailers.get("Agent-Id") != agent_id:
+                                findings.append(
+                                    _finding(
+                                        "agent_id_trailer_mismatch",
+                                        f"{agent_path}.required_metadata.commit_trailers.Agent-Id",
+                                        "Agent-Id trailer must match registered agent_id",
+                                    )
+                                )
+                            if trailers.get("Agent-Policy-Id") != payload.get("policy_id"):
+                                findings.append(
+                                    _finding(
+                                        "policy_id_trailer_mismatch",
+                                        f"{agent_path}.required_metadata.commit_trailers.Agent-Policy-Id",
+                                        "Agent-Policy-Id trailer must match policy_id",
+                                    )
+                                )
                     elif not _is_string(metadata.get(key)):
                         findings.append(
                             _finding("missing_string", f"{agent_path}.required_metadata.{key}", f"{key} is required")
@@ -1923,6 +1982,16 @@ def validate_agent_delegation_policy(payload: dict[str, Any], *, public_safe: bo
                             "invalid_coauthorship_policy",
                             f"{agent_path}.required_metadata.coauthorship_policy",
                             f"coauthorship_policy must be one of {sorted(AGENT_COAUTHORSHIP_POLICIES)}",
+                        )
+                    )
+                elif isinstance(metadata.get("commit_trailers"), dict) and (
+                    metadata["commit_trailers"].get("Agent-Coauthorship") != metadata.get("coauthorship_policy")
+                ):
+                    findings.append(
+                        _finding(
+                            "coauthorship_trailer_mismatch",
+                            f"{agent_path}.required_metadata.commit_trailers.Agent-Coauthorship",
+                            "Agent-Coauthorship trailer must match coauthorship_policy",
                         )
                     )
 

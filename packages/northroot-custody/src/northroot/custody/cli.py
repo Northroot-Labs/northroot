@@ -84,12 +84,20 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     command_plan.add_argument("--source")
     command_plan.add_argument("--detail")
     command_plan.add_argument("--artifact-ref")
+    command_plan.add_argument("--json")
     command_plan.add_argument("--force", action="store_true")
     command_plan.add_argument("--use-recorded-evidence", action="store_true")
     command_plan.add_argument("--skip-preflight", action="store_true")
     command_plan.add_argument("--registry-state")
     command_plan.add_argument("--project-id")
     command_plan.add_argument("--object-id")
+    command_plan.add_argument("--agent-id", default=steward.DEFAULT_DOGFOOD_AGENT_ID)
+    command_plan.add_argument("--branch")
+    command_plan.add_argument("--base-branch")
+    command_plan.add_argument("--commit-message")
+    command_plan.add_argument("--pr-title")
+    command_plan.add_argument("--pr-body")
+    command_plan.add_argument("--remote", default="origin")
 
     report = steward_sub.add_parser("report", help="Render a consolidated read-only custody report.")
     report.add_argument("--state", required=True)
@@ -310,12 +318,20 @@ def main(argv: Sequence[str] | None = None) -> int:
             source=args.source,
             detail=args.detail,
             artifact_ref=args.artifact_ref,
+            json_path=Path(args.json) if args.json else None,
             force=args.force,
             use_recorded_evidence=args.use_recorded_evidence,
             skip_preflight=args.skip_preflight,
             registry_state=Path(args.registry_state) if args.registry_state else None,
             project_id=args.project_id,
             object_id=args.object_id,
+            agent_id=args.agent_id,
+            branch=args.branch,
+            base_branch=args.base_branch,
+            commit_message=args.commit_message,
+            pr_title=args.pr_title,
+            pr_body=args.pr_body,
+            remote=args.remote,
         )
         write_json(plan)
         return 0 if plan["ok"] else 1

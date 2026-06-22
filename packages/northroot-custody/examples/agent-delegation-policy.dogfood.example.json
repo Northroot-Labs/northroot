@@ -36,8 +36,16 @@
           "Agent-Id",
           "Agent-Policy-Id",
           "Agent-Branch",
-          "Agent-Verification"
-        ]
+          "Agent-Verification",
+          "Agent-Coauthorship"
+        ],
+        "commit_trailers": {
+          "Agent-Id": "agent:codex",
+          "Agent-Policy-Id": "agent-delegation/dogfood-default",
+          "Agent-Branch": "<delegated-branch>",
+          "Agent-Verification": "<verification-summary>",
+          "Agent-Coauthorship": "agent-authored"
+        }
       }
     }
   ],

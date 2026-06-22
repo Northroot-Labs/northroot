@@ -366,6 +366,36 @@ class CliTests(unittest.TestCase):
                             "--state",
                             str(output_dir),
                             "--operation",
+                            "import-legacy-runs",
+                            "--json",
+                            str(EXAMPLES / "legacy-run-import.redacted.example.json"),
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "command-plan",
+                            "--state",
+                            str(output_dir),
+                            "--operation",
+                            "branch.create",
+                            "--branch",
+                            "codex/cli-dogfood-policy",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "command-plan",
+                            "--state",
+                            str(output_dir),
+                            "--operation",
                             "restore",
                             "--snapshot-id",
                             "snap-001",

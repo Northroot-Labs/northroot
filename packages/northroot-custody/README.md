@@ -238,6 +238,15 @@ explicit agent identity metadata. It still prohibits protected-branch pushes,
 protected-branch merges, workflow permission escalation, long-lived signing key
 access, and human-author impersonation.
 
+`steward capabilities` publishes that same default under `agent_contract`, and
+`steward command-plan` can plan those dogfood operations without a separate
+policy argument. For example, a registered Codex agent can request
+`--operation branch.create --branch codex/<topic>`, `--operation commit.create`
+with a commit message and verification summary, `--operation push.branch`, or
+draft PR operations. The returned plan includes required agent provenance
+trailers and still refuses protected branches or unregistered agents. Draft PRs
+remain draft until final human review clearance.
+
 Delegated `steward run`, `steward verify`, `steward restore`, and
 `steward restore-drill` accept `--registry-state`, `--project-id`, and optional
 `--object-id`. When those arguments are supplied with `--execute`, registry
@@ -249,6 +258,9 @@ Executed delegated operations are guarded by `steward-operation.lock.json` in
 the steward state directory. A stale lock blocks later execution with
 `delegated-operation-locked`; run `steward recover-operation --state ...` to
 record `delegated-interrupted-recovered` and clear the lock before retrying.
+`steward verify-state`, `steward report`, and `steward command-plan` also fail
+closed around that lock so automation cannot treat interrupted steward state as
+safe to resume blindly.
 
 `steward restore` is the bounded recovery path for an actual restore. It
 requires both `--snapshot-id` and `--target`, delegates to `resticprofile`, and
@@ -298,7 +310,9 @@ accepts a constrained operation name plus typed inputs, then returns
 warnings, side-effect metadata, and preflight readiness when `--execute` is
 requested. Agent runtimes should prefer this over hand-binding templates. A
 shell is not required for custody operations, and agents must not shell-join the
-returned argv.
+returned argv. The operation set includes steward custody operations, sanitized
+legacy run imports, and the default dogfood branch/commit/push/draft-PR
+workflow for registered agents.
 
 When a policy names multiple destinations, steward renders the first destination
 as the primary delegated `resticprofile` repository. Additional destinations are

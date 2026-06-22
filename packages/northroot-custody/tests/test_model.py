@@ -197,11 +197,13 @@ class CustodyModelTests(unittest.TestCase):
         policy = load_example("agent-delegation-policy.dogfood.example.json")
         policy["scope"]["delegated_branch_prefixes"] = ["main/"]
         policy["prohibited_operations"].remove("impersonate-human-author")
+        del policy["registered_agents"][0]["required_metadata"]["commit_trailers"]["Agent-Coauthorship"]
 
         findings = model.validate_agent_delegation_policy(policy, public_safe=True)
 
         self.assertIn("protected_branch_prefix", {finding.code for finding in findings})
         self.assertIn("missing_required_prohibitions", {finding.code for finding in findings})
+        self.assertIn("missing_commit_trailer", {finding.code for finding in findings})
 
     def test_public_policy_rejects_real_secret_reference(self) -> None:
         policy = load_example("custody-policy.example.json")
