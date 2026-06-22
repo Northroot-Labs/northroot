@@ -165,14 +165,19 @@ On `main`, the following are enforced:
 ## Agent Delegation Policy
 
 Agents **may:**
-- Create branches under `agent/*`
+- Create branches under `agent/*` or environment-specific delegated prefixes
+  such as `codex/*`
+- Commit frequently to delegated branches as durable checkpoints
 - Push draft commits to those branches
 - Open/update PRs
+- Continue work on draft PRs until the change is ready for final human review
+  and clearance
 
 Agents **must not:**
 - Merge to protected branches
 - Hold or access long-lived signing keys
 - Modify branch protection or required checks
+- Blur human and agent authorship metadata
 
 Agent tokens **must** be scoped to:
 - Read repo + write branches + PRs
