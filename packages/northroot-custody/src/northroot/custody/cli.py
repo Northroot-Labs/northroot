@@ -52,6 +52,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     verify_state = steward_sub.add_parser("verify-state", help="Verify steward state readiness without side effects.")
     verify_state.add_argument("--state", required=True)
     verify_state.add_argument("--snapshot-id", help="Snapshot id used to evaluate recorded retention evidence.")
+    verify_state.add_argument("--registry-state")
+    verify_state.add_argument("--project-id")
+    verify_state.add_argument("--object-id")
 
     capabilities = steward_sub.add_parser("capabilities", help="Print agent-safe steward capability manifest.")
     capabilities.add_argument("--state", required=True)
@@ -102,6 +105,9 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     report = steward_sub.add_parser("report", help="Render a consolidated read-only custody report.")
     report.add_argument("--state", required=True)
     report.add_argument("--snapshot-id", help="Snapshot id used to include snapshot-scoped evidence and retention state.")
+    report.add_argument("--registry-state")
+    report.add_argument("--project-id")
+    report.add_argument("--object-id")
 
     evidence = steward_sub.add_parser("evidence", help="Report evidence derived from steward run summaries.")
     evidence_sub = evidence.add_subparsers(dest="evidence_command", required=True)
@@ -289,7 +295,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(preflight)
         return 0 if preflight["ready"] else 1
     if args.command == "steward" and args.steward_command == "verify-state":
-        verification = steward.render_state_verification(Path(args.state), snapshot_id=args.snapshot_id)
+        verification = steward.render_state_verification(
+            Path(args.state),
+            snapshot_id=args.snapshot_id,
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
+        )
         write_json(verification)
         return 0 if verification["ready"] else 1
     if args.command == "steward" and args.steward_command == "capabilities":
@@ -339,7 +351,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(plan)
         return 0 if plan["ok"] else 1
     if args.command == "steward" and args.steward_command == "report":
-        write_json(steward.render_report(Path(args.state), snapshot_id=args.snapshot_id))
+        write_json(
+            steward.render_report(
+                Path(args.state),
+                snapshot_id=args.snapshot_id,
+                registry_state=Path(args.registry_state) if args.registry_state else None,
+                project_id=args.project_id,
+                object_id=args.object_id,
+            )
+        )
         return 0
     if args.command == "steward" and args.steward_command == "evidence" and args.evidence_command == "report":
         write_json(steward.render_evidence_report(Path(args.state), snapshot_id=args.snapshot_id))

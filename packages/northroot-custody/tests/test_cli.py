@@ -537,6 +537,21 @@ class CliTests(unittest.TestCase):
                         cli.main(
                             [
                                 "steward",
+                                "verify-state",
+                                "--state",
+                                str(output_dir),
+                                "--registry-state",
+                                str(registry_dir),
+                                "--project-id",
+                                "project/example",
+                            ]
+                        ),
+                        0,
+                    )
+                    self.assertEqual(
+                        cli.main(
+                            [
+                                "steward",
                                 "verify",
                                 "--state",
                                 str(output_dir),
