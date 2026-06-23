@@ -257,6 +257,10 @@ whether the interrupted write appears to have landed. Recovery removes the lock
 only when the registry still validates, or when initialization stopped before
 the registry file was written and can be retried cleanly.
 
+`steward registry bind-source` attaches a source destination to the referenced
+project as part of the same atomic registry mutation. Callers do not need to
+hand-edit `project.source_destination_ids` after adding a source binding.
+
 `steward registry topology` is a read-only readiness report for project
 destination wiring. It expands registered projects into source destinations,
 destination bindings, replica targets, required replica evidence, object
@@ -265,6 +269,10 @@ non-zero when the registry is locked or invalid, when the requested project is
 unknown, when a project has no usable source destination, or when replica
 readiness lacks required evidence or the registry-level
 `on_disconnected_storage` / `partial_run_handling` policy is not fail-closed.
+It also checks that each source binding belongs to the project that references
+it, uses a source-compatible destination role, uses the project permission set,
+and only includes objects in that project; replica targets must use a replica
+destination role and require `verified_offsite_copy` evidence.
 It does not probe storage or copy bytes; private deployments still use
 repository binding availability probes and external copy monitors for live
 storage availability.

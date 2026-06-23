@@ -630,12 +630,24 @@ def registry_topology_report(
     for project in projects:
         if not isinstance(project, dict):
             continue
+        project_id_value = str(project.get("project_id"))
+        project_object_ids = {
+            str(item)
+            for item in project.get("object_ids", [])
+            if isinstance(item, str)
+        }
         project_source_ids = [str(item) for item in project.get("source_destination_ids", []) if isinstance(item, str)]
         source_reports: list[dict[str, Any]] = []
         for source_id in project_source_ids:
             source = source_destinations_by_id.get(source_id)
             destination = destinations_by_id.get(str(source.get("destination_id"))) if source else None
             object_ids = [str(item) for item in source.get("object_ids", [])] if source else []
+            source_project_matches = bool(source and source.get("project_id") == project_id_value)
+            source_objects_in_project = bool(source) and all(object_id in project_object_ids for object_id in object_ids)
+            source_permission_matches = bool(source and source.get("permission_set_ref") == project.get("permission_set_ref"))
+            source_destination_role_ok = bool(
+                destination and destination.get("role") in {"primary", "source"}
+            )
             source_replica_reports: list[dict[str, Any]] = []
             for replica in replicas:
                 if replica.get("source_destination_id") != source_id:
@@ -646,7 +658,8 @@ def registry_topology_report(
                 ]
                 replica_ready = bool(
                     replica_destination
-                    and required_evidence
+                    and replica_destination.get("role") == "replica"
+                    and "verified_offsite_copy" in required_evidence
                     and fail_closed_storage
                     and never_prune_without_decision
                 )
@@ -663,13 +676,26 @@ def registry_topology_report(
                         "ready": replica_ready,
                         "readiness": {
                             "destination_registered": replica_destination is not None,
+                            "destination_role": replica_destination.get("role") if replica_destination else None,
+                            "destination_role_is_replica": bool(
+                                replica_destination and replica_destination.get("role") == "replica"
+                            ),
                             "required_evidence_declared": bool(required_evidence),
+                            "verified_offsite_copy_required": "verified_offsite_copy" in required_evidence,
                             "storage_failure_policy": resume_policy.get("on_disconnected_storage"),
                             "partial_run_handling": partial_run_handling,
                         },
                     }
                 )
-            source_ready = bool(source and destination and object_ids)
+            source_ready = bool(
+                source
+                and destination
+                and object_ids
+                and source_project_matches
+                and source_objects_in_project
+                and source_permission_matches
+                and source_destination_role_ok
+            )
             if not source_ready:
                 issue_count += 1
             source_reports.append(
@@ -693,8 +719,13 @@ def registry_topology_report(
                     "ready": source_ready,
                     "readiness": {
                         "source_registered": source is not None,
+                        "source_project_matches": source_project_matches,
                         "destination_registered": destination is not None,
+                        "destination_role": destination.get("role") if destination else None,
+                        "destination_role_is_source_compatible": source_destination_role_ok,
+                        "permission_set_matches_project": source_permission_matches,
                         "object_count": len(object_ids),
+                        "objects_in_project": source_objects_in_project,
                     },
                 }
             )
@@ -1203,6 +1234,17 @@ def bind_source_destination(
 ) -> dict[str, Any]:
     def mutator(registry: dict[str, Any]) -> None:
         _append_unique(registry.setdefault("source_destinations", []), "source_destination_id", source_destination)
+        source_id = source_destination.get("source_destination_id")
+        project_id = source_destination.get("project_id")
+        for project in registry.setdefault("projects", []):
+            if not isinstance(project, dict) or project.get("project_id") != project_id:
+                continue
+            existing = project.setdefault("source_destination_ids", [])
+            if not isinstance(existing, list):
+                raise ValueError(f"project source_destination_ids must be a list: {project_id}")
+            if source_id not in existing:
+                existing.append(source_id)
+            break
 
     return mutate_registry(
         state_dir,
