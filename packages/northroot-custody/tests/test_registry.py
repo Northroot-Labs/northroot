@@ -318,6 +318,78 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(topology["issue_count"], 1)
             self.assertEqual(topology["projects"][0]["source_destinations"], [])
 
+    def test_bind_source_destination_links_project_topology(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            service_registry = model.load_json(EXAMPLES / "service-registry.example.json")
+            source_destination = service_registry["source_destinations"][0]
+            replica = service_registry["replicas"][0]
+            service_registry["projects"][0]["source_destination_ids"] = []
+            service_registry["source_destinations"] = []
+            service_registry["replicas"] = []
+            registry.initialize_registry(state_dir, service_registry, public_safe=True)
+
+            before_topology = registry.registry_topology_report(
+                state_dir,
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertFalse(before_topology["ready"])
+
+            bound = registry.bind_source_destination(state_dir, source_destination, public_safe=True)
+
+            self.assertTrue(bound["mutated"])
+            linked_registry = registry.load_registry(state_dir)
+            self.assertEqual(
+                linked_registry["projects"][0]["source_destination_ids"],
+                ["source/project-example-primary"],
+            )
+
+            self.assertTrue(registry.add_replica(state_dir, replica, public_safe=True)["mutated"])
+            topology = registry.registry_topology_report(
+                state_dir,
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertTrue(topology["ready"])
+            self.assertTrue(topology["projects"][0]["source_destinations"][0]["readiness"]["objects_in_project"])
+
+    def test_registry_topology_detects_source_objects_outside_project(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            service_registry = model.load_json(EXAMPLES / "service-registry.example.json")
+            service_registry["objects"].append(
+                {
+                    "object_id": "artifact/unscoped-source-object",
+                    "object_type": "artifact-dir",
+                    "visibility": "private",
+                    "storage_binding": "artifact://unscoped-source-object",
+                    "custody_policy": {
+                        "backup": "delegated",
+                        "verification": "sample-restore",
+                    },
+                    "redaction_policy": {
+                        "public_summary": "object-id-and-status",
+                    },
+                    "restore_class": "full-restore",
+                }
+            )
+            service_registry["source_destinations"][0]["object_ids"].append("artifact/unscoped-source-object")
+            registry.initialize_registry(state_dir, service_registry, public_safe=True)
+
+            status = registry.registry_status(state_dir, public_safe=True)
+            topology = registry.registry_topology_report(
+                state_dir,
+                project_id="project/example",
+                public_safe=True,
+            )
+
+            self.assertTrue(status["ready"])
+            self.assertFalse(topology["ready"])
+            self.assertEqual(topology["decision"], "topology-incomplete")
+            readiness = topology["projects"][0]["source_destinations"][0]["readiness"]
+            self.assertFalse(readiness["objects_in_project"])
+
     def test_registry_recover_handles_interrupted_initialization(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"
