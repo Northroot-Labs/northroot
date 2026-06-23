@@ -3320,6 +3320,115 @@ def operation_lock_path(output_dir: Path) -> Path:
     return output_dir / OPERATION_LOCK_FILENAME
 
 
+def _operation_registry_context(
+    registry_state: Path,
+    *,
+    operation: str,
+    project_id: str | None,
+    object_id: str | None,
+) -> dict[str, Any]:
+    try:
+        status = registry.registry_status(registry_state, public_safe=True)
+        topology_gate = registry_topology_gate(
+            registry_state,
+            operation=operation,
+            project_id=project_id,
+            object_id=object_id,
+        )
+        topology_checked = bool(project_id and operation in REGISTRY_TOPOLOGY_REQUIRED_OPERATIONS)
+        topology_decision = (
+            topology_gate["decision"]
+            if topology_gate is not None
+            else "ready"
+            if topology_checked and bool(status.get("ready"))
+            else None
+        )
+        topology_allowed = None
+        if topology_checked:
+            topology_allowed = topology_gate is None and bool(status.get("ready"))
+        return {
+            "schema_version": "northroot.steward.operation-registry-context.v0",
+            "checked": True,
+            "registry_state": str(registry_state),
+            "registry_path": status.get("registry_path"),
+            "registry_sha256": status.get("registry_sha256"),
+            "registry_ready": bool(status.get("ready")),
+            "protected_state_ok": bool(status.get("protected_state_ok")),
+            "resume_required": bool(status.get("resume_required")),
+            "project_id": project_id,
+            "object_id": object_id,
+            "operation": operation,
+            "finding_count": status.get("finding_count"),
+            "error_count": status.get("error_count"),
+            "topology_checked": topology_checked,
+            "topology_allowed": topology_allowed,
+            "topology_decision": topology_decision,
+        }
+    except Exception as exc:  # noqa: BLE001 - recovery context must fail closed as data
+        return {
+            "schema_version": "northroot.steward.operation-registry-context.v0",
+            "checked": False,
+            "registry_state": str(registry_state),
+            "project_id": project_id,
+            "object_id": object_id,
+            "operation": operation,
+            "registry_sha256": None,
+            "registry_ready": False,
+            "protected_state_ok": False,
+            "resume_required": True,
+            "error": str(exc),
+        }
+
+
+def _operation_recovery_registry_context(lock: dict[str, Any], *, operation: str) -> dict[str, Any]:
+    registry_state_value = lock.get("registry_state")
+    project_id = lock.get("project_id") if isinstance(lock.get("project_id"), str) else None
+    object_id = lock.get("object_id") if isinstance(lock.get("object_id"), str) else None
+    locked_context = lock.get("registry_context_at_lock")
+    locked_sha256 = lock.get("registry_sha256")
+    if not isinstance(locked_sha256, str) and isinstance(locked_context, dict):
+        locked_sha256 = locked_context.get("registry_sha256")
+    if not isinstance(registry_state_value, str) or not registry_state_value:
+        return {
+            "schema_version": "northroot.steward.operation-registry-recovery.v0",
+            "checked": False,
+            "resume_state": "registry-not-bound-to-operation",
+            "registry_changed_since_lock": None,
+            "registry_sha256_at_lock": locked_sha256 if isinstance(locked_sha256, str) else None,
+            "registry_sha256_at_recovery": None,
+            "current_registry_context": None,
+        }
+    current_context = _operation_registry_context(
+        Path(registry_state_value),
+        operation=operation,
+        project_id=project_id,
+        object_id=object_id,
+    )
+    current_sha256 = current_context.get("registry_sha256")
+    if isinstance(locked_sha256, str) and isinstance(current_sha256, str):
+        registry_changed = locked_sha256 != current_sha256
+        resume_state = (
+            "registry-changed-after-operation-lock"
+            if registry_changed
+            else "registry-unchanged-after-operation-lock"
+        )
+    elif isinstance(locked_sha256, str) and current_sha256 is None:
+        registry_changed = None
+        resume_state = "registry-missing-or-unreadable-at-recovery"
+    else:
+        registry_changed = None
+        resume_state = "registry-change-unknown"
+    return {
+        "schema_version": "northroot.steward.operation-registry-recovery.v0",
+        "checked": True,
+        "resume_state": resume_state,
+        "registry_changed_since_lock": registry_changed,
+        "registry_sha256_at_lock": locked_sha256 if isinstance(locked_sha256, str) else None,
+        "registry_sha256_at_recovery": current_sha256 if isinstance(current_sha256, str) else None,
+        "current_registry_context": current_context,
+    }
+
+
 def _operation_lock_payload(
     *,
     output_dir: Path,
@@ -3331,6 +3440,16 @@ def _operation_lock_payload(
     project_id: str | None,
     object_id: str | None,
 ) -> dict[str, Any]:
+    registry_context = (
+        _operation_registry_context(
+            registry_state,
+            operation=operation,
+            project_id=project_id,
+            object_id=object_id,
+        )
+        if registry_state is not None
+        else None
+    )
     return {
         "schema_version": "northroot.steward.operation-lock.v0",
         "operation_id": f"{_utc_stamp()}-{operation}",
@@ -3341,6 +3460,8 @@ def _operation_lock_payload(
         "snapshot_id": snapshot_id,
         "restore_target": str(restore_target) if restore_target is not None else None,
         "registry_state": str(registry_state) if registry_state is not None else None,
+        "registry_sha256": registry_context.get("registry_sha256") if registry_context is not None else None,
+        "registry_context_at_lock": registry_context,
         "project_id": project_id,
         "object_id": object_id,
         "pid": os.getpid(),
@@ -3402,6 +3523,11 @@ def recover_operation(output_dir: Path) -> dict[str, Any]:
         if lock.get("unreadable")
         else "previous delegated operation was interrupted before completion"
     )
+    registry_recovery = _operation_recovery_registry_context(lock, operation=operation)
+    retry_policy = (
+        "rerun only after recover-operation records this interruption and fresh preflight, "
+        "authorization, and topology checks pass"
+    )
     operation_payload = {
         "schema_version": "northroot.steward.operation.v0",
         "profile_name": installation["profile_name"],
@@ -3419,6 +3545,9 @@ def recover_operation(output_dir: Path) -> dict[str, Any]:
         "preflight": None,
         "authorization": lock.get("authorization"),
         "registry_topology": lock.get("registry_topology"),
+        "registry_recovery": registry_recovery,
+        "side_effect_state": "unknown-after-interrupted-delegated-operation",
+        "retry_policy": retry_policy,
         "operation_lock": lock,
         "operation_lock_path": str(lock_path),
     }
@@ -3903,6 +4032,9 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
         else None,
         "authorization": operation_payload.get("authorization"),
         "registry_topology": operation_payload.get("registry_topology"),
+        "registry_recovery": operation_payload.get("registry_recovery"),
+        "side_effect_state": operation_payload.get("side_effect_state"),
+        "retry_policy": operation_payload.get("retry_policy"),
         "operation_lock": operation_payload.get("operation_lock"),
         "operation_lock_path": operation_payload.get("operation_lock_path"),
     }
@@ -3923,6 +4055,9 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
                 "failure_stage": operation_payload.get("failure_stage"),
                 "preflight": operation_payload.get("preflight"),
                 "authorization": operation_payload.get("authorization"),
+                "registry_recovery": operation_payload.get("registry_recovery"),
+                "side_effect_state": operation_payload.get("side_effect_state"),
+                "retry_policy": operation_payload.get("retry_policy"),
                 "operation_lock": operation_payload.get("operation_lock"),
                 "operation_lock_path": operation_payload.get("operation_lock_path"),
             }

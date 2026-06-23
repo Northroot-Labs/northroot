@@ -609,6 +609,14 @@ class StewardTests(unittest.TestCase):
             denied_summary = model.load_json(Path(str(denied_registry_execute["run_summary_path"])))
             self.assertEqual(denied_summary["status"], "delegated-authorization-denied")
             self.assertEqual(denied_summary["snapshot_result"]["authorization"]["decision"], "blocked")
+            self.assertEqual(
+                denied_summary["snapshot_result"]["operation_lock"]["registry_context_at_lock"]["topology_decision"],
+                "ready",
+            )
+            self.assertIsInstance(
+                denied_summary["snapshot_result"]["operation_lock"]["registry_sha256"],
+                str,
+            )
             self.assertFalse(steward.operation_lock_path(output_dir).exists())
 
             denied_topology_execute = steward.render_operation(
@@ -631,6 +639,7 @@ class StewardTests(unittest.TestCase):
             )
             self.assertFalse(steward.operation_lock_path(output_dir).exists())
 
+            registry_at_lock = registry.registry_status(registry_dir, public_safe=True)
             stale_lock = {
                 "schema_version": "northroot.steward.operation-lock.v0",
                 "operation_id": "test-stale-operation",
@@ -641,6 +650,23 @@ class StewardTests(unittest.TestCase):
                 "snapshot_id": "snap-locked",
                 "restore_target": None,
                 "registry_state": str(registry_dir),
+                "registry_sha256": registry_at_lock["registry_sha256"],
+                "registry_context_at_lock": {
+                    "schema_version": "northroot.steward.operation-registry-context.v0",
+                    "checked": True,
+                    "registry_state": str(registry_dir),
+                    "registry_path": registry_at_lock["registry_path"],
+                    "registry_sha256": registry_at_lock["registry_sha256"],
+                    "registry_ready": True,
+                    "protected_state_ok": True,
+                    "resume_required": False,
+                    "project_id": "project/example",
+                    "object_id": "workspace/example",
+                    "operation": "verify",
+                    "topology_checked": True,
+                    "topology_allowed": True,
+                    "topology_decision": "ready",
+                },
                 "project_id": "project/example",
                 "object_id": "workspace/example",
                 "pid": 999999,
@@ -651,6 +677,22 @@ class StewardTests(unittest.TestCase):
             steward.operation_lock_path(output_dir).write_text(
                 json.dumps(stale_lock, indent=2, sort_keys=True) + "\n",
                 encoding="utf-8",
+            )
+            registry.add_object(
+                registry_dir,
+                {
+                    "object_id": "generated-state/recovery-test",
+                    "object_type": "generated-state",
+                    "visibility": "ephemeral",
+                    "storage_binding": "cache://recovery-test",
+                    "custody_policy": {
+                        "backup": "metadata-only",
+                        "retention": "discard-after-test",
+                    },
+                    "redaction_policy": {"public_summary": "object-id-only"},
+                    "restore_class": "metadata-only",
+                },
+                public_safe=True,
             )
             blocked_by_lock = steward.render_operation(output_dir, "verify", execute=True)
             self.assertFalse(blocked_by_lock["executed"])
@@ -704,6 +746,18 @@ class StewardTests(unittest.TestCase):
                 recovery_lock_summary["snapshot_result"]["operation_lock"]["operation_id"],
                 "test-stale-operation",
             )
+            self.assertEqual(
+                recovery_lock_summary["snapshot_result"]["registry_recovery"]["resume_state"],
+                "registry-changed-after-operation-lock",
+            )
+            self.assertTrue(
+                recovery_lock_summary["snapshot_result"]["registry_recovery"]["registry_changed_since_lock"]
+            )
+            self.assertEqual(
+                recovery_lock_summary["snapshot_result"]["side_effect_state"],
+                "unknown-after-interrupted-delegated-operation",
+            )
+            self.assertIn("fresh preflight", recovery_lock_summary["snapshot_result"]["retry_policy"])
             self.assertFalse(steward.recover_operation(output_dir)["recovered"])
 
             missing_schedule_plan = steward.render_command_plan(output_dir, operation="schedule.create")
