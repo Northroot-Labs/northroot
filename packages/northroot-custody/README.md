@@ -277,6 +277,13 @@ It does not probe storage or copy bytes; private deployments still use
 repository binding availability probes and external copy monitors for live
 storage availability.
 
+Registry-bound `run`, `verify`, `restore`, `restore-drill`, `schedule create`,
+and `schedule install` require both permission authorization and ready project
+topology. A project permission set that allows `run` is not enough if the
+project has no usable source destination or replica wiring. `schedule status`,
+`schedule uninstall`, and `schedule delete` remain available for inspection and
+cleanup when topology is broken.
+
 `steward registry import-legacy-profile` applies a sanitized legacy migration
 bundle such as `examples/legacy-profile-import.redacted.example.json` as one
 atomic registry mutation. The bundle must contain symbolic refs and redacted

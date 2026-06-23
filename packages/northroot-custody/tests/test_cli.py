@@ -452,6 +452,29 @@ class CliTests(unittest.TestCase):
                     ),
                     0,
                 )
+                incomplete_registry_json = Path(temp_dir) / "incomplete-registry.json"
+                incomplete_registry = json.loads((EXAMPLES / "service-registry.example.json").read_text(encoding="utf-8"))
+                incomplete_registry["projects"][0]["source_destination_ids"] = []
+                incomplete_registry_json.write_text(
+                    json.dumps(incomplete_registry, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                incomplete_registry_dir = Path(temp_dir) / "incomplete-registry-state"
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "init",
+                            "--state",
+                            str(incomplete_registry_dir),
+                            "--registry",
+                            str(incomplete_registry_json),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
                 self.assertEqual(
                     cli.main(
                         [
@@ -473,6 +496,39 @@ class CliTests(unittest.TestCase):
                     cli.main(
                         [
                             "steward",
+                            "command-plan",
+                            "--state",
+                            str(output_dir),
+                            "--operation",
+                            "run",
+                            "--registry-state",
+                            str(incomplete_registry_dir),
+                            "--project-id",
+                            "project/example",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "run",
+                            "--state",
+                            str(output_dir),
+                            "--registry-state",
+                            str(incomplete_registry_dir),
+                            "--project-id",
+                            "project/example",
+                            "--execute",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
                             "run",
                             "--state",
                             str(output_dir),
@@ -483,6 +539,28 @@ class CliTests(unittest.TestCase):
                             "--object-id",
                             "secrets/restic-env",
                             "--execute",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "schedule",
+                            "create",
+                            "--state",
+                            str(output_dir),
+                            "--scheduler",
+                            "launchd",
+                            "--operation",
+                            "run",
+                            "--every-minutes",
+                            "60",
+                            "--registry-state",
+                            str(incomplete_registry_dir),
+                            "--project-id",
+                            "project/example",
                         ]
                     ),
                     1,
@@ -857,6 +935,8 @@ class CliTests(unittest.TestCase):
                 stdout.getvalue(),
             )
             self.assertIn('"failure_stage": "authorization"', stdout.getvalue())
+            self.assertIn('"failure_stage": "registry-topology"', stdout.getvalue())
+            self.assertIn('"decision": "topology-incomplete"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.operation-recovery.v0"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.legacy-run-import-result.v0"', stdout.getvalue())
             self.assertIn('"operation": "schedule.install"', stdout.getvalue())
