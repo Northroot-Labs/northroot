@@ -401,6 +401,7 @@ class RegistryTests(unittest.TestCase):
                         "project_found": True,
                         "linked": True,
                         "already_linked": True,
+                        "removed_from_project_ids": [],
                     }
                 ],
             )
@@ -426,7 +427,17 @@ class RegistryTests(unittest.TestCase):
             service_registry = model.load_json(EXAMPLES / "service-registry.example.json")
             source_destination = service_registry["source_destinations"][0]
             replica = service_registry["replicas"][0]
+            stale_project = clone(service_registry["projects"][0])
+            stale_project["project_id"] = "project/stale-membership"
+            stale_project["workspace_id"] = "stale-membership-workspace"
+            stale_project["permission_set_ref"] = "perm/project-stale-membership"
+            stale_project["source_destination_ids"] = ["source/project-example-primary"]
+            stale_permission = clone(service_registry["permissions"][0])
+            stale_permission["permission_set_id"] = "perm/project-stale-membership"
+            stale_permission["project_id"] = "project/stale-membership"
             service_registry["projects"][0]["source_destination_ids"] = []
+            service_registry["projects"].append(stale_project)
+            service_registry["permissions"].append(stale_permission)
             service_registry["source_destinations"] = []
             service_registry["replicas"] = []
             registry.initialize_registry(state_dir, service_registry, public_safe=True)
@@ -446,6 +457,10 @@ class RegistryTests(unittest.TestCase):
                 linked_registry["projects"][0]["source_destination_ids"],
                 ["source/project-example-primary"],
             )
+            stale_project_after_bind = next(
+                project for project in linked_registry["projects"] if project["project_id"] == "project/stale-membership"
+            )
+            self.assertEqual(stale_project_after_bind["source_destination_ids"], [])
 
             self.assertTrue(registry.add_replica(state_dir, replica, public_safe=True)["mutated"])
             topology = registry.registry_topology_report(

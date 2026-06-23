@@ -290,6 +290,9 @@ It also checks that each source binding belongs to the project that references
 it, uses a source-compatible destination role, uses the project permission set,
 and only includes objects in that project; replica targets must use a replica
 destination role and require `verified_offsite_copy` evidence.
+Source binding mutations keep that membership exclusive by removing stale
+references to the same source binding from other projects in the protected
+registry mutation.
 It does not probe storage or copy bytes; private deployments still use
 repository binding availability probes and external copy monitors for live
 storage availability.
