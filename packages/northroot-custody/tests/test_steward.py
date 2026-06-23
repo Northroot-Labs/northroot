@@ -180,8 +180,11 @@ class StewardTests(unittest.TestCase):
             self.assertTrue(verified["safe_to_execute"])
             self.assertTrue(verified["registry_context"]["ready"])
             self.assertEqual(verified["registry_context"]["authorization"]["decision"], "allowed")
+            self.assertTrue(verified["registry_context"]["topology_ready"])
+            self.assertEqual(verified["registry_context"]["topology"]["decision"], "ready")
             self.assertTrue(report["registry_ready"])
             self.assertEqual(report["registry_context"]["authorization"]["decision"], "allowed")
+            self.assertTrue(report["registry_context"]["topology_ready"])
 
             registry_path = registry.registry_path(registry_dir)
             tampered_registry = model.load_json(registry_path)
@@ -214,6 +217,42 @@ class StewardTests(unittest.TestCase):
             self.assertIn(
                 "repair service registry integrity before relying on steward policy authorization",
                 tampered_report["recommended_actions"],
+            )
+
+            incomplete_registry_dir = Path(temp_dir) / "incomplete-registry"
+            incomplete_registry_payload = model.load_json(EXAMPLES / "service-registry.example.json")
+            incomplete_registry_payload["projects"][0]["source_destination_ids"] = []
+            registry.initialize_registry(incomplete_registry_dir, incomplete_registry_payload, public_safe=True)
+
+            with mock.patch.dict(
+                os.environ,
+                {"PATH": str(fake_bin), "OP_SERVICE_ACCOUNT_TOKEN": "dummy"},
+                clear=True,
+            ):
+                incomplete_verified = steward.render_state_verification(
+                    output_dir,
+                    registry_state=incomplete_registry_dir,
+                    project_id="project/example",
+                )
+                incomplete_report = steward.render_report(
+                    output_dir,
+                    registry_state=incomplete_registry_dir,
+                    project_id="project/example",
+                )
+
+            self.assertFalse(incomplete_verified["ready"])
+            self.assertFalse(incomplete_verified["safe_to_execute"])
+            self.assertFalse(incomplete_verified["registry_context"]["ready"])
+            self.assertFalse(incomplete_verified["registry_context"]["topology_ready"])
+            self.assertEqual(incomplete_verified["registry_context"]["decision"], "topology-incomplete")
+            self.assertEqual(incomplete_verified["registry_context"]["topology"]["project_count"], 1)
+            self.assertIn(
+                "registry_topology_not_ready",
+                {check["code"] for check in incomplete_verified["checks"] if check["code"]},
+            )
+            self.assertIn(
+                "repair service registry destination topology before relying on steward project execution",
+                incomplete_report["recommended_actions"],
             )
 
     def test_init_status_run_and_schedule_are_delegated(self) -> None:
@@ -300,6 +339,16 @@ class StewardTests(unittest.TestCase):
             self.assertEqual(
                 capabilities["agent_contract"]["default_dogfood_policy"]["registered_agents"][0]["agent_id"],
                 "agent:codex",
+            )
+            self.assertTrue(
+                capabilities["agent_contract"]["default_policy_resolution"][
+                    "registered_agents_use_default_dogfood_policy"
+                ]
+            )
+            self.assertFalse(
+                capabilities["agent_contract"]["default_policy_resolution"][
+                    "policy_file_required_for_dogfood_agent_workflow"
+                ]
             )
             operations = {operation["name"]: operation for operation in capabilities["allowed_operations"]}
             operation_contracts = {
@@ -431,6 +480,33 @@ class StewardTests(unittest.TestCase):
                 agent_commit_plan["agent_provenance"]["required_commit_trailers"]["Agent-Coauthorship"],
                 "agent-authored",
             )
+
+            agent_push_plan = steward.render_command_plan(
+                output_dir,
+                operation="push.branch",
+                branch="codex/steward-dogfood-policy",
+            )
+            self.assertTrue(agent_push_plan["ok"])
+            self.assertEqual(
+                agent_push_plan["argv"],
+                ["git", "push", "-u", "origin", "codex/steward-dogfood-policy"],
+            )
+            self.assertTrue(
+                agent_push_plan["agent_guidance"]["default_dogfood_policy_selected_without_policy_file"]
+            )
+            self.assertEqual(model.validate_command_plan(agent_push_plan), [])
+
+            agent_draft_pr_plan = steward.render_command_plan(
+                output_dir,
+                operation="pr.draft.open",
+                branch="codex/steward-dogfood-policy",
+                pr_title="Draft steward dogfood policy",
+            )
+            self.assertTrue(agent_draft_pr_plan["ok"])
+            self.assertIn("--draft", agent_draft_pr_plan["argv"])
+            self.assertEqual(agent_draft_pr_plan["agent_authorization"]["policy_id"], "agent-delegation/dogfood-default")
+            self.assertTrue(agent_draft_pr_plan["side_effects"]["opens_or_updates_draft_pr"])
+            self.assertEqual(model.validate_command_plan(agent_draft_pr_plan), [])
 
             protected_agent_plan = steward.render_command_plan(
                 output_dir,
