@@ -1184,11 +1184,46 @@ def _append_unique_or_same(
     counts["inserted"] += 1
 
 
+def _set_unique(items: list[dict[str, Any]], key: str, value: dict[str, Any]) -> str:
+    identity = value.get(key)
+    for index, item in enumerate(items):
+        if item.get(key) != identity:
+            continue
+        if _canonical_payload(item) == _canonical_payload(value):
+            return "unchanged"
+        items[index] = value
+        return "replaced"
+    items.append(value)
+    return "inserted"
+
+
+def _set_result(result: dict[str, Any], *, entity: str, identity: object, action: str, **extra: Any) -> dict[str, Any]:
+    return {
+        **result,
+        "schema_version": "northroot.steward.registry-set-result.v0",
+        "entity": entity,
+        "identity": identity,
+        "action": action,
+        **extra,
+    }
+
+
 def add_object(state_dir: Path, custody_object: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
     def mutator(registry: dict[str, Any]) -> None:
         _append_unique(registry.setdefault("objects", []), "object_id", custody_object)
 
     return mutate_registry(state_dir, operation="registry.object.add", mutator=mutator, public_safe=public_safe)
+
+
+def set_object(state_dir: Path, custody_object: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    action = "pending"
+
+    def mutator(registry: dict[str, Any]) -> None:
+        nonlocal action
+        action = _set_unique(registry.setdefault("objects", []), "object_id", custody_object)
+
+    result = mutate_registry(state_dir, operation="registry.object.set", mutator=mutator, public_safe=public_safe)
+    return _set_result(result, entity="object", identity=custody_object.get("object_id"), action=action)
 
 
 def add_permission(state_dir: Path, permission: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
@@ -1198,11 +1233,38 @@ def add_permission(state_dir: Path, permission: dict[str, Any], *, public_safe: 
     return mutate_registry(state_dir, operation="registry.permission.add", mutator=mutator, public_safe=public_safe)
 
 
+def set_permission(state_dir: Path, permission: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    action = "pending"
+
+    def mutator(registry: dict[str, Any]) -> None:
+        nonlocal action
+        action = _set_unique(registry.setdefault("permissions", []), "permission_set_id", permission)
+
+    result = mutate_registry(
+        state_dir,
+        operation="registry.permission.set",
+        mutator=mutator,
+        public_safe=public_safe,
+    )
+    return _set_result(result, entity="permission", identity=permission.get("permission_set_id"), action=action)
+
+
 def add_project(state_dir: Path, project: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
     def mutator(registry: dict[str, Any]) -> None:
         _append_unique(registry.setdefault("projects", []), "project_id", project)
 
     return mutate_registry(state_dir, operation="registry.project.add", mutator=mutator, public_safe=public_safe)
+
+
+def set_project(state_dir: Path, project: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    action = "pending"
+
+    def mutator(registry: dict[str, Any]) -> None:
+        nonlocal action
+        action = _set_unique(registry.setdefault("projects", []), "project_id", project)
+
+    result = mutate_registry(state_dir, operation="registry.project.set", mutator=mutator, public_safe=public_safe)
+    return _set_result(result, entity="project", identity=project.get("project_id"), action=action)
 
 
 def register_project(
@@ -1224,6 +1286,22 @@ def add_destination(state_dir: Path, destination: dict[str, Any], *, public_safe
         _append_unique(registry.setdefault("destinations", []), "destination_id", destination)
 
     return mutate_registry(state_dir, operation="registry.destination.add", mutator=mutator, public_safe=public_safe)
+
+
+def set_destination(state_dir: Path, destination: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    action = "pending"
+
+    def mutator(registry: dict[str, Any]) -> None:
+        nonlocal action
+        action = _set_unique(registry.setdefault("destinations", []), "destination_id", destination)
+
+    result = mutate_registry(
+        state_dir,
+        operation="registry.destination.set",
+        mutator=mutator,
+        public_safe=public_safe,
+    )
+    return _set_result(result, entity="destination", identity=destination.get("destination_id"), action=action)
 
 
 def bind_source_destination(
@@ -1254,11 +1332,70 @@ def bind_source_destination(
     )
 
 
+def set_source_destination(
+    state_dir: Path,
+    source_destination: dict[str, Any],
+    *,
+    public_safe: bool = False,
+) -> dict[str, Any]:
+    action = "pending"
+    project_linked = False
+
+    def mutator(registry: dict[str, Any]) -> None:
+        nonlocal action, project_linked
+        source_id = source_destination.get("source_destination_id")
+        project_id = source_destination.get("project_id")
+        action = _set_unique(
+            registry.setdefault("source_destinations", []),
+            "source_destination_id",
+            source_destination,
+        )
+        for project in registry.setdefault("projects", []):
+            if not isinstance(project, dict):
+                continue
+            existing = project.setdefault("source_destination_ids", [])
+            if not isinstance(existing, list):
+                raise ValueError(f"project source_destination_ids must be a list: {project.get('project_id')}")
+            if project.get("project_id") == project_id:
+                if source_id not in existing:
+                    existing.append(source_id)
+                project_linked = source_id in existing
+            else:
+                while source_id in existing:
+                    existing.remove(source_id)
+
+    result = mutate_registry(
+        state_dir,
+        operation="registry.source-destination.set",
+        mutator=mutator,
+        public_safe=public_safe,
+    )
+    return _set_result(
+        result,
+        entity="source_destination",
+        identity=source_destination.get("source_destination_id"),
+        action=action,
+        project_id=source_destination.get("project_id"),
+        project_linked=project_linked,
+    )
+
+
 def add_replica(state_dir: Path, replica: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
     def mutator(registry: dict[str, Any]) -> None:
         _append_unique(registry.setdefault("replicas", []), "replica_id", replica)
 
     return mutate_registry(state_dir, operation="registry.replica.add", mutator=mutator, public_safe=public_safe)
+
+
+def set_replica(state_dir: Path, replica: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    action = "pending"
+
+    def mutator(registry: dict[str, Any]) -> None:
+        nonlocal action
+        action = _set_unique(registry.setdefault("replicas", []), "replica_id", replica)
+
+    result = mutate_registry(state_dir, operation="registry.replica.set", mutator=mutator, public_safe=public_safe)
+    return _set_result(result, entity="replica", identity=replica.get("replica_id"), action=action)
 
 
 def record_legacy_import(
@@ -1271,6 +1408,22 @@ def record_legacy_import(
         _append_unique(registry.setdefault("legacy_imports", []), "import_id", legacy_import)
 
     return mutate_registry(state_dir, operation="registry.legacy-import.record", mutator=mutator, public_safe=public_safe)
+
+
+def set_legacy_import(state_dir: Path, legacy_import: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
+    action = "pending"
+
+    def mutator(registry: dict[str, Any]) -> None:
+        nonlocal action
+        action = _set_unique(registry.setdefault("legacy_imports", []), "import_id", legacy_import)
+
+    result = mutate_registry(
+        state_dir,
+        operation="registry.legacy-import.set",
+        mutator=mutator,
+        public_safe=public_safe,
+    )
+    return _set_result(result, entity="legacy_import", identity=legacy_import.get("import_id"), action=action)
 
 
 def import_legacy_profile(

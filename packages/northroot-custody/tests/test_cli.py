@@ -7,7 +7,7 @@ import unittest
 from unittest import mock
 from pathlib import Path
 
-from northroot.custody import cli, steward
+from northroot.custody import cli, registry, steward
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -173,6 +173,27 @@ class CliTests(unittest.TestCase):
                     ),
                     0,
                 )
+                cli_object = json.loads(object_path.read_text(encoding="utf-8"))
+                cli_object["storage_binding"] = "artifact://cli-release-bundle-v2"
+                object_path.write_text(
+                    json.dumps(cli_object, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "set-object",
+                            "--state",
+                            str(state_dir),
+                            "--json",
+                            str(object_path),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
                 self.assertEqual(
                     cli.main(
                         [
@@ -254,6 +275,11 @@ class CliTests(unittest.TestCase):
                     ),
                     1,
                 )
+            service_registry = registry.load_registry(state_dir)
+            cli_object_state = {
+                item["object_id"]: item for item in service_registry["objects"]
+            }["artifact/cli-release-bundle"]
+            self.assertEqual(cli_object_state["storage_binding"], "artifact://cli-release-bundle-v2")
             self.assertIn('"project_count": 3', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.legacy-profile-import-result.v0"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.registry-topology.v0"', stdout.getvalue())

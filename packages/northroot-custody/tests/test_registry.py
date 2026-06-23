@@ -14,6 +14,10 @@ def write_json(path: Path, payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def clone(payload: dict[str, object]) -> dict[str, object]:
+    return json.loads(json.dumps(payload))
+
+
 class RegistryTests(unittest.TestCase):
     def test_authorize_operation_evaluates_project_and_object_permissions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -302,6 +306,61 @@ class RegistryTests(unittest.TestCase):
             self.assertFalse(recovered["registry_changed_since_lock"])
             self.assertFalse((state_dir / "service-registry.lock.json").exists())
             self.assertTrue(registry.registry_status(state_dir, public_safe=True)["ready"])
+
+    def test_set_mutations_replace_registry_entries_under_protected_state(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            service_registry = model.load_json(EXAMPLES / "service-registry.example.json")
+            registry.initialize_registry(state_dir, service_registry, public_safe=True)
+
+            replacement_destination = clone(service_registry["destinations"][0])
+            replacement_destination["storage_binding"] = "repository://local-primary-v2"
+            set_destination = registry.set_destination(state_dir, replacement_destination, public_safe=True)
+            self.assertEqual(set_destination["schema_version"], "northroot.steward.registry-set-result.v0")
+            self.assertEqual(set_destination["entity"], "destination")
+            self.assertEqual(set_destination["action"], "replaced")
+
+            replacement_permission = clone(service_registry["permissions"][0])
+            replacement_permission["allowed_operations"] = [
+                operation for operation in replacement_permission["allowed_operations"] if operation != "run"
+            ]
+            set_permission = registry.set_permission(state_dir, replacement_permission, public_safe=True)
+            self.assertEqual(set_permission["action"], "replaced")
+            denied_run = registry.authorize_operation(
+                state_dir,
+                operation="run",
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertFalse(denied_run["allowed"])
+            self.assertEqual(denied_run["decision"], "not-allowed")
+
+            source_destination = clone(service_registry["source_destinations"][0])
+            current = registry.load_registry(state_dir)
+            current["projects"][0]["source_destination_ids"] = []
+            write_json(state_dir / "service-registry.json", current)
+            self.assertFalse(
+                registry.registry_topology_report(
+                    state_dir,
+                    project_id="project/example",
+                    public_safe=True,
+                )["ready"]
+            )
+            linked_source = registry.set_source_destination(state_dir, source_destination, public_safe=True)
+            self.assertEqual(linked_source["action"], "unchanged")
+            self.assertTrue(linked_source["project_linked"])
+            repaired = registry.load_registry(state_dir)
+            self.assertEqual(repaired["projects"][0]["source_destination_ids"], ["source/project-example-primary"])
+
+            replacement_replica = clone(service_registry["replicas"][0])
+            replacement_replica["required_evidence"] = ["verified_offsite_copy", "restore_drill"]
+            set_replica = registry.set_replica(state_dir, replacement_replica, public_safe=True)
+            self.assertEqual(set_replica["action"], "replaced")
+            final_status = registry.registry_status(state_dir, public_safe=True)
+            self.assertTrue(final_status["ready"])
+            final_registry = registry.load_registry(state_dir)
+            self.assertEqual(final_registry["destinations"][0]["storage_binding"], "repository://local-primary-v2")
+            self.assertEqual(final_registry["replicas"][0]["required_evidence"], ["verified_offsite_copy", "restore_drill"])
 
     def test_registry_topology_detects_project_without_source_destinations(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
