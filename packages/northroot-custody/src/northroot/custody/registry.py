@@ -661,6 +661,34 @@ def registry_topology_report(
             object_ids = [str(item) for item in source.get("object_ids", [])] if source else []
             source_project_matches = bool(source and source.get("project_id") == project_id_value)
             source_objects_in_project = bool(source) and all(object_id in project_object_ids for object_id in object_ids)
+            source_object_reports: list[dict[str, Any]] = []
+            non_exportable_source_objects: list[str] = []
+            for object_id in object_ids:
+                custody_object = objects_by_id.get(object_id, {})
+                custody_policy = custody_object.get("custody_policy") if isinstance(custody_object, dict) else {}
+                if not isinstance(custody_policy, dict):
+                    custody_policy = {}
+                backup_policy = custody_policy.get("backup")
+                restore_class = custody_object.get("restore_class")
+                visibility = custody_object.get("visibility")
+                exportable = (
+                    visibility != "ephemeral"
+                    and restore_class not in {"never-export", "rehydrate-from-provider"}
+                    and backup_policy not in {"excluded", "provider-rehydrated"}
+                )
+                if not exportable:
+                    non_exportable_source_objects.append(object_id)
+                source_object_reports.append(
+                    {
+                        "object_id": object_id,
+                        "object_type": custody_object.get("object_type"),
+                        "visibility": visibility,
+                        "restore_class": restore_class,
+                        "custody_backup": backup_policy,
+                        "source_exportable": exportable,
+                    }
+                )
+            source_objects_exportable = bool(source) and not non_exportable_source_objects
             source_permission_matches = bool(source and source.get("permission_set_ref") == project.get("permission_set_ref"))
             source_destination_role_ok = bool(
                 destination and destination.get("role") in {"primary", "source"}
@@ -713,6 +741,7 @@ def registry_topology_report(
                 and object_ids
                 and source_project_matches
                 and source_objects_in_project
+                and source_objects_exportable
                 and source_permission_matches
                 and source_destination_role_ok
                 and replicas_ready
@@ -726,15 +755,7 @@ def registry_topology_report(
                     "destination_id": source.get("destination_id") if source else None,
                     "destination": destination,
                     "permission_set_ref": source.get("permission_set_ref") if source else None,
-                    "objects": [
-                        {
-                            "object_id": object_id,
-                            "object_type": objects_by_id.get(object_id, {}).get("object_type"),
-                            "visibility": objects_by_id.get(object_id, {}).get("visibility"),
-                            "restore_class": objects_by_id.get(object_id, {}).get("restore_class"),
-                        }
-                        for object_id in object_ids
-                    ],
+                    "objects": source_object_reports,
                     "consistency_boundary_ids": source.get("consistency_boundary_ids", []) if source else [],
                     "replicas": source_replica_reports,
                     "ready": source_ready,
@@ -747,6 +768,8 @@ def registry_topology_report(
                         "permission_set_matches_project": source_permission_matches,
                         "object_count": len(object_ids),
                         "objects_in_project": source_objects_in_project,
+                        "objects_exportable": source_objects_exportable,
+                        "non_exportable_source_objects": non_exportable_source_objects,
                         "replica_count": len(source_replica_reports),
                         "replicas_present": bool(source_replica_reports),
                         "replicas_ready": replicas_ready,
