@@ -138,6 +138,75 @@ class StewardTests(unittest.TestCase):
             self.assertTrue(steward.render_run_summary_integrity(output_dir)["ok"])
             self.assertFalse(steward.recover_operation(output_dir)["recovered"])
 
+    def test_executed_schedule_mutations_use_recoverable_operation_lock(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "steward"
+            steward.init_steward(
+                inventory_path=EXAMPLES / "workspace-inventory.example.json",
+                policy_path=EXAMPLES / "custody-policy.example.json",
+                output_dir=output_dir,
+            )
+            schedule = steward.create_schedule(
+                output_dir=output_dir,
+                scheduler="launchd",
+                every_minutes=60,
+            )
+            stale_lock = {
+                "schema_version": "northroot.steward.operation-lock.v0",
+                "operation_id": "interrupted-schedule-install",
+                "operation": "schedule.install",
+                "state": str(output_dir),
+                "command": "launchctl bootstrap",
+                "command_args": ["launchctl", "bootstrap"],
+                "snapshot_id": None,
+                "restore_target": None,
+                "registry_state": None,
+                "registry_sha256": None,
+                "registry_context_at_lock": None,
+                "project_id": None,
+                "object_id": None,
+                "pid": 999999,
+                "started_at": "20260622T000000000000Z",
+                "failure_policy": "fail-closed-record-summary-before-retry",
+                "resume_hint": "run steward recover-operation before retrying delegated execution",
+            }
+            steward.operation_lock_path(output_dir).write_text(
+                json.dumps(stale_lock, indent=2, sort_keys=True) + "\n",
+                encoding="utf-8",
+            )
+            blocked_install = steward.install_schedule(output_dir, execute=True, require_preflight=False)
+            self.assertFalse(blocked_install["executed"])
+            self.assertEqual(blocked_install["return_code"], 75)
+            self.assertEqual(blocked_install["failure_stage"], "operation-lock")
+            self.assertEqual(blocked_install["operation_lock"]["operation"], "schedule.install")
+
+            recovered = steward.recover_operation(output_dir)
+            self.assertTrue(recovered["recovered"])
+            recovered_summary = model.load_json(Path(str(recovered["run_summary_path"])))
+            self.assertEqual(recovered_summary["snapshot_result"]["operation"], "schedule.install")
+            self.assertEqual(recovered_summary["status"], "delegated-interrupted-recovered")
+            self.assertFalse(steward.operation_lock_path(output_dir).exists())
+
+            fake_bin = Path(temp_dir) / "bin"
+            fake_bin.mkdir()
+            write_fake_executable(fake_bin, "launchctl")
+            with mock.patch.dict(os.environ, {"PATH": str(fake_bin)}, clear=True):
+                installed = steward.install_schedule(output_dir, execute=True, require_preflight=False)
+            self.assertTrue(installed["executed"])
+            self.assertTrue(installed["installed"])
+            self.assertEqual(installed["operation_lock"]["operation"], "schedule.install")
+            self.assertFalse(steward.operation_lock_path(output_dir).exists())
+            self.assertTrue(steward.schedule_status(output_dir)["installed"])
+
+            with mock.patch.dict(os.environ, {"PATH": str(fake_bin)}, clear=True):
+                uninstalled = steward.uninstall_schedule(output_dir, execute=True)
+            self.assertTrue(uninstalled["executed"])
+            self.assertFalse(uninstalled["installed"])
+            self.assertEqual(uninstalled["operation_lock"]["operation"], "schedule.uninstall")
+            self.assertFalse(steward.operation_lock_path(output_dir).exists())
+            self.assertFalse(steward.schedule_status(output_dir)["installed"])
+            self.assertTrue(Path(str(schedule["schedule_path"])).exists())
+
     def test_state_verification_and_report_include_registry_policy_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "steward"
@@ -381,6 +450,8 @@ class StewardTests(unittest.TestCase):
             )
             self.assertTrue(operations["branch.create"]["governed_by_default_dogfood_policy"])
             self.assertTrue(operations["import-legacy-runs"]["uses_operation_lock"])
+            self.assertTrue(operations["schedule.install"]["uses_operation_lock"])
+            self.assertTrue(operations["schedule.uninstall"]["uses_operation_lock"])
             self.assertIn(
                 "delegates_platform_scheduler_registration_when_execute_is_set",
                 operation_contracts["schedule.install"]["side_effects"],
