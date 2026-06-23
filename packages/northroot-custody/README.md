@@ -289,7 +289,9 @@ readiness lacks required evidence or the registry-level
 It also checks that each source binding belongs to the project that references
 it, uses a source-compatible destination role, uses the project permission set,
 and only includes objects in that project; replica targets must use a replica
-destination role and require `verified_offsite_copy` evidence.
+destination role and require `verified_offsite_copy` evidence. Each source
+binding must have at least one ready replica, so a project cannot be marked
+ready with only a primary destination.
 Source binding mutations keep that membership exclusive by removing stale
 references to the same source binding from other projects in the protected
 registry mutation.
