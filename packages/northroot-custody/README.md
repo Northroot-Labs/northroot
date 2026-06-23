@@ -157,6 +157,10 @@ nr-custody steward registry add-object \
   --state /tmp/northroot-steward-registry \
   --json /tmp/object-custody.json \
   --public-safe
+nr-custody steward registry set-destination \
+  --state /tmp/northroot-steward-registry \
+  --json /tmp/destination.json \
+  --public-safe
 nr-custody steward registry register-project \
   --state /tmp/northroot-steward-registry \
   --project-json /tmp/project.json \
@@ -236,8 +240,13 @@ and repair guidance when the policy proof is not usable.
 registry. `registry init` validates and installs a public-safe registry
 document. Mutation commands append object custody entries, project/object
 permissions, registered projects, destinations, source bindings, replicas, and
-legacy import records through atomic writes. Each successful mutation records a
-registry operation summary with the resulting registry digest. Registry
+legacy import records through atomic writes. Explicit `set-object`,
+`set-permission`, `set-project`, `set-destination`, `set-source`,
+`set-replica`, and `set-legacy-import` commands replace an existing entry or
+insert it when absent under the same lock, validation, and digest-summary path;
+`set-source` also relinks the referenced project in the same mutation. Each
+successful mutation records a registry operation summary with the resulting
+registry digest. Registry
 operation summaries are also indexed in `registry-operations/index.json` with
 `northroot.steward.registry-operation-index.v0` digest entries. `registry verify`
 checks both the live registry digest and the operation-log digest index,

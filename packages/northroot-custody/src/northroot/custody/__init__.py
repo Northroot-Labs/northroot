@@ -78,6 +78,13 @@ from .registry import (
     registry_integrity_report,
     registry_status,
     registry_topology_report,
+    set_destination,
+    set_legacy_import,
+    set_object,
+    set_permission,
+    set_project,
+    set_replica,
+    set_source_destination,
 )
 
 __all__ = [
@@ -141,6 +148,13 @@ __all__ = [
     "registry_status",
     "registry_topology_report",
     "schedule_status",
+    "set_destination",
+    "set_legacy_import",
+    "set_object",
+    "set_permission",
+    "set_project",
+    "set_replica",
+    "set_source_destination",
     "uninstall_schedule",
     "validate_agent_delegation_policy",
     "validate_custody_policy",

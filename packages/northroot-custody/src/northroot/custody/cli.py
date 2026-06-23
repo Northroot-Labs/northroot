@@ -234,17 +234,24 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     registry_recover.add_argument("--public-safe", action="store_true")
     for name in (
         "add-object",
+        "set-object",
         "add-permission",
+        "set-permission",
         "add-project",
+        "set-project",
         "add-destination",
+        "set-destination",
         "bind-source",
+        "set-source",
         "add-replica",
+        "set-replica",
         "record-legacy-import",
+        "set-legacy-import",
         "import-legacy-profile",
     ):
         mutation = registry_sub.add_parser(name)
         mutation.add_argument("--state", required=True)
-        mutation.add_argument("--json", required=True, help="Path to the JSON object to append.")
+        mutation.add_argument("--json", required=True, help="Path to the JSON object to apply.")
         mutation.add_argument("--public-safe", action="store_true")
     register_project = registry_sub.add_parser("register-project")
     register_project.add_argument("--state", required=True)
@@ -681,12 +688,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.command == "steward" and args.steward_command == "registry":
         mutation_map = {
             "add-object": registry.add_object,
+            "set-object": registry.set_object,
             "add-permission": registry.add_permission,
+            "set-permission": registry.set_permission,
             "add-project": registry.add_project,
+            "set-project": registry.set_project,
             "add-destination": registry.add_destination,
+            "set-destination": registry.set_destination,
             "bind-source": registry.bind_source_destination,
+            "set-source": registry.set_source_destination,
             "add-replica": registry.add_replica,
+            "set-replica": registry.set_replica,
             "record-legacy-import": registry.record_legacy_import,
+            "set-legacy-import": registry.set_legacy_import,
             "import-legacy-profile": registry.import_legacy_profile,
         }
         if args.registry_command in mutation_map:
