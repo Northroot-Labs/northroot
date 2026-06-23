@@ -330,8 +330,12 @@ runs.
 `steward registry authorize` is the deterministic permission gate for agents and
 automation. It evaluates a project operation, and optionally an object-scoped
 operation, against project and object permission sets. Blocked operations,
-human-clearance operations, missing allow rules, invalid registries, and
-unresolved recovery locks all return non-zero.
+human-clearance operations, missing allow rules, sensitive objects without an
+object-scoped permission set, invalid registries, and unresolved recovery locks
+all return non-zero. Project topology also fails closed when a `secret` or
+`regulated` object is registered under the project without an explicit object
+permission set, so project-level permission cannot silently stand in for
+sensitive object custody policy.
 
 `examples/agent-delegation-policy.dogfood.example.json` is the default dogfood
 delegation policy for current steward work. It registers `agent:codex` for
