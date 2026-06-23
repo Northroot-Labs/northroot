@@ -121,6 +121,35 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(status["node_id"], "node-example")
             self.assertEqual(status["project_count"], 1)
             self.assertEqual(status["object_count"], 5)
+            topology = registry.registry_topology_report(state_dir, public_safe=True)
+            self.assertTrue(topology["ready"])
+            self.assertEqual(topology["decision"], "ready")
+            self.assertTrue(topology["resume_policy_ready"]["fail_closed_on_disconnected_storage"])
+            self.assertTrue(topology["resume_policy_ready"]["never_prune_without_retention_decision"])
+            self.assertEqual(topology["project_count"], 1)
+            self.assertEqual(topology["projects"][0]["project_id"], "project/example")
+            self.assertEqual(
+                topology["projects"][0]["source_destinations"][0]["destination_id"],
+                "dest/local-primary",
+            )
+            self.assertEqual(
+                topology["projects"][0]["source_destinations"][0]["replicas"][0]["required_evidence"],
+                ["verified_offsite_copy"],
+            )
+            filtered_topology = registry.registry_topology_report(
+                state_dir,
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertTrue(filtered_topology["ready"])
+            self.assertEqual(filtered_topology["project_count"], 1)
+            missing_project_topology = registry.registry_topology_report(
+                state_dir,
+                project_id="project/missing",
+                public_safe=True,
+            )
+            self.assertFalse(missing_project_topology["ready"])
+            self.assertEqual(missing_project_topology["decision"], "unknown-project")
 
             new_object = {
                 "object_id": "artifact/release-bundle",
@@ -273,6 +302,21 @@ class RegistryTests(unittest.TestCase):
             self.assertFalse(recovered["registry_changed_since_lock"])
             self.assertFalse((state_dir / "service-registry.lock.json").exists())
             self.assertTrue(registry.registry_status(state_dir, public_safe=True)["ready"])
+
+    def test_registry_topology_detects_project_without_source_destinations(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            service_registry = model.load_json(EXAMPLES / "service-registry.example.json")
+            service_registry["projects"][0]["source_destination_ids"] = []
+            self.assertEqual(model.validate_service_registry(service_registry, public_safe=True), [])
+            registry.initialize_registry(state_dir, service_registry, public_safe=True)
+
+            topology = registry.registry_topology_report(state_dir, public_safe=True)
+
+            self.assertFalse(topology["ready"])
+            self.assertEqual(topology["decision"], "topology-incomplete")
+            self.assertEqual(topology["issue_count"], 1)
+            self.assertEqual(topology["projects"][0]["source_destinations"], [])
 
     def test_registry_recover_handles_interrupted_initialization(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

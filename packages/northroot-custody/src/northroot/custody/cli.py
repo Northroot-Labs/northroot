@@ -216,6 +216,10 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     registry_status = registry_sub.add_parser("status")
     registry_status.add_argument("--state", required=True)
     registry_status.add_argument("--public-safe", action="store_true")
+    registry_topology = registry_sub.add_parser("topology")
+    registry_topology.add_argument("--state", required=True)
+    registry_topology.add_argument("--project-id")
+    registry_topology.add_argument("--public-safe", action="store_true")
     registry_verify = registry_sub.add_parser("verify")
     registry_verify.add_argument("--state", required=True)
     registry_verify.add_argument("--public-safe", action="store_true")
@@ -641,6 +645,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         status = registry.registry_status(Path(args.state), public_safe=args.public_safe)
         write_json(status)
         return 0 if status["ready"] else 1
+    if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "topology":
+        topology = registry.registry_topology_report(
+            Path(args.state),
+            project_id=args.project_id,
+            public_safe=args.public_safe,
+        )
+        write_json(topology)
+        return 0 if topology["ready"] else 1
     if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "verify":
         integrity = registry.registry_integrity_report(Path(args.state), public_safe=args.public_safe)
         write_json(integrity)

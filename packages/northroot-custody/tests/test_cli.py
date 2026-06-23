@@ -120,6 +120,21 @@ class CliTests(unittest.TestCase):
                         [
                             "steward",
                             "registry",
+                            "topology",
+                            "--state",
+                            str(state_dir),
+                            "--project-id",
+                            "project/example",
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
                             "verify",
                             "--state",
                             str(state_dir),
@@ -241,6 +256,8 @@ class CliTests(unittest.TestCase):
                 )
             self.assertIn('"project_count": 3', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.legacy-profile-import-result.v0"', stdout.getvalue())
+            self.assertIn('"schema_version": "northroot.steward.registry-topology.v0"', stdout.getvalue())
+            self.assertIn('"fail_closed_on_disconnected_storage": true', stdout.getvalue())
             self.assertIn('"decision": "allowed"', stdout.getvalue())
             self.assertIn('"decision": "not-allowed"', stdout.getvalue())
             self.assertTrue((state_dir / "registry-operations").exists())

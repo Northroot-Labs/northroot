@@ -566,6 +566,180 @@ def registry_status(state_dir: Path, *, public_safe: bool = False) -> dict[str, 
     }
 
 
+def _items_by_id(items: Any, key: str) -> dict[str, dict[str, Any]]:
+    if not isinstance(items, list):
+        return {}
+    return {str(item[key]): item for item in items if isinstance(item, dict) and isinstance(item.get(key), str)}
+
+
+def registry_topology_report(
+    state_dir: Path,
+    *,
+    project_id: str | None = None,
+    public_safe: bool = False,
+) -> dict[str, Any]:
+    status = registry_status(state_dir, public_safe=public_safe)
+    base = {
+        "schema_version": "northroot.steward.registry-topology.v0",
+        "registry_path": status["registry_path"],
+        "registry_sha256": status["registry_sha256"],
+        "registry_ready": bool(status["ready"]),
+        "protected_state_ok": bool(status.get("protected_state_ok")),
+        "resume_required": bool(status.get("resume_required")),
+        "project_id": project_id,
+    }
+    if not status["ready"]:
+        return {
+            **base,
+            "ready": False,
+            "decision": "registry-not-ready",
+            "reason": "registry integrity or validation must be repaired before topology can be trusted",
+            "findings": status.get("findings", []),
+            "projects": [],
+            "resume_policy": None,
+        }
+
+    service_registry = load_registry(state_dir)
+    projects = service_registry.get("projects", [])
+    if not isinstance(projects, list):
+        projects = []
+    if project_id is not None:
+        projects = [project for project in projects if isinstance(project, dict) and project.get("project_id") == project_id]
+        if not projects:
+            return {
+                **base,
+                "ready": False,
+                "decision": "unknown-project",
+                "reason": f"unknown project_id: {project_id}",
+                "projects": [],
+                "resume_policy": service_registry.get("resume_policy"),
+            }
+
+    objects_by_id = _items_by_id(service_registry.get("objects"), "object_id")
+    destinations_by_id = _items_by_id(service_registry.get("destinations"), "destination_id")
+    source_destinations_by_id = _items_by_id(service_registry.get("source_destinations"), "source_destination_id")
+    replicas = [replica for replica in service_registry.get("replicas", []) if isinstance(replica, dict)]
+    permissions_by_id = _items_by_id(service_registry.get("permissions"), "permission_set_id")
+    resume_policy = service_registry.get("resume_policy") if isinstance(service_registry.get("resume_policy"), dict) else {}
+    partial_run_handling = resume_policy.get("partial_run_handling")
+    fail_closed_storage = resume_policy.get("on_disconnected_storage") == "fail-closed-record-summary"
+    never_prune_without_decision = partial_run_handling == "never-prune-without-retention-decision"
+
+    project_reports: list[dict[str, Any]] = []
+    issue_count = 0
+    for project in projects:
+        if not isinstance(project, dict):
+            continue
+        project_source_ids = [str(item) for item in project.get("source_destination_ids", []) if isinstance(item, str)]
+        source_reports: list[dict[str, Any]] = []
+        for source_id in project_source_ids:
+            source = source_destinations_by_id.get(source_id)
+            destination = destinations_by_id.get(str(source.get("destination_id"))) if source else None
+            object_ids = [str(item) for item in source.get("object_ids", [])] if source else []
+            source_replica_reports: list[dict[str, Any]] = []
+            for replica in replicas:
+                if replica.get("source_destination_id") != source_id:
+                    continue
+                replica_destination = destinations_by_id.get(str(replica.get("destination_id")))
+                required_evidence = [
+                    str(item) for item in replica.get("required_evidence", []) if isinstance(item, str)
+                ]
+                replica_ready = bool(
+                    replica_destination
+                    and required_evidence
+                    and fail_closed_storage
+                    and never_prune_without_decision
+                )
+                if not replica_ready:
+                    issue_count += 1
+                source_replica_reports.append(
+                    {
+                        "replica_id": replica.get("replica_id"),
+                        "destination_id": replica.get("destination_id"),
+                        "destination": replica_destination,
+                        "execution_model": replica.get("execution_model"),
+                        "required_evidence": required_evidence,
+                        "resume_policy_ref": replica.get("resume_policy_ref"),
+                        "ready": replica_ready,
+                        "readiness": {
+                            "destination_registered": replica_destination is not None,
+                            "required_evidence_declared": bool(required_evidence),
+                            "storage_failure_policy": resume_policy.get("on_disconnected_storage"),
+                            "partial_run_handling": partial_run_handling,
+                        },
+                    }
+                )
+            source_ready = bool(source and destination and object_ids)
+            if not source_ready:
+                issue_count += 1
+            source_reports.append(
+                {
+                    "source_destination_id": source_id,
+                    "project_id": source.get("project_id") if source else None,
+                    "destination_id": source.get("destination_id") if source else None,
+                    "destination": destination,
+                    "permission_set_ref": source.get("permission_set_ref") if source else None,
+                    "objects": [
+                        {
+                            "object_id": object_id,
+                            "object_type": objects_by_id.get(object_id, {}).get("object_type"),
+                            "visibility": objects_by_id.get(object_id, {}).get("visibility"),
+                            "restore_class": objects_by_id.get(object_id, {}).get("restore_class"),
+                        }
+                        for object_id in object_ids
+                    ],
+                    "consistency_boundary_ids": source.get("consistency_boundary_ids", []) if source else [],
+                    "replicas": source_replica_reports,
+                    "ready": source_ready,
+                    "readiness": {
+                        "source_registered": source is not None,
+                        "destination_registered": destination is not None,
+                        "object_count": len(object_ids),
+                    },
+                }
+            )
+        project_permission = permissions_by_id.get(str(project.get("permission_set_ref")))
+        project_ready = bool(source_reports) and all(bool(source["ready"]) for source in source_reports)
+        if not project_ready:
+            issue_count += 1
+        project_reports.append(
+            {
+                "project_id": project.get("project_id"),
+                "workspace_id": project.get("workspace_id"),
+                "node_ref": project.get("node_ref"),
+                "permission_set_ref": project.get("permission_set_ref"),
+                "permission_set": project_permission,
+                "object_ids": project.get("object_ids", []),
+                "schedule_ref": project.get("schedule_ref"),
+                "source_destinations": source_reports,
+                "ready": project_ready,
+            }
+        )
+
+    topology_ready = bool(project_reports) and issue_count == 0 and fail_closed_storage and never_prune_without_decision
+    return {
+        **base,
+        "ready": topology_ready,
+        "decision": "ready" if topology_ready else "topology-incomplete",
+        "reason": None
+        if topology_ready
+        else "project destination topology or resume policy is incomplete",
+        "project_count": len(project_reports),
+        "destination_count": status["destination_count"],
+        "source_destination_count": status["source_destination_count"],
+        "replica_count": status["replica_count"],
+        "issue_count": issue_count,
+        "resume_policy": resume_policy,
+        "resume_policy_ready": {
+            "on_disconnected_storage": resume_policy.get("on_disconnected_storage"),
+            "partial_run_handling": partial_run_handling,
+            "fail_closed_on_disconnected_storage": fail_closed_storage,
+            "never_prune_without_retention_decision": never_prune_without_decision,
+        },
+        "projects": project_reports,
+    }
+
+
 def _project_by_id(registry: dict[str, Any], project_id: str) -> dict[str, Any] | None:
     for project in registry.get("projects", []):
         if isinstance(project, dict) and project.get("project_id") == project_id:

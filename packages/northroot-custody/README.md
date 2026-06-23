@@ -144,6 +144,10 @@ nr-custody steward registry init \
   --public-safe
 nr-custody steward registry status --state /tmp/northroot-steward-registry --public-safe
 nr-custody steward registry verify --state /tmp/northroot-steward-registry --public-safe
+nr-custody steward registry topology \
+  --state /tmp/northroot-steward-registry \
+  --project-id project/example \
+  --public-safe
 nr-custody steward registry authorize \
   --state /tmp/northroot-steward-registry \
   --operation run \
@@ -252,6 +256,18 @@ exists; recovery records `resume_state` as
 whether the interrupted write appears to have landed. Recovery removes the lock
 only when the registry still validates, or when initialization stopped before
 the registry file was written and can be retried cleanly.
+
+`steward registry topology` is a read-only readiness report for project
+destination wiring. It expands registered projects into source destinations,
+destination bindings, replica targets, required replica evidence, object
+visibility/restore classes, and the fail-closed resume policy. It returns
+non-zero when the registry is locked or invalid, when the requested project is
+unknown, when a project has no usable source destination, or when replica
+readiness lacks required evidence or the registry-level
+`on_disconnected_storage` / `partial_run_handling` policy is not fail-closed.
+It does not probe storage or copy bytes; private deployments still use
+repository binding availability probes and external copy monitors for live
+storage availability.
 
 `steward registry import-legacy-profile` applies a sanitized legacy migration
 bundle such as `examples/legacy-profile-import.redacted.example.json` as one
