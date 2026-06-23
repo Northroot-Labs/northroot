@@ -275,12 +275,34 @@ class CliTests(unittest.TestCase):
                     ),
                     1,
                 )
+                tampered = registry.load_registry(state_dir)
+                tampered["service_id"] = "steward/tampered-through-cli-test"
+                registry.registry_path(state_dir).write_text(
+                    json.dumps(tampered, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "set-object",
+                            "--state",
+                            str(state_dir),
+                            "--json",
+                            str(object_path),
+                            "--public-safe",
+                        ]
+                    ),
+                    1,
+                )
             service_registry = registry.load_registry(state_dir)
             cli_object_state = {
                 item["object_id"]: item for item in service_registry["objects"]
             }["artifact/cli-release-bundle"]
             self.assertEqual(cli_object_state["storage_binding"], "artifact://cli-release-bundle-v2")
             self.assertIn('"project_count": 3', stdout.getvalue())
+            self.assertIn('"blocked": true', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.legacy-profile-import-result.v0"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.registry-topology.v0"', stdout.getvalue())
             self.assertIn('"fail_closed_on_disconnected_storage": true', stdout.getvalue())

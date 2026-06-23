@@ -335,21 +335,22 @@ class RegistryTests(unittest.TestCase):
             self.assertFalse(denied_run["allowed"])
             self.assertEqual(denied_run["decision"], "not-allowed")
 
-            source_destination = clone(service_registry["source_destinations"][0])
-            current = registry.load_registry(state_dir)
-            current["projects"][0]["source_destination_ids"] = []
-            write_json(state_dir / "service-registry.json", current)
+            source_state_dir = Path(temp_dir) / "source-registry-state"
+            source_registry = clone(service_registry)
+            source_registry["projects"][0]["source_destination_ids"] = []
+            source_destination = clone(source_registry["source_destinations"][0])
+            registry.initialize_registry(source_state_dir, source_registry, public_safe=True)
             self.assertFalse(
                 registry.registry_topology_report(
-                    state_dir,
+                    source_state_dir,
                     project_id="project/example",
                     public_safe=True,
                 )["ready"]
             )
-            linked_source = registry.set_source_destination(state_dir, source_destination, public_safe=True)
+            linked_source = registry.set_source_destination(source_state_dir, source_destination, public_safe=True)
             self.assertEqual(linked_source["action"], "unchanged")
             self.assertTrue(linked_source["project_linked"])
-            repaired = registry.load_registry(state_dir)
+            repaired = registry.load_registry(source_state_dir)
             self.assertEqual(repaired["projects"][0]["source_destination_ids"], ["source/project-example-primary"])
 
             replacement_replica = clone(service_registry["replicas"][0])
@@ -608,6 +609,29 @@ class RegistryTests(unittest.TestCase):
             )
             self.assertFalse(authorization["allowed"])
             self.assertEqual(authorization["decision"], "invalid-registry")
+            blocked_object = {
+                "object_id": "artifact/blocked-unprotected-state",
+                "object_type": "artifact-dir",
+                "visibility": "private",
+                "storage_binding": "artifact://blocked-unprotected-state",
+                "custody_policy": {
+                    "backup": "delegated",
+                    "verification": "sample-restore",
+                },
+                "redaction_policy": {
+                    "public_summary": "object-id-and-status",
+                },
+                "restore_class": "full-restore",
+            }
+            with self.assertRaises(registry.RegistryIntegrityError) as raised:
+                registry.set_object(state_dir, blocked_object, public_safe=True)
+            self.assertFalse(raised.exception.integrity["protected_state_ok"])
+            self.assertIsNotNone(raised.exception.operation_summary_path)
+            blocked_summary = model.load_json(Path(str(raised.exception.operation_summary_path)))
+            self.assertEqual(blocked_summary["status"], "blocked-unprotected-state")
+            self.assertEqual(blocked_summary["operation"], "registry.object.set")
+            still_tampered = registry.registry_integrity_report(state_dir, public_safe=True)
+            self.assertFalse(still_tampered["protected_state_ok"])
 
     def test_registry_integrity_detects_tampered_operation_summary(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

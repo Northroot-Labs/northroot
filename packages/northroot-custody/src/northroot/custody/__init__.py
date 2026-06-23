@@ -61,6 +61,7 @@ from .steward import (
     uninstall_schedule,
 )
 from .registry import (
+    RegistryIntegrityError,
     RegistryLockedError,
     add_destination,
     add_object,
@@ -107,6 +108,7 @@ __all__ = [
     "VISIBILITY_CLASSES",
     "VERIFICATION_RESULT_SCHEMA",
     "StewardInstallation",
+    "RegistryIntegrityError",
     "RegistryLockedError",
     "add_destination",
     "add_object",

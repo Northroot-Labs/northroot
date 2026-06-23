@@ -266,6 +266,8 @@ def _write_registry_result(result: object) -> int:
     write_json(result)
     if isinstance(result, dict) and result.get("locked"):
         return 1
+    if isinstance(result, dict) and result.get("blocked"):
+        return 1
     if isinstance(result, dict) and result.get("recovered") is False and result.get("resume_required"):
         return 1
     return 0
@@ -281,6 +283,16 @@ def _registry_mutation_result(fn, *, state: str, json_path: str, public_safe: bo
             "resume_required": True,
             "lock": exc.lock,
             "detail": "service registry has an unresolved operation lock; run steward registry recover first",
+        }
+    except registry.RegistryIntegrityError as exc:
+        return {
+            "mutated": False,
+            "blocked": True,
+            "protected_state_ok": False,
+            "resume_required": bool(exc.integrity.get("resume_required")),
+            "operation_summary_path": str(exc.operation_summary_path) if exc.operation_summary_path else None,
+            "integrity": exc.integrity,
+            "detail": "service registry protected state is not ready; run steward registry verify and repair before mutating",
         }
 
 
@@ -730,6 +742,20 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "resume_required": True,
                         "lock": exc.lock,
                         "detail": "service registry has an unresolved operation lock; run steward registry recover first",
+                    }
+                )
+            except registry.RegistryIntegrityError as exc:
+                return _write_registry_result(
+                    {
+                        "mutated": False,
+                        "blocked": True,
+                        "protected_state_ok": False,
+                        "resume_required": bool(exc.integrity.get("resume_required")),
+                        "operation_summary_path": str(exc.operation_summary_path)
+                        if exc.operation_summary_path
+                        else None,
+                        "integrity": exc.integrity,
+                        "detail": "service registry protected state is not ready; run steward registry verify and repair before mutating",
                     }
                 )
     raise AssertionError(args.command)

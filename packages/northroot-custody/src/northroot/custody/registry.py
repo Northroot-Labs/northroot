@@ -27,6 +27,15 @@ class RegistryLockedError(RuntimeError):
         self.lock = lock
 
 
+class RegistryIntegrityError(RuntimeError):
+    """Raised when a registry mutation finds unprotected registry state."""
+
+    def __init__(self, integrity: dict[str, Any], *, operation_summary_path: Path | None = None) -> None:
+        super().__init__("service registry protected state is not ready for mutation")
+        self.integrity = integrity
+        self.operation_summary_path = operation_summary_path
+
+
 def _utc_stamp() -> str:
     return dt.datetime.now(tz=dt.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
 
@@ -997,6 +1006,26 @@ def mutate_registry(
         raise RegistryLockedError(existing_lock)
     operation_id = _operation_id(operation)
     before_sha256 = _file_sha256(registry_path(state_dir))
+    integrity = registry_integrity_report(state_dir, public_safe=public_safe)
+    if not integrity["ready"]:
+        summary = {
+            "schema_version": "northroot.steward.registry-operation.v0",
+            "operation_id": operation_id,
+            "operation": operation,
+            "status": "blocked-unprotected-state",
+            "registry_path": str(registry_path(state_dir)),
+            "before_sha256": before_sha256,
+            "registry_sha256": integrity["registry_sha256"],
+            "expected_registry_sha256": integrity["expected_registry_sha256"],
+            "protected_state_ok": integrity["protected_state_ok"],
+            "resume_required": integrity["resume_required"],
+            "public_safe": public_safe,
+            "findings": integrity.get("findings", []),
+            "checks": integrity.get("checks", []),
+            "completed_at": _utc_stamp(),
+        }
+        summary_path = _write_operation_summary(state_dir, summary)
+        raise RegistryIntegrityError(integrity, operation_summary_path=summary_path)
     lock = {
         "schema_version": "northroot.steward.registry-operation-lock.v0",
         "operation_id": operation_id,
