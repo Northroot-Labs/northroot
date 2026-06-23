@@ -560,6 +560,23 @@ class StewardTests(unittest.TestCase):
             self.assertTrue(authorized_schedule_plan["ok"])
             self.assertTrue(authorized_schedule_plan["authorization"]["allowed"])
             self.assertIn("--registry-state", authorized_schedule_plan["argv"])
+            incomplete_registry_dir = Path(temp_dir) / "incomplete-registry"
+            incomplete_registry_payload = model.load_json(EXAMPLES / "service-registry.example.json")
+            incomplete_registry_payload["projects"][0]["source_destination_ids"] = []
+            registry.initialize_registry(incomplete_registry_dir, incomplete_registry_payload, public_safe=True)
+            incomplete_topology_plan = steward.render_command_plan(
+                output_dir,
+                operation="run",
+                registry_state=incomplete_registry_dir,
+                project_id="project/example",
+            )
+            self.assertFalse(incomplete_topology_plan["ok"])
+            self.assertTrue(incomplete_topology_plan["authorization"]["allowed"])
+            self.assertEqual(incomplete_topology_plan["registry_topology"]["decision"], "topology-incomplete")
+            self.assertIn(
+                "registry topology denied: topology-incomplete",
+                incomplete_topology_plan["refused_reasons"],
+            )
             denied_registry_plan = steward.render_command_plan(
                 output_dir,
                 operation="run",
@@ -592,6 +609,26 @@ class StewardTests(unittest.TestCase):
             denied_summary = model.load_json(Path(str(denied_registry_execute["run_summary_path"])))
             self.assertEqual(denied_summary["status"], "delegated-authorization-denied")
             self.assertEqual(denied_summary["snapshot_result"]["authorization"]["decision"], "blocked")
+            self.assertFalse(steward.operation_lock_path(output_dir).exists())
+
+            denied_topology_execute = steward.render_operation(
+                output_dir,
+                "run",
+                execute=True,
+                registry_state=incomplete_registry_dir,
+                project_id="project/example",
+            )
+            self.assertFalse(denied_topology_execute["executed"])
+            self.assertEqual(denied_topology_execute["return_code"], 77)
+            self.assertEqual(denied_topology_execute["failure_stage"], "registry-topology")
+            self.assertEqual(denied_topology_execute["registry_topology"]["decision"], "topology-incomplete")
+            self.assertIsNone(denied_topology_execute["preflight"])
+            denied_topology_summary = model.load_json(Path(str(denied_topology_execute["run_summary_path"])))
+            self.assertEqual(denied_topology_summary["status"], "delegated-registry-topology-denied")
+            self.assertEqual(
+                denied_topology_summary["snapshot_result"]["registry_topology"]["decision"],
+                "topology-incomplete",
+            )
             self.assertFalse(steward.operation_lock_path(output_dir).exists())
 
             stale_lock = {

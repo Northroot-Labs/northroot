@@ -326,13 +326,22 @@ def _authorize_schedule_context(
             "decision": "missing-project-id",
             "reason": "project_id is required when registry_state is supplied",
         }
-    return registry.authorize_operation(
+    authorization = registry.authorize_operation(
         registry_state,
         operation=operation,
         project_id=project_id,
         object_id=object_id,
         public_safe=True,
     )
+    if not authorization["allowed"]:
+        return authorization
+    topology_gate = steward.registry_topology_gate(
+        registry_state,
+        operation=operation,
+        project_id=project_id,
+        object_id=object_id,
+    )
+    return topology_gate or authorization
 
 
 def _schedule_authorization_denied_result(operation: str, authorization: dict[str, object]) -> dict[str, object]:

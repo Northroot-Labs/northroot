@@ -37,6 +37,7 @@ SCHEDULE_CONTEXT_DIRNAME = "contexts"
 SCHEDULE_OPERATIONS = {"run", "verify", "restore-drill"}
 OPERATIONS = {"run", "verify", "restore", "restore-drill"}
 RECOVERABLE_OPERATION_SUMMARY_OPERATIONS = OPERATIONS | {"legacy-run-import"}
+REGISTRY_TOPOLOGY_REQUIRED_OPERATIONS = OPERATIONS | {"schedule.create", "schedule.install"}
 COMMAND_PLAN_OPERATIONS = {
     "status",
     "preflight",
@@ -1825,6 +1826,35 @@ def _dogfood_allowed_operations(output_dir: Path) -> list[dict[str, Any]]:
     ]
 
 
+def registry_topology_gate(
+    registry_state: Path | None,
+    *,
+    operation: str,
+    project_id: str | None,
+    object_id: str | None = None,
+) -> dict[str, Any] | None:
+    if registry_state is None or not project_id or operation not in REGISTRY_TOPOLOGY_REQUIRED_OPERATIONS:
+        return None
+    topology = registry.registry_topology_report(
+        registry_state,
+        project_id=project_id,
+        public_safe=True,
+    )
+    if topology["ready"]:
+        return None
+    return {
+        "schema_version": "northroot.steward.registry-topology-gate.v0",
+        "operation": operation,
+        "registry_state": str(registry_state),
+        "project_id": project_id,
+        "object_id": object_id,
+        "allowed": False,
+        "decision": topology["decision"],
+        "reason": topology.get("reason") or "registry topology is not ready for project execution",
+        "topology": topology,
+    }
+
+
 def render_command_plan(
     output_dir: Path,
     *,
@@ -1866,6 +1896,7 @@ def render_command_plan(
     mutates_backup_repository = False
     delegated_platform_mutation = False
     authorization: dict[str, Any] | None = None
+    registry_topology: dict[str, Any] | None = None
     agent_policy = default_dogfood_agent_delegation_policy()
     agent = _registered_agent(agent_policy, agent_id)
     agent_authorization: dict[str, Any] | None = None
@@ -2163,6 +2194,14 @@ def render_command_plan(
             )
             if not authorization["allowed"]:
                 refused_reasons.append(f"registry authorization denied: {authorization['decision']}")
+            registry_topology = registry_topology_gate(
+                registry_state,
+                operation=operation,
+                project_id=project_id,
+                object_id=object_id,
+            )
+            if registry_topology is not None:
+                refused_reasons.append(f"registry topology denied: {registry_topology['decision']}")
 
     preflight_ready: bool | None = None
     preflight_failed_codes: list[str] = []
@@ -2217,6 +2256,7 @@ def render_command_plan(
         "refused_reasons": refused_reasons,
         "warnings": warnings,
         "authorization": authorization,
+        "registry_topology": registry_topology,
         "agent_authorization": agent_authorization,
         "agent_provenance": provenance,
         "default_agent_policy_id": agent_policy["policy_id"],
@@ -3378,6 +3418,7 @@ def recover_operation(output_dir: Path) -> dict[str, Any]:
         "restore_observation": None,
         "preflight": None,
         "authorization": lock.get("authorization"),
+        "registry_topology": lock.get("registry_topology"),
         "operation_lock": lock,
         "operation_lock_path": str(lock_path),
     }
@@ -3430,6 +3471,7 @@ def render_operation(
     restore_observation = None
     preflight_result = None
     authorization = None
+    registry_topology = None
     operation_lock = None
     acquired_lock_path = None
     if execute:
@@ -3495,8 +3537,21 @@ def render_operation(
                 return_code = 77
                 error = f"registry authorization denied: {authorization['decision']}"
                 failure_stage = "authorization"
+            else:
+                registry_topology = registry_topology_gate(
+                    registry_state,
+                    operation=operation,
+                    project_id=project_id,
+                    object_id=object_id,
+                )
+                if registry_topology is not None:
+                    return_code = 77
+                    error = f"registry topology denied: {registry_topology['decision']}"
+                    failure_stage = "registry-topology"
             if operation_lock is not None:
                 operation_lock["authorization"] = authorization
+                if registry_topology is not None:
+                    operation_lock["registry_topology"] = registry_topology
                 if acquired_lock_path is not None:
                     _atomic_write_json(acquired_lock_path, operation_lock)
         if return_code is not None:
@@ -3576,6 +3631,7 @@ def render_operation(
         "restore_observation": restore_observation,
         "preflight": preflight_result,
         "authorization": authorization,
+        "registry_topology": registry_topology,
         "operation_lock": operation_lock,
         "operation_lock_path": str(operation_lock_path(output_dir)) if execute else None,
     }
@@ -3811,6 +3867,8 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
         status = "delegated-invalid-lock-recovered"
     elif execute_requested and not executed and operation_payload.get("failure_stage") == "authorization":
         status = "delegated-authorization-denied"
+    elif execute_requested and not executed and operation_payload.get("failure_stage") == "registry-topology":
+        status = "delegated-registry-topology-denied"
     elif execute_requested and not executed and operation_payload.get("failure_stage") == "runtime-env":
         status = "delegated-runtime-env-failed"
     elif execute_requested and operation_payload.get("failure_stage") == "restore-observation":
@@ -3844,6 +3902,7 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
         if isinstance(operation_payload.get("preflight"), dict)
         else None,
         "authorization": operation_payload.get("authorization"),
+        "registry_topology": operation_payload.get("registry_topology"),
         "operation_lock": operation_payload.get("operation_lock"),
         "operation_lock_path": operation_payload.get("operation_lock_path"),
     }
