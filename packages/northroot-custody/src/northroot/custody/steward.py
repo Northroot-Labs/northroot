@@ -33,6 +33,7 @@ RUN_SUMMARY_INDEX_SCHEMA = "northroot.steward.run-summary-index.v0"
 SCHEDULE_MANIFEST_FILENAME = "schedule.json"
 SCHEDULE_INDEX_FILENAME = "schedule-index.json"
 SCHEDULE_INDEX_SCHEMA = "northroot.steward.schedule-index.v0"
+SCHEDULE_CONTEXT_DIRNAME = "contexts"
 SCHEDULE_OPERATIONS = {"run", "verify", "restore-drill"}
 OPERATIONS = {"run", "verify", "restore", "restore-drill"}
 RECOVERABLE_OPERATION_SUMMARY_OPERATIONS = OPERATIONS | {"legacy-run-import"}
@@ -205,16 +206,58 @@ def _artifact(path: Path) -> dict[str, str]:
     }
 
 
-def _schedule_manifest_path(output_dir: Path) -> Path:
-    return output_dir / "schedules" / SCHEDULE_MANIFEST_FILENAME
+def _slug(value: str) -> str:
+    return "".join(char if char.isalnum() else "-" for char in value).strip("-").lower() or "default"
 
 
-def _schedule_index_path(output_dir: Path) -> Path:
-    return output_dir / "schedules" / SCHEDULE_INDEX_FILENAME
+def _schedule_scope_id(
+    *,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> str | None:
+    if registry_state is None and project_id is None and object_id is None:
+        return None
+    scope = {
+        "registry_state": str(registry_state) if registry_state is not None else None,
+        "project_id": project_id,
+        "object_id": object_id,
+    }
+    digest = hashlib.sha256(_json_bytes(scope)).hexdigest()[:12]
+    if object_id:
+        prefix = f"{_slug(project_id or 'project')}-{_slug(object_id)}"
+    elif project_id:
+        prefix = _slug(project_id)
+    else:
+        prefix = "registry"
+    return f"{prefix[:48]}-{digest}"
+
+
+def _schedule_dir(output_dir: Path, *, schedule_scope_id: str | None = None) -> Path:
+    if schedule_scope_id:
+        return output_dir / "schedules" / SCHEDULE_CONTEXT_DIRNAME / schedule_scope_id
+    return output_dir / "schedules"
+
+
+def _scoped_schedule_manifest_paths(output_dir: Path) -> list[Path]:
+    contexts_dir = output_dir / "schedules" / SCHEDULE_CONTEXT_DIRNAME
+    if not contexts_dir.is_dir():
+        return []
+    return sorted(path for path in contexts_dir.glob(f"*/{SCHEDULE_MANIFEST_FILENAME}") if path.is_file())
+
+
+def _schedule_manifest_path_for_scope(output_dir: Path, *, schedule_scope_id: str | None = None) -> Path:
+    return _schedule_dir(output_dir, schedule_scope_id=schedule_scope_id) / SCHEDULE_MANIFEST_FILENAME
+
+
+def _schedule_index_path_for_scope(output_dir: Path, *, schedule_scope_id: str | None = None) -> Path:
+    return _schedule_dir(output_dir, schedule_scope_id=schedule_scope_id) / SCHEDULE_INDEX_FILENAME
 
 
 def _write_schedule_manifest(output_dir: Path, schedule: dict[str, Any]) -> Path:
-    manifest_path = _schedule_manifest_path(output_dir)
+    scope_id = schedule.get("schedule_scope_id")
+    schedule_scope_id = str(scope_id) if isinstance(scope_id, str) and scope_id else None
+    manifest_path = _schedule_manifest_path_for_scope(output_dir, schedule_scope_id=schedule_scope_id)
     sha256 = _atomic_write_json(manifest_path, schedule)
     index = {
         "schema_version": SCHEDULE_INDEX_SCHEMA,
@@ -226,31 +269,37 @@ def _write_schedule_manifest(output_dir: Path, schedule: dict[str, Any]) -> Path
             "scheduler": schedule.get("scheduler"),
             "operation": schedule.get("operation"),
             "every_minutes": schedule.get("every_minutes"),
+            "schedule_scope_id": schedule_scope_id,
         },
     }
-    _atomic_write_json(_schedule_index_path(output_dir), index)
+    _atomic_write_json(_schedule_index_path_for_scope(output_dir, schedule_scope_id=schedule_scope_id), index)
     return manifest_path
 
 
-def _schedule_orphan_paths(output_dir: Path) -> list[str]:
-    schedules_dir = output_dir / "schedules"
+def _schedule_orphan_paths(output_dir: Path, *, schedule_scope_id: str | None = None) -> list[str]:
+    schedules_dir = _schedule_dir(output_dir, schedule_scope_id=schedule_scope_id)
     if not schedules_dir.is_dir():
         return []
     protected_names = {SCHEDULE_MANIFEST_FILENAME, SCHEDULE_INDEX_FILENAME}
     return sorted(str(path) for path in schedules_dir.iterdir() if path.is_file() and path.name not in protected_names)
 
 
-def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
-    manifest_path = _schedule_manifest_path(output_dir)
-    index_path = _schedule_index_path(output_dir)
+def render_schedule_integrity(
+    output_dir: Path,
+    *,
+    schedule_scope_id: str | None = None,
+) -> dict[str, Any]:
+    manifest_path = _schedule_manifest_path_for_scope(output_dir, schedule_scope_id=schedule_scope_id)
+    index_path = _schedule_index_path_for_scope(output_dir, schedule_scope_id=schedule_scope_id)
     if not manifest_path.exists() and not index_path.exists():
-        orphaned_paths = _schedule_orphan_paths(output_dir)
+        orphaned_paths = _schedule_orphan_paths(output_dir, schedule_scope_id=schedule_scope_id)
         if orphaned_paths:
             return {
                 "schema_version": "northroot.steward.schedule-integrity.v0",
                 "ok": False,
                 "manifest_path": str(manifest_path),
                 "index_path": str(index_path),
+                "schedule_scope_id": schedule_scope_id,
                 "status": "orphaned-artifacts",
                 "detail": "schedule artifacts exist without a schedule manifest; use schedule delete --force after confirming platform registration state",
                 "orphaned_paths": orphaned_paths,
@@ -260,6 +309,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": True,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "not-configured",
             "detail": "no schedule is configured",
         }
@@ -269,6 +319,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": False,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "unindexed",
             "detail": "schedule manifest is not present in the steward digest index",
         }
@@ -278,6 +329,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": False,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "missing-manifest",
             "detail": "indexed schedule manifest is missing",
         }
@@ -289,6 +341,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": False,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "invalid-index",
             "detail": str(err),
         }
@@ -298,6 +351,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": False,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "invalid-index",
             "detail": f"schedule index schema_version must be {SCHEDULE_INDEX_SCHEMA}",
         }
@@ -308,6 +362,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": False,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "invalid-index",
             "detail": "schedule index manifest entry must reference schedule.json",
         }
@@ -318,6 +373,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": False,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "invalid-index",
             "detail": "schedule index manifest entry is missing sha256",
         }
@@ -328,6 +384,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": False,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "digest-mismatch",
             "detail": "schedule manifest digest does not match the steward digest index",
             "expected_sha256": expected_sha,
@@ -341,6 +398,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": False,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "invalid-manifest",
             "detail": str(err),
         }
@@ -350,6 +408,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
             "ok": False,
             "manifest_path": str(manifest_path),
             "index_path": str(index_path),
+            "schedule_scope_id": schedule_scope_id,
             "status": "invalid-manifest",
             "detail": "schedule manifest schema_version must be northroot.steward.schedule.v0",
         }
@@ -358,6 +417,7 @@ def render_schedule_integrity(output_dir: Path) -> dict[str, Any]:
         "ok": True,
         "manifest_path": str(manifest_path),
         "index_path": str(index_path),
+        "schedule_scope_id": schedule_scope_id,
         "status": "ok",
         "detail": "schedule manifest matches the steward digest index",
         "sha256": actual_sha,
@@ -797,7 +857,13 @@ def _runtime_env_for_execution(secret_bindings: dict[str, Any] | None) -> dict[s
     return env
 
 
-def render_preflight(output_dir: Path) -> dict[str, Any]:
+def render_preflight(
+    output_dir: Path,
+    *,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> dict[str, Any]:
     installation = load_installation(output_dir)
     installation_integrity = render_installation_integrity(output_dir)
     plan_path = Path(str(installation["snapshot_plan_path"]))
@@ -1055,7 +1121,12 @@ def render_preflight(output_dir: Path) -> dict[str, Any]:
                     )
                 )
 
-    schedule = schedule_status(output_dir)
+    schedule = schedule_status(
+        output_dir,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
     schedule_integrity = schedule.get("schedule_integrity")
     schedule_integrity_ok = isinstance(schedule_integrity, dict) and bool(schedule_integrity.get("ok"))
     if schedule.get("configured") or not schedule_integrity_ok:
@@ -2096,7 +2167,12 @@ def render_command_plan(
     preflight_ready: bool | None = None
     preflight_failed_codes: list[str] = []
     if execute and requires_preflight and operation not in {"schedule.install"}:
-        preflight = render_preflight(output_dir)
+        preflight = render_preflight(
+            output_dir,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
         preflight_ready = bool(preflight["ready"])
         preflight_failed_codes = [
             str(check["code"])
@@ -2106,7 +2182,12 @@ def render_command_plan(
         if not preflight_ready:
             refused_reasons.append("preflight is not ready for execute")
     elif execute and operation == "schedule.install" and requires_preflight:
-        preflight = render_preflight(output_dir)
+        preflight = render_preflight(
+            output_dir,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
         preflight_ready = bool(preflight["ready"])
         preflight_failed_codes = [
             str(check["code"])
@@ -2477,7 +2558,12 @@ def render_state_verification(
     object_id: str | None = None,
 ) -> dict[str, Any]:
     status = render_status(output_dir)
-    preflight = render_preflight(output_dir)
+    preflight = render_preflight(
+        output_dir,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
     capabilities = render_capabilities(output_dir)
     evidence_report = render_evidence_report(output_dir, snapshot_id=snapshot_id)
     run_summary_integrity = evidence_report["run_summary_integrity"]
@@ -2488,7 +2574,7 @@ def render_state_verification(
         object_id=object_id,
         operation="verify-state",
     )
-    schedule = status["schedule"]
+    schedule = preflight.get("schedule", status["schedule"])
     failed_codes = sorted(
         str(check["code"])
         for check in preflight["checks"]
@@ -2659,7 +2745,12 @@ def render_report(
     object_id: str | None = None,
 ) -> dict[str, Any]:
     status = render_status(output_dir)
-    preflight = render_preflight(output_dir)
+    preflight = render_preflight(
+        output_dir,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
     evidence_report = render_evidence_report(output_dir, snapshot_id=snapshot_id)
     operation_lock = _operation_lock_status(output_dir)
     registry_context = _render_registry_context(
@@ -3383,7 +3474,12 @@ def render_operation(
         if return_code is not None:
             pass
         else:
-            preflight_result = render_preflight(output_dir)
+            preflight_result = render_preflight(
+                output_dir,
+                registry_state=registry_state,
+                project_id=project_id,
+                object_id=object_id,
+            )
         if preflight_result is not None and not preflight_result["ready"]:
             failed_codes = sorted(
                 {
@@ -3906,11 +4002,18 @@ def create_schedule(
         raise ValueError(f"unsupported scheduled operation: {operation}")
     installation = load_installation(output_dir)
     profile_name = str(installation["profile_name"])
-    schedules_dir = output_dir / "schedules"
+    schedule_scope_id = _schedule_scope_id(
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
+    schedules_dir = _schedule_dir(output_dir, schedule_scope_id=schedule_scope_id)
     schedules_dir.mkdir(parents=True, exist_ok=True)
+    name_suffix = f"-{schedule_scope_id}" if schedule_scope_id else ""
+    label_suffix = f".{schedule_scope_id}" if schedule_scope_id else ""
 
     if scheduler == "launchd":
-        label = f"org.northroot.{profile_name}"
+        label = f"org.northroot.{profile_name}{label_suffix}"
         schedule_path = schedules_dir / f"{label}.plist"
         schedule_sha256 = _atomic_write_text(
             schedule_path,
@@ -3928,7 +4031,7 @@ def create_schedule(
         generated_paths = [str(schedule_path)]
         generated_artifacts = {"launchd_plist": {"path": str(schedule_path), "sha256": schedule_sha256}}
     elif scheduler == "systemd":
-        service_name = f"northroot-{profile_name}"
+        service_name = f"northroot-{profile_name}{name_suffix}"
         service_path = schedules_dir / f"{service_name}.service"
         timer_path = schedules_dir / f"{service_name}.timer"
         service_sha256 = _atomic_write_text(
@@ -3968,6 +4071,7 @@ def create_schedule(
         "registry_state": str(registry_state) if registry_state is not None else None,
         "project_id": project_id,
         "object_id": object_id,
+        "schedule_scope_id": schedule_scope_id,
         "installed": False,
         "execution_mode": "delegated",
     }
@@ -3975,15 +4079,16 @@ def create_schedule(
     return schedule
 
 
-def schedule_status(output_dir: Path) -> dict[str, Any]:
-    schedule_path = _schedule_manifest_path(output_dir)
-    integrity = render_schedule_integrity(output_dir)
+def _status_for_schedule_scope(output_dir: Path, *, schedule_scope_id: str | None = None) -> dict[str, Any]:
+    schedule_path = _schedule_manifest_path_for_scope(output_dir, schedule_scope_id=schedule_scope_id)
+    integrity = render_schedule_integrity(output_dir, schedule_scope_id=schedule_scope_id)
     if not schedule_path.exists():
         return {
             "schema_version": "northroot.steward.schedule-status.v0",
             "configured": False,
             "installed": False,
             "schedule_path": None,
+            "schedule_scope_id": schedule_scope_id,
             "schedule_integrity": integrity,
         }
     try:
@@ -3994,12 +4099,64 @@ def schedule_status(output_dir: Path) -> dict[str, Any]:
             "configured": True,
             "installed": False,
             "schedule_path": str(schedule_path),
+            "schedule_scope_id": schedule_scope_id,
             "schedule_integrity": integrity,
         }
     schedule["schema_version"] = "northroot.steward.schedule-status.v0"
     schedule["configured"] = True
     schedule["schedule_integrity"] = integrity
     return schedule
+
+
+def schedule_status(
+    output_dir: Path,
+    *,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> dict[str, Any]:
+    schedule_scope_id = _schedule_scope_id(
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
+    if schedule_scope_id is not None:
+        return _status_for_schedule_scope(output_dir, schedule_scope_id=schedule_scope_id)
+
+    default_status = _status_for_schedule_scope(output_dir)
+    if default_status.get("configured") or not default_status.get("schedule_integrity", {}).get("ok"):
+        return default_status
+
+    scoped_paths = _scoped_schedule_manifest_paths(output_dir)
+    if len(scoped_paths) == 1:
+        return _status_for_schedule_scope(output_dir, schedule_scope_id=scoped_paths[0].parent.name)
+    if len(scoped_paths) > 1:
+        return {
+            "schema_version": "northroot.steward.schedule-status.v0",
+            "configured": True,
+            "installed": False,
+            "schedule_path": None,
+            "schedule_scope_id": None,
+            "requires_schedule_context": True,
+            "schedule_count": len(scoped_paths),
+            "scoped_schedules": [
+                {
+                    "schedule_scope_id": path.parent.name,
+                    "manifest_path": str(path),
+                }
+                for path in scoped_paths
+            ],
+            "schedule_integrity": {
+                "schema_version": "northroot.steward.schedule-integrity.v0",
+                "ok": False,
+                "manifest_path": None,
+                "index_path": None,
+                "schedule_scope_id": None,
+                "status": "schedule-context-required",
+                "detail": "multiple scoped schedules exist; pass registry/project/object context",
+            },
+        }
+    return default_status
 
 
 def _schedule_integrity_error_result(
@@ -4070,8 +4227,21 @@ def _run_command_sequence(commands: list[list[str]]) -> tuple[bool, int | None, 
     return True, 0, None
 
 
-def install_schedule(output_dir: Path, *, execute: bool = False, require_preflight: bool = True) -> dict[str, Any]:
-    status = schedule_status(output_dir)
+def install_schedule(
+    output_dir: Path,
+    *,
+    execute: bool = False,
+    require_preflight: bool = True,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> dict[str, Any]:
+    status = schedule_status(
+        output_dir,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
     if not status.get("configured"):
         raise ValueError("schedule must be created before it can be installed")
     if not status.get("schedule_integrity", {}).get("ok"):
@@ -4090,7 +4260,12 @@ def install_schedule(output_dir: Path, *, execute: bool = False, require_preflig
     preflight_result = None
     if execute:
         if require_preflight:
-            preflight_result = render_preflight(output_dir)
+            preflight_result = render_preflight(
+                output_dir,
+                registry_state=registry_state,
+                project_id=project_id,
+                object_id=object_id,
+            )
             if not preflight_result["ready"]:
                 return {
                     "schema_version": "northroot.steward.schedule-install.v0",
@@ -4128,8 +4303,20 @@ def install_schedule(output_dir: Path, *, execute: bool = False, require_preflig
     }
 
 
-def uninstall_schedule(output_dir: Path, *, execute: bool = False) -> dict[str, Any]:
-    status = schedule_status(output_dir)
+def uninstall_schedule(
+    output_dir: Path,
+    *,
+    execute: bool = False,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> dict[str, Any]:
+    status = schedule_status(
+        output_dir,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
     if not status.get("configured"):
         raise ValueError("schedule must be created before it can be uninstalled")
     if not status.get("schedule_integrity", {}).get("ok"):
@@ -4164,10 +4351,26 @@ def uninstall_schedule(output_dir: Path, *, execute: bool = False) -> dict[str, 
     }
 
 
-def delete_schedule(output_dir: Path, *, force: bool = False) -> dict[str, Any]:
-    status = schedule_status(output_dir)
+def delete_schedule(
+    output_dir: Path,
+    *,
+    force: bool = False,
+    registry_state: Path | None = None,
+    project_id: str | None = None,
+    object_id: str | None = None,
+) -> dict[str, Any]:
+    status = schedule_status(
+        output_dir,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
     removed: list[str] = []
-    schedules_dir = output_dir / "schedules"
+    schedule_scope_id = status.get("schedule_scope_id")
+    schedules_dir = _schedule_dir(
+        output_dir,
+        schedule_scope_id=str(schedule_scope_id) if isinstance(schedule_scope_id, str) and schedule_scope_id else None,
+    )
     if not status.get("schedule_integrity", {}).get("ok") and not force:
         return _schedule_integrity_error_result(
             schema_version="northroot.steward.schedule-delete.v0",
@@ -4190,6 +4393,11 @@ def delete_schedule(output_dir: Path, *, force: bool = False) -> dict[str, Any]:
             if path.is_file():
                 path.unlink()
                 removed.append(str(path))
+        try:
+            if schedule_scope_id:
+                schedules_dir.rmdir()
+        except OSError:
+            pass
     return {
         "schema_version": "northroot.steward.schedule-delete.v0",
         "configured_before_delete": bool(status.get("configured")),
