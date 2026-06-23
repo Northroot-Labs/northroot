@@ -253,7 +253,10 @@ checks both the live registry digest and the operation-log digest index,
 so a structurally valid but unrecorded registry edit, or a hand-edited operation
 summary, is not treated as protected state. `registry status`, `registry
 authorize`, and mutation commands depend on that proof before treating the
-registry as ready. Unreadable or corrupted registry JSON is reported as
+registry as ready. Mutations fail closed with `blocked-unprotected-state` when
+the registry digest no longer matches the latest proving operation summary, so a
+later legitimate command cannot accidentally bless an unrecorded edit.
+Unreadable or corrupted registry JSON is reported as
 structured not-ready state and authorization returns `invalid-registry` instead
 of allowing automation to proceed. Registry initialization and later mutations
 both run under registry operation locks, so a machine death or interrupted
