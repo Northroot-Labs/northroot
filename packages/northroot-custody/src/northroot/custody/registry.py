@@ -718,28 +718,66 @@ def initialize_registry(
     overwrite: bool = False,
 ) -> dict[str, Any]:
     path = registry_path(state_dir)
+    existing_lock = _load_lock(state_dir)
+    if existing_lock is not None:
+        raise RegistryLockedError(existing_lock)
     if path.exists() and not overwrite:
         raise FileExistsError(f"service registry already exists: {path}")
     _validate_or_raise(registry, public_safe=public_safe)
     state_dir.mkdir(parents=True, exist_ok=True)
-    digest = _atomic_write_json(path, registry)
-    summary = {
-        "schema_version": "northroot.steward.registry-operation.v0",
-        "operation_id": _operation_id("registry.init"),
+    operation_id = _operation_id("registry.init")
+    before_sha256 = _file_sha256(path)
+    lock = {
+        "schema_version": "northroot.steward.registry-operation-lock.v0",
+        "operation_id": operation_id,
         "operation": "registry.init",
-        "status": "completed",
         "registry_path": str(path),
-        "registry_sha256": digest,
-        "public_safe": public_safe,
-        "completed_at": _utc_stamp(),
+        "before_sha256": before_sha256,
+        "started_at": _utc_stamp(),
+        "pid": os.getpid(),
+        "failure_policy": "fail-closed-record-summary",
+        "resume_hint": "run registry recover before applying another initialization or mutation",
     }
-    summary_path = _write_operation_summary(state_dir, summary)
-    return {
-        "initialized": True,
-        "registry_path": str(path),
-        "registry_sha256": digest,
-        "operation_summary_path": str(summary_path),
-    }
+    _atomic_write_json(lock_path(state_dir), lock)
+    try:
+        digest = _atomic_write_json(path, registry)
+        summary = {
+            "schema_version": "northroot.steward.registry-operation.v0",
+            "operation_id": operation_id,
+            "operation": "registry.init",
+            "status": "completed",
+            "registry_path": str(path),
+            "before_sha256": before_sha256,
+            "registry_sha256": digest,
+            "public_safe": public_safe,
+            "completed_at": _utc_stamp(),
+        }
+        summary_path = _write_operation_summary(state_dir, summary)
+        lock_path(state_dir).unlink(missing_ok=True)
+        _fsync_directory(state_dir)
+        return {
+            "initialized": True,
+            "registry_path": str(path),
+            "registry_sha256": digest,
+            "operation_summary_path": str(summary_path),
+        }
+    except Exception as exc:
+        summary = {
+            "schema_version": "northroot.steward.registry-operation.v0",
+            "operation_id": operation_id,
+            "operation": "registry.init",
+            "status": "failed",
+            "registry_path": str(path),
+            "before_sha256": before_sha256,
+            "registry_sha256": _file_sha256(path),
+            "public_safe": public_safe,
+            "error": str(exc),
+            "completed_at": _utc_stamp(),
+        }
+        _write_operation_summary(state_dir, summary)
+        lock_path(state_dir).unlink(missing_ok=True)
+        _fsync_directory(state_dir)
+        raise
 
 
 def mutate_registry(
@@ -821,17 +859,50 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
             "resume_required": False,
             "detail": "no operation lock present",
         }
-    registry = load_registry(state_dir)
-    findings = model.validate_service_registry(registry, public_safe=public_safe)
+    registry_missing = not registry_path(state_dir).is_file()
+    registry_error: str | None = None
+    findings: list[model.Finding] = []
+    if not registry_missing:
+        try:
+            registry_payload = load_registry(state_dir)
+            findings = model.validate_service_registry(registry_payload, public_safe=public_safe)
+        except Exception as exc:  # noqa: BLE001 - recovery must report unreadable registry state, not crash
+            registry_error = str(exc)
     errors = [finding for finding in findings if finding.severity == "error"]
     operation_id = _operation_id("registry.recover")
-    status = "recovered-after-interruption" if not errors else "blocked-invalid-registry"
+    if registry_error is not None:
+        status = "blocked-unreadable-registry"
+    elif errors:
+        status = "blocked-invalid-registry"
+    else:
+        status = "recovered-after-interruption"
     current_sha256 = _file_sha256(registry_path(state_dir))
     before_sha256 = lock.get("before_sha256")
-    if isinstance(before_sha256, str):
+    if registry_missing:
+        resume_state = "registry-missing-after-lock"
+    elif isinstance(before_sha256, str):
         resume_state = "registry-unchanged-after-lock" if current_sha256 == before_sha256 else "registry-changed-after-lock"
     else:
         resume_state = "registry-change-unknown"
+    finding_payloads = [finding.as_dict() for finding in findings]
+    if registry_missing:
+        finding_payloads.append(
+            {
+                "severity": "warning",
+                "code": "missing_service_registry_after_lock",
+                "path": str(registry_path(state_dir)),
+                "detail": "registry operation lock existed but service registry was never written",
+            }
+        )
+    if registry_error is not None:
+        finding_payloads.append(
+            {
+                "severity": "error",
+                "code": "unreadable_service_registry",
+                "path": str(registry_path(state_dir)),
+                "detail": registry_error,
+            }
+        )
     summary = {
         "schema_version": "northroot.steward.registry-operation.v0",
         "operation_id": operation_id,
@@ -844,10 +915,19 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
         "registry_sha256": current_sha256,
         "registry_changed_since_lock": resume_state == "registry-changed-after-lock",
         "public_safe": public_safe,
-        "findings": [finding.as_dict() for finding in findings],
+        "findings": finding_payloads,
         "completed_at": _utc_stamp(),
     }
     summary_path = _write_operation_summary(state_dir, summary)
+    if registry_error is not None:
+        return {
+            "recovered": False,
+            "resume_required": True,
+            "operation_summary_path": str(summary_path),
+            "resume_state": resume_state,
+            "error_count": 1,
+            "findings": finding_payloads,
+        }
     if errors:
         return {
             "recovered": False,
@@ -855,7 +935,7 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
             "operation_summary_path": str(summary_path),
             "resume_state": resume_state,
             "error_count": len(errors),
-            "findings": [finding.as_dict() for finding in findings],
+            "findings": finding_payloads,
         }
     lock_path(state_dir).unlink(missing_ok=True)
     _fsync_directory(state_dir)

@@ -242,15 +242,16 @@ summary, is not treated as protected state. `registry status`, `registry
 authorize`, and mutation commands depend on that proof before treating the
 registry as ready. Unreadable or corrupted registry JSON is reported as
 structured not-ready state and authorization returns `invalid-registry` instead
-of allowing automation to proceed. If a machine dies or the process is
-interrupted while a registry mutation lock exists, later mutations fail closed until
-`registry recover` validates the current registry and records the interrupted
-operation. Mutation locks include the registry digest observed before the
-mutation started; recovery records `resume_state` as
-`registry-unchanged-after-lock`, `registry-changed-after-lock`, or
-`registry-change-unknown` so operators can tell whether the interrupted write
-appears to have landed. Recovery removes the lock only when the registry still
-validates.
+of allowing automation to proceed. Registry initialization and later mutations
+both run under registry operation locks, so a machine death or interrupted
+process fails closed until `registry recover` records the interrupted operation.
+Operation locks include the registry digest observed before the write when one
+exists; recovery records `resume_state` as
+`registry-unchanged-after-lock`, `registry-changed-after-lock`,
+`registry-change-unknown`, or `registry-missing-after-lock` so operators can tell
+whether the interrupted write appears to have landed. Recovery removes the lock
+only when the registry still validates, or when initialization stopped before
+the registry file was written and can be retried cleanly.
 
 `steward registry import-legacy-profile` applies a sanitized legacy migration
 bundle such as `examples/legacy-profile-import.redacted.example.json` as one
