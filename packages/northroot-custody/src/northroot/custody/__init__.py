@@ -77,6 +77,7 @@ from .registry import (
     register_project,
     registry_integrity_report,
     registry_status,
+    registry_topology_report,
 )
 
 __all__ = [
@@ -138,6 +139,7 @@ __all__ = [
     "render_state_verification",
     "render_status",
     "registry_status",
+    "registry_topology_report",
     "schedule_status",
     "uninstall_schedule",
     "validate_agent_delegation_policy",
