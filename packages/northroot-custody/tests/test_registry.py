@@ -378,6 +378,48 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(topology["issue_count"], 1)
             self.assertEqual(topology["projects"][0]["source_destinations"], [])
 
+    def test_legacy_profile_import_relinks_source_destinations_for_imported_projects(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            registry.initialize_registry(
+                state_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            legacy_profile = model.load_json(EXAMPLES / "legacy-profile-import.redacted.example.json")
+            legacy_profile["projects"][0]["source_destination_ids"] = []
+            self.assertEqual(model.validate_legacy_profile_import(legacy_profile, public_safe=True), [])
+
+            imported = registry.import_legacy_profile(state_dir, legacy_profile, public_safe=True)
+
+            self.assertEqual(
+                imported["project_source_links"],
+                [
+                    {
+                        "source_destination_id": "source/legacy-import-primary",
+                        "project_id": "project/legacy-import",
+                        "project_found": True,
+                        "linked": True,
+                        "already_linked": True,
+                    }
+                ],
+            )
+            imported_registry = registry.load_registry(state_dir)
+            imported_project = next(
+                project for project in imported_registry["projects"] if project["project_id"] == "project/legacy-import"
+            )
+            self.assertEqual(imported_project["source_destination_ids"], ["source/legacy-import-primary"])
+            topology = registry.registry_topology_report(
+                state_dir,
+                project_id="project/legacy-import",
+                public_safe=True,
+            )
+            self.assertTrue(topology["ready"])
+
+            replayed = registry.import_legacy_profile(state_dir, legacy_profile, public_safe=True)
+            self.assertEqual(replayed["imported_counts"]["projects"]["skipped_existing"], 1)
+            self.assertTrue(registry.registry_status(state_dir, public_safe=True)["ready"])
+
     def test_bind_source_destination_links_project_topology(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"

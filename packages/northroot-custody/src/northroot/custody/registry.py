@@ -1237,6 +1237,37 @@ def _set_result(result: dict[str, Any], *, entity: str, identity: object, action
     }
 
 
+def _link_source_destination_to_project(
+    service_registry: dict[str, Any],
+    *,
+    source_destination_id: object,
+    project_id: object,
+) -> dict[str, Any]:
+    for project in service_registry.setdefault("projects", []):
+        if not isinstance(project, dict) or project.get("project_id") != project_id:
+            continue
+        existing = project.setdefault("source_destination_ids", [])
+        if not isinstance(existing, list):
+            raise ValueError(f"project source_destination_ids must be a list: {project_id}")
+        already_linked = source_destination_id in existing
+        if not already_linked:
+            existing.append(source_destination_id)
+        return {
+            "source_destination_id": source_destination_id,
+            "project_id": project_id,
+            "project_found": True,
+            "linked": True,
+            "already_linked": already_linked,
+        }
+    return {
+        "source_destination_id": source_destination_id,
+        "project_id": project_id,
+        "project_found": False,
+        "linked": False,
+        "already_linked": False,
+    }
+
+
 def add_object(state_dir: Path, custody_object: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
     def mutator(registry: dict[str, Any]) -> None:
         _append_unique(registry.setdefault("objects", []), "object_id", custody_object)
@@ -1343,15 +1374,11 @@ def bind_source_destination(
         _append_unique(registry.setdefault("source_destinations", []), "source_destination_id", source_destination)
         source_id = source_destination.get("source_destination_id")
         project_id = source_destination.get("project_id")
-        for project in registry.setdefault("projects", []):
-            if not isinstance(project, dict) or project.get("project_id") != project_id:
-                continue
-            existing = project.setdefault("source_destination_ids", [])
-            if not isinstance(existing, list):
-                raise ValueError(f"project source_destination_ids must be a list: {project_id}")
-            if source_id not in existing:
-                existing.append(source_id)
-            break
+        _link_source_destination_to_project(
+            registry,
+            source_destination_id=source_id,
+            project_id=project_id,
+        )
 
     return mutate_registry(
         state_dir,
@@ -1467,6 +1494,21 @@ def import_legacy_profile(
         detail = "; ".join(f"{finding.path}: {finding.detail}" for finding in errors)
         raise ValueError(f"invalid legacy profile import: {detail}")
 
+    normalized_legacy_profile_import = json.loads(json.dumps(legacy_profile_import))
+    imported_projects_by_id = _items_by_id(normalized_legacy_profile_import.get("projects"), "project_id")
+    for source_destination in normalized_legacy_profile_import.get("source_destinations", []):
+        if not isinstance(source_destination, dict):
+            continue
+        project = imported_projects_by_id.get(str(source_destination.get("project_id")))
+        if project is None:
+            continue
+        existing = project.setdefault("source_destination_ids", [])
+        if not isinstance(existing, list):
+            continue
+        source_destination_id = source_destination.get("source_destination_id")
+        if source_destination_id not in existing:
+            existing.append(source_destination_id)
+
     collection_specs = (
         ("objects", "object_id"),
         ("permissions", "permission_set_id"),
@@ -1480,17 +1522,26 @@ def import_legacy_profile(
         key: {"inserted": 0, "skipped_existing": 0}
         for key, _identity_key in collection_specs
     }
+    project_links: list[dict[str, Any]] = []
 
     def mutator(service_registry: dict[str, Any]) -> None:
         for key, identity_key in collection_specs:
             collection_counts = counts[key]
-            for item in legacy_profile_import.get(key, []):
+            for item in normalized_legacy_profile_import.get(key, []):
                 _append_unique_or_same(
                     service_registry.setdefault(key, []),
                     identity_key,
                     item,
                     counts=collection_counts,
                 )
+        for source_destination in normalized_legacy_profile_import.get("source_destinations", []):
+            project_links.append(
+                _link_source_destination_to_project(
+                    service_registry,
+                    source_destination_id=source_destination.get("source_destination_id"),
+                    project_id=source_destination.get("project_id"),
+                )
+            )
 
     result = mutate_registry(
         state_dir,
@@ -1505,4 +1556,5 @@ def import_legacy_profile(
         "source": legacy_profile_import["source"],
         "import_mode": legacy_profile_import["import_mode"],
         "imported_counts": counts,
+        "project_source_links": project_links,
     }

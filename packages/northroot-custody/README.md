@@ -310,7 +310,10 @@ atomic registry mutation. The bundle must contain symbolic refs and redacted
 object custody entries, not raw LaunchAgent paths, machine-local state paths,
 volume names, secret values, or private receipts. Replaying an identical import
 skips existing entries; conflicting entries fail closed without changing the
-registry.
+registry. Imported source-destination bindings are linked back to their
+referenced project inside the same protected mutation, so migrated projects do
+not require a manual `project.source_destination_ids` repair before topology
+verification.
 
 `steward import-legacy-runs` imports sanitized historical run summaries from a
 legacy profile into the steward state's `run-summaries/` directory. It accepts
