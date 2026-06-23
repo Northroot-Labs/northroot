@@ -530,6 +530,33 @@ class RegistryTests(unittest.TestCase):
             readiness = topology["projects"][0]["source_destinations"][0]["readiness"]
             self.assertFalse(readiness["objects_in_project"])
 
+    def test_registry_topology_rejects_non_exportable_source_objects(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            service_registry = model.load_json(EXAMPLES / "service-registry.example.json")
+            service_registry["source_destinations"][0]["object_ids"].append("cache/runtime")
+            self.assertEqual(model.validate_service_registry(service_registry, public_safe=True), [])
+            registry.initialize_registry(state_dir, service_registry, public_safe=True)
+
+            topology = registry.registry_topology_report(
+                state_dir,
+                project_id="project/example",
+                public_safe=True,
+            )
+
+            self.assertFalse(topology["ready"])
+            self.assertEqual(topology["decision"], "topology-incomplete")
+            source = topology["projects"][0]["source_destinations"][0]
+            self.assertFalse(source["ready"])
+            self.assertTrue(source["readiness"]["objects_in_project"])
+            self.assertFalse(source["readiness"]["objects_exportable"])
+            self.assertEqual(source["readiness"]["non_exportable_source_objects"], ["cache/runtime"])
+            cache_object = next(item for item in source["objects"] if item["object_id"] == "cache/runtime")
+            self.assertEqual(cache_object["visibility"], "ephemeral")
+            self.assertEqual(cache_object["restore_class"], "never-export")
+            self.assertEqual(cache_object["custody_backup"], "excluded")
+            self.assertFalse(cache_object["source_exportable"])
+
     def test_sensitive_objects_require_object_permission_for_authorization_and_topology(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"
