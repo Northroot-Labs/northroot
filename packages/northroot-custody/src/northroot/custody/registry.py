@@ -1242,30 +1242,42 @@ def _link_source_destination_to_project(
     *,
     source_destination_id: object,
     project_id: object,
+    exclusive: bool = False,
 ) -> dict[str, Any]:
+    removed_from_project_ids: list[object] = []
+    target_result: dict[str, Any] | None = None
     for project in service_registry.setdefault("projects", []):
-        if not isinstance(project, dict) or project.get("project_id") != project_id:
+        if not isinstance(project, dict):
             continue
         existing = project.setdefault("source_destination_ids", [])
         if not isinstance(existing, list):
             raise ValueError(f"project source_destination_ids must be a list: {project_id}")
+        if project.get("project_id") != project_id:
+            if exclusive and source_destination_id in existing:
+                while source_destination_id in existing:
+                    existing.remove(source_destination_id)
+                removed_from_project_ids.append(project.get("project_id"))
+            continue
         already_linked = source_destination_id in existing
         if not already_linked:
             existing.append(source_destination_id)
-        return {
+        target_result = {
             "source_destination_id": source_destination_id,
             "project_id": project_id,
             "project_found": True,
             "linked": True,
             "already_linked": already_linked,
         }
-    return {
+    result = target_result or {
         "source_destination_id": source_destination_id,
         "project_id": project_id,
         "project_found": False,
         "linked": False,
         "already_linked": False,
     }
+    if exclusive:
+        result["removed_from_project_ids"] = removed_from_project_ids
+    return result
 
 
 def add_object(state_dir: Path, custody_object: dict[str, Any], *, public_safe: bool = False) -> dict[str, Any]:
@@ -1378,6 +1390,7 @@ def bind_source_destination(
             registry,
             source_destination_id=source_id,
             project_id=project_id,
+            exclusive=True,
         )
 
     return mutate_registry(
@@ -1406,19 +1419,13 @@ def set_source_destination(
             "source_destination_id",
             source_destination,
         )
-        for project in registry.setdefault("projects", []):
-            if not isinstance(project, dict):
-                continue
-            existing = project.setdefault("source_destination_ids", [])
-            if not isinstance(existing, list):
-                raise ValueError(f"project source_destination_ids must be a list: {project.get('project_id')}")
-            if project.get("project_id") == project_id:
-                if source_id not in existing:
-                    existing.append(source_id)
-                project_linked = source_id in existing
-            else:
-                while source_id in existing:
-                    existing.remove(source_id)
+        link = _link_source_destination_to_project(
+            registry,
+            source_destination_id=source_id,
+            project_id=project_id,
+            exclusive=True,
+        )
+        project_linked = bool(link["linked"])
 
     result = mutate_registry(
         state_dir,
@@ -1540,6 +1547,7 @@ def import_legacy_profile(
                     service_registry,
                     source_destination_id=source_destination.get("source_destination_id"),
                     project_id=source_destination.get("project_id"),
+                    exclusive=True,
                 )
             )
 
