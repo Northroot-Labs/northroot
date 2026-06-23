@@ -62,6 +62,16 @@ COMMAND_PLAN_OPERATIONS = {
 }
 
 
+class ScheduleRegistryGateError(ValueError):
+    """Raised when registry policy refuses a schedule state mutation."""
+
+    def __init__(self, operation: str, gate: dict[str, Any]) -> None:
+        decision = gate.get("decision") or "denied"
+        super().__init__(f"registry {operation} denied: {decision}")
+        self.operation = operation
+        self.gate = gate
+
+
 @dataclass(frozen=True)
 class StewardInstallation:
     schema_version: str
@@ -1853,6 +1863,51 @@ def registry_topology_gate(
         "reason": topology.get("reason") or "registry topology is not ready for project execution",
         "topology": topology,
     }
+
+
+def schedule_registry_gate(
+    registry_state: Path | None,
+    *,
+    operation: str,
+    project_id: str | None,
+    object_id: str | None = None,
+) -> dict[str, Any] | None:
+    if registry_state is None and project_id is None and object_id is None:
+        return None
+    if registry_state is None:
+        return {
+            "schema_version": "northroot.steward.schedule-authorization.v0",
+            "operation": operation,
+            "allowed": False,
+            "decision": "missing-registry-state",
+            "reason": "registry_state is required when project_id or object_id is supplied",
+        }
+    if not project_id:
+        return {
+            "schema_version": "northroot.steward.schedule-authorization.v0",
+            "operation": operation,
+            "registry_state": str(registry_state),
+            "object_id": object_id,
+            "allowed": False,
+            "decision": "missing-project-id",
+            "reason": "project_id is required when registry_state is supplied",
+        }
+    authorization = authorize_operation(
+        registry_state,
+        operation=operation,
+        project_id=project_id,
+        object_id=object_id,
+        public_safe=True,
+    )
+    if not authorization["allowed"]:
+        return authorization
+    topology_gate = registry_topology_gate(
+        registry_state,
+        operation=operation,
+        project_id=project_id,
+        object_id=object_id,
+    )
+    return topology_gate
 
 
 def render_command_plan(
@@ -4222,6 +4277,14 @@ def create_schedule(
         raise ValueError("every_minutes must be greater than zero")
     if operation not in SCHEDULE_OPERATIONS:
         raise ValueError(f"unsupported scheduled operation: {operation}")
+    registry_gate = schedule_registry_gate(
+        registry_state,
+        operation="schedule.create",
+        project_id=project_id,
+        object_id=object_id,
+    )
+    if registry_gate is not None:
+        raise ScheduleRegistryGateError("schedule.create", registry_gate)
     installation = load_installation(output_dir)
     profile_name = str(installation["profile_name"])
     schedule_scope_id = _schedule_scope_id(
