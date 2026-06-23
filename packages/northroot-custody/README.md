@@ -330,7 +330,15 @@ files only when the schedule is not marked installed. `schedule create`,
 or platform registration is changed. Registry context supplied at schedule
 creation is persisted in `schedule.json`, used by later schedule subcommands,
 and rendered into the unattended scheduled command so hourly runs keep the same
-project/object policy context. Use `schedule delete --force` only for
+project/object policy context. Schedules created without registry context keep
+the profile-level `schedules/schedule.json` path for compatibility. Schedules
+created with registry/project/object context are written under
+`schedules/contexts/<schedule-scope-id>/` with distinct launchd labels or
+systemd unit names, so multiple registered projects can keep separate schedules
+without overwriting each other. When exactly one scoped schedule exists,
+context-free status/install/uninstall/delete commands use it for compatibility;
+when multiple scoped schedules exist, those commands fail closed until the
+registry/project/object context is supplied. Use `schedule delete --force` only for
 operator-confirmed cleanup of stale generated files after the platform
 registration has already been removed. Refused deletion returns a non-zero exit
 status so scripts and agents cannot mistake a blocked cleanup for success.
@@ -353,7 +361,7 @@ contains spaces, quote it inside `--runner-command`, for example
 templates are written with fsync-and-rename semantics and hashed in
 `schedule.json`; preflight fails if a rendered launchd plist or systemd
 unit/timer drifts after creation. The `schedule.json` manifest itself is
-indexed in `schedules/schedule-index.json` with
+indexed in its sibling `schedule-index.json` with
 `northroot.steward.schedule-index.v0`, and schedule install, uninstall, delete,
 and preflight fail closed if that manifest is unindexed, missing, or
 digest-mismatched. If generated scheduler files exist without a schedule

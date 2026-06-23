@@ -534,7 +534,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(schedule)
         return 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "status":
-        status = steward.schedule_status(Path(args.state))
+        status = steward.schedule_status(
+            Path(args.state),
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
+        )
         authorization = _authorize_schedule_context(args, operation="schedule.status", status=status)
         if authorization is not None and not authorization["allowed"]:
             write_json(_schedule_authorization_denied_result("schedule.status", authorization))
@@ -544,38 +549,71 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(status)
         return 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "install":
-        status = steward.schedule_status(Path(args.state))
+        status = steward.schedule_status(
+            Path(args.state),
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
+        )
         authorization = _authorize_schedule_context(args, operation="schedule.install", status=status)
         if authorization is not None and not authorization["allowed"]:
             write_json(_schedule_authorization_denied_result("schedule.install", authorization))
             return 1
+        registry_state, project_id, object_id = _schedule_registry_context(args, status=status)
         result = steward.install_schedule(
             Path(args.state),
             execute=args.execute,
             require_preflight=not args.skip_preflight,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
         )
         if authorization is not None:
             result["authorization"] = authorization
         write_json(result)
         return 1 if result.get("return_code") not in (None, 0) else 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "uninstall":
-        status = steward.schedule_status(Path(args.state))
+        status = steward.schedule_status(
+            Path(args.state),
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
+        )
         authorization = _authorize_schedule_context(args, operation="schedule.uninstall", status=status)
         if authorization is not None and not authorization["allowed"]:
             write_json(_schedule_authorization_denied_result("schedule.uninstall", authorization))
             return 1
-        result = steward.uninstall_schedule(Path(args.state), execute=args.execute)
+        registry_state, project_id, object_id = _schedule_registry_context(args, status=status)
+        result = steward.uninstall_schedule(
+            Path(args.state),
+            execute=args.execute,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
         if authorization is not None:
             result["authorization"] = authorization
         write_json(result)
         return 1 if result.get("return_code") not in (None, 0) else 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "delete":
-        status = steward.schedule_status(Path(args.state))
+        status = steward.schedule_status(
+            Path(args.state),
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
+        )
         authorization = _authorize_schedule_context(args, operation="schedule.delete", status=status)
         if authorization is not None and not authorization["allowed"]:
             write_json(_schedule_authorization_denied_result("schedule.delete", authorization))
             return 1
-        result = steward.delete_schedule(Path(args.state), force=args.force)
+        registry_state, project_id, object_id = _schedule_registry_context(args, status=status)
+        result = steward.delete_schedule(
+            Path(args.state),
+            force=args.force,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
         if authorization is not None:
             result["authorization"] = authorization
         write_json(result)

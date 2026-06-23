@@ -1123,7 +1123,7 @@ class StewardTests(unittest.TestCase):
                 registry_state=registry_dir,
                 project_id="project/example",
             )
-            service_text = (output_dir / "schedules" / "northroot-steward.service").read_text(encoding="utf-8")
+            service_text = Path(str(schedule["schedule_path"])).with_suffix(".service").read_text(encoding="utf-8")
             self.assertIn("--registry-state", service_text)
             self.assertIn(str(registry_dir), service_text)
             self.assertIn("--project-id project/example", service_text)
@@ -1134,6 +1134,53 @@ class StewardTests(unittest.TestCase):
             self.assertTrue(deleted["deleted"])
             self.assertFalse(Path(str(schedule["schedule_path"])).exists())
             self.assertFalse(steward.schedule_status(output_dir)["configured"])
+
+            first_project_schedule = steward.create_schedule(
+                output_dir=output_dir,
+                scheduler="systemd",
+                every_minutes=30,
+                registry_state=registry_dir,
+                project_id="project/example",
+            )
+            second_project_schedule = steward.create_schedule(
+                output_dir=output_dir,
+                scheduler="launchd",
+                every_minutes=60,
+                registry_state=registry_dir,
+                project_id="project/release",
+            )
+            self.assertNotEqual(
+                first_project_schedule["schedule_scope_id"],
+                second_project_schedule["schedule_scope_id"],
+            )
+            self.assertNotEqual(
+                Path(str(first_project_schedule["schedule_path"])).parent,
+                Path(str(second_project_schedule["schedule_path"])).parent,
+            )
+            ambiguous_schedule = steward.schedule_status(output_dir)
+            self.assertTrue(ambiguous_schedule["requires_schedule_context"])
+            self.assertEqual(ambiguous_schedule["schedule_count"], 2)
+            first_status = steward.schedule_status(
+                output_dir,
+                registry_state=registry_dir,
+                project_id="project/example",
+            )
+            self.assertTrue(first_status["configured"])
+            self.assertEqual(first_status["project_id"], "project/example")
+            first_delete = steward.delete_schedule(
+                output_dir,
+                registry_state=registry_dir,
+                project_id="project/example",
+            )
+            self.assertTrue(first_delete["deleted"])
+            self.assertFalse(Path(str(first_project_schedule["schedule_path"])).exists())
+            self.assertTrue(Path(str(second_project_schedule["schedule_path"])).exists())
+            second_delete = steward.delete_schedule(
+                output_dir,
+                registry_state=registry_dir,
+                project_id="project/release",
+            )
+            self.assertTrue(second_delete["deleted"])
 
             verify_schedule = steward.create_schedule(
                 output_dir=output_dir,
