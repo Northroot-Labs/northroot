@@ -2234,6 +2234,7 @@ def render_command_plan(
             "do_not_shell_join_argv": True,
             "do_not_read_or_log_secret_values": True,
             "registered_agents_use_default_dogfood_policy": True,
+            "default_dogfood_policy_selected_without_policy_file": True,
             "final_review_clearance_required_before_ready_pr_or_merge": True,
         },
     }
@@ -2276,6 +2277,11 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
         "agent_contract": {
             "schema_version": "northroot.steward.agent-contract.v0",
             "default_dogfood_policy": default_dogfood_agent_delegation_policy(),
+            "default_policy_resolution": {
+                "registered_agents_use_default_dogfood_policy": True,
+                "policy_file_required_for_dogfood_agent_workflow": False,
+                "registered_agent_operations": sorted(model.AGENT_DELEGATION_OPERATIONS),
+            },
             "invocation": {
                 "argument_style": "argv",
                 "shell_required": False,
@@ -2515,6 +2521,7 @@ def _render_registry_context(
         return None
     status = registry.registry_status(registry_state, public_safe=True)
     authorization = None
+    topology = None
     missing_project_id = bool(object_id and not project_id)
     if project_id is not None:
         authorization = authorize_operation(
@@ -2524,11 +2531,26 @@ def _render_registry_context(
             object_id=object_id,
             public_safe=True,
         )
-    ready = bool(status["ready"] and not missing_project_id and (authorization is None or authorization["allowed"]))
+        topology = registry.registry_topology_report(
+            registry_state,
+            project_id=project_id,
+            public_safe=True,
+        )
+    topology_ready = topology is None or bool(topology["ready"])
+    ready = bool(
+        status["ready"]
+        and not missing_project_id
+        and (authorization is None or authorization["allowed"])
+        and topology_ready
+    )
     if not status["ready"]:
         decision = "invalid-registry"
     elif missing_project_id:
         decision = "missing-project-id"
+    elif authorization is not None and not authorization["allowed"]:
+        decision = str(authorization["decision"])
+    elif topology is not None and not topology["ready"]:
+        decision = str(topology["decision"])
     elif authorization is not None:
         decision = str(authorization["decision"])
     else:
@@ -2546,6 +2568,8 @@ def _render_registry_context(
         "resume_required": bool(status.get("resume_required")),
         "status": status,
         "authorization": authorization,
+        "topology": topology,
+        "topology_ready": topology_ready if topology is not None else None,
     }
 
 
@@ -2685,6 +2709,8 @@ def render_state_verification(
             registry_code = "registry_not_ready"
         elif registry_context["decision"] == "missing-project-id":
             registry_code = "registry_project_required"
+        elif registry_context["topology_ready"] is False:
+            registry_code = "registry_topology_not_ready"
         elif not registry_context["ready"]:
             registry_code = "registry_authorization_failed"
         checks.append(
@@ -2787,6 +2813,8 @@ def render_report(
             recommended_actions.append("repair service registry integrity before relying on steward policy authorization")
         elif registry_context["decision"] == "missing-project-id":
             recommended_actions.append("provide project_id when checking object-scoped steward registry authorization")
+        elif registry_context["topology_ready"] is False:
+            recommended_actions.append("repair service registry destination topology before relying on steward project execution")
         else:
             recommended_actions.append("update service registry permissions or request human clearance before steward operations")
     if retention_decision is not None and retention_decision.get("missing_evidence"):

@@ -391,7 +391,12 @@ manifest and call the listed custody operations instead of constructing direct
 `restic` or `resticprofile` shell commands. The manifest includes an
 `agent_contract` and `operation_contracts` list with argv templates, required
 inputs, side effects, success schemas, preflight requirements, and secret
-handling rules.
+handling rules. The `agent_contract.default_dogfood_policy` is selected by
+default for registered dogfood agents such as `agent:codex`; branch, commit,
+push, draft-PR, PR follow-up, and PR-check plans do not require a separate
+policy file. Those plans still refuse protected branches and require the
+`Agent-*` provenance trailers that distinguish agent authorship, delegated
+policy, branch, verification, and coauthorship.
 
 `steward command-plan` is the safer bridge from an agent request to an argv. It
 accepts a constrained operation name plus typed inputs, then returns
@@ -402,6 +407,13 @@ shell is not required for custody operations, and agents must not shell-join the
 returned argv. The operation set includes steward custody operations, sanitized
 legacy run imports, and the default dogfood branch/commit/push/draft-PR
 workflow for registered agents.
+
+When `--registry-state` and `--project-id` are supplied, `steward verify-state`
+and `steward report` check both policy authorization and project destination
+topology. A structurally valid registry still fails closed if a project has no
+source destination, a source lacks objects or a destination, a replica lacks
+required evidence, or the resume policy is not fail-closed for disconnected
+storage and retention decisions.
 
 When a policy names multiple destinations, steward renders the first destination
 as the primary delegated `resticprofile` repository. Additional destinations are
