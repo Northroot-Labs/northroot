@@ -1283,18 +1283,28 @@ class StewardTests(unittest.TestCase):
             self.assertIn(str(orphan_path), forced_orphan_delete["removed_paths"])
             self.assertFalse(orphan_path.exists())
 
+            schedule_allowed_registry_dir = Path(temp_dir) / "schedule-allowed-registry"
+            schedule_allowed_registry = model.load_json(EXAMPLES / "service-registry.example.json")
+            schedule_project_permission = schedule_allowed_registry["permissions"][0]
+            for operation in ("schedule.install", "schedule.uninstall", "schedule.delete"):
+                if operation not in schedule_project_permission["allowed_operations"]:
+                    schedule_project_permission["allowed_operations"].append(operation)
+                while operation in schedule_project_permission["requires_human_clearance"]:
+                    schedule_project_permission["requires_human_clearance"].remove(operation)
+            registry.initialize_registry(schedule_allowed_registry_dir, schedule_allowed_registry, public_safe=True)
+
             schedule = steward.create_schedule(
                 output_dir=output_dir,
                 scheduler="systemd",
                 every_minutes=30,
-                registry_state=registry_dir,
+                registry_state=schedule_allowed_registry_dir,
                 project_id="project/example",
             )
             service_text = Path(str(schedule["schedule_path"])).with_suffix(".service").read_text(encoding="utf-8")
             self.assertIn("--registry-state", service_text)
-            self.assertIn(str(registry_dir), service_text)
+            self.assertIn(str(schedule_allowed_registry_dir), service_text)
             self.assertIn("--project-id project/example", service_text)
-            self.assertEqual(schedule["registry_state"], str(registry_dir))
+            self.assertEqual(schedule["registry_state"], str(schedule_allowed_registry_dir))
             self.assertEqual(schedule["project_id"], "project/example")
 
             denied_schedule_output_dir = Path(temp_dir) / "steward-denied-schedule"
@@ -1317,6 +1327,36 @@ class StewardTests(unittest.TestCase):
             self.assertEqual(denied_schedule.exception.gate["decision"], "not-allowed")
             self.assertFalse((denied_schedule_output_dir / "schedules").exists())
 
+            policy_denied_schedule_output_dir = Path(temp_dir) / "steward-policy-denied-schedule"
+            steward.init_steward(
+                inventory_path=EXAMPLES / "workspace-inventory.example.json",
+                policy_path=EXAMPLES / "custody-policy.example.json",
+                output_dir=policy_denied_schedule_output_dir,
+                secret_bindings_path=EXAMPLES / "secret-bindings.redacted.example.json",
+                repository_bindings_path=EXAMPLES / "repository-bindings.redacted.example.json",
+            )
+            policy_denied_schedule = steward.create_schedule(
+                output_dir=policy_denied_schedule_output_dir,
+                scheduler="launchd",
+                every_minutes=60,
+                registry_state=registry_dir,
+                project_id="project/example",
+            )
+            with self.assertRaises(steward.ScheduleRegistryGateError) as denied_install:
+                steward.install_schedule(policy_denied_schedule_output_dir)
+            self.assertEqual(denied_install.exception.operation, "schedule.install")
+            self.assertEqual(denied_install.exception.gate["decision"], "human-clearance-required")
+            self.assertFalse(steward.schedule_status(policy_denied_schedule_output_dir)["installed"])
+            with self.assertRaises(steward.ScheduleRegistryGateError) as denied_uninstall:
+                steward.uninstall_schedule(policy_denied_schedule_output_dir)
+            self.assertEqual(denied_uninstall.exception.operation, "schedule.uninstall")
+            self.assertEqual(denied_uninstall.exception.gate["decision"], "human-clearance-required")
+            with self.assertRaises(steward.ScheduleRegistryGateError) as denied_delete:
+                steward.delete_schedule(policy_denied_schedule_output_dir)
+            self.assertEqual(denied_delete.exception.operation, "schedule.delete")
+            self.assertEqual(denied_delete.exception.gate["decision"], "human-clearance-required")
+            self.assertTrue(Path(str(policy_denied_schedule["schedule_path"])).exists())
+
             deleted = steward.delete_schedule(output_dir)
             self.assertTrue(deleted["configured_before_delete"])
             self.assertTrue(deleted["deleted"])
@@ -1327,14 +1367,14 @@ class StewardTests(unittest.TestCase):
                 output_dir=output_dir,
                 scheduler="systemd",
                 every_minutes=30,
-                registry_state=registry_dir,
+                registry_state=schedule_allowed_registry_dir,
                 project_id="project/example",
             )
             second_project_schedule = steward.create_schedule(
                 output_dir=output_dir,
                 scheduler="launchd",
                 every_minutes=60,
-                registry_state=registry_dir,
+                registry_state=schedule_allowed_registry_dir,
                 project_id="project/example",
                 object_id="state/sqlite",
             )
@@ -1351,14 +1391,14 @@ class StewardTests(unittest.TestCase):
             self.assertEqual(ambiguous_schedule["schedule_count"], 2)
             first_status = steward.schedule_status(
                 output_dir,
-                registry_state=registry_dir,
+                registry_state=schedule_allowed_registry_dir,
                 project_id="project/example",
             )
             self.assertTrue(first_status["configured"])
             self.assertEqual(first_status["project_id"], "project/example")
             first_delete = steward.delete_schedule(
                 output_dir,
-                registry_state=registry_dir,
+                registry_state=schedule_allowed_registry_dir,
                 project_id="project/example",
             )
             self.assertTrue(first_delete["deleted"])
@@ -1366,7 +1406,7 @@ class StewardTests(unittest.TestCase):
             self.assertTrue(Path(str(second_project_schedule["schedule_path"])).exists())
             second_delete = steward.delete_schedule(
                 output_dir,
-                registry_state=registry_dir,
+                registry_state=schedule_allowed_registry_dir,
                 project_id="project/example",
                 object_id="state/sqlite",
             )

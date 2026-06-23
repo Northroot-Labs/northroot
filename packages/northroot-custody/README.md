@@ -198,7 +198,12 @@ gates for a specific snapshot.
 the generated steward files, `resticprofile` availability, private repository
 binding validity, private secret binding validity, provider command
 availability, and required scheduler environment variables or runtime
-environment bindings without printing secret values. Steward records hashes for
+environment bindings without printing secret values. Scheduled service mutations
+use the same registry authorization gate from the CLI and the package API. A
+registry-scoped schedule stores its registry/project context, and `create`,
+`install`, `uninstall`, and `delete` must pass object and project permission
+policy before they write templates, touch the platform scheduler, or remove
+generated schedule state. Steward records hashes for
 generated custody artifacts such as `snapshot-plan.json` and
 `resticprofile.yaml`; preflight fails if those generated files drift. Change the
 inventory, policy, or private bindings and rerun `steward init` instead of
