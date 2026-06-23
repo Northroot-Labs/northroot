@@ -704,6 +704,9 @@ def registry_topology_report(
                         },
                     }
                 )
+            replicas_ready = bool(source_replica_reports) and all(
+                bool(replica_report["ready"]) for replica_report in source_replica_reports
+            )
             source_ready = bool(
                 source
                 and destination
@@ -712,6 +715,7 @@ def registry_topology_report(
                 and source_objects_in_project
                 and source_permission_matches
                 and source_destination_role_ok
+                and replicas_ready
             )
             if not source_ready:
                 issue_count += 1
@@ -743,6 +747,9 @@ def registry_topology_report(
                         "permission_set_matches_project": source_permission_matches,
                         "object_count": len(object_ids),
                         "objects_in_project": source_objects_in_project,
+                        "replica_count": len(source_replica_reports),
+                        "replicas_present": bool(source_replica_reports),
+                        "replicas_ready": replicas_ready,
                     },
                 }
             )

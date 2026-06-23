@@ -378,6 +378,29 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(topology["issue_count"], 1)
             self.assertEqual(topology["projects"][0]["source_destinations"], [])
 
+    def test_registry_topology_requires_replica_wiring(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            service_registry = model.load_json(EXAMPLES / "service-registry.example.json")
+            service_registry["replicas"] = []
+            self.assertEqual(model.validate_service_registry(service_registry, public_safe=True), [])
+            registry.initialize_registry(state_dir, service_registry, public_safe=True)
+
+            topology = registry.registry_topology_report(
+                state_dir,
+                project_id="project/example",
+                public_safe=True,
+            )
+
+            self.assertFalse(topology["ready"])
+            self.assertEqual(topology["decision"], "topology-incomplete")
+            self.assertEqual(topology["issue_count"], 2)
+            source = topology["projects"][0]["source_destinations"][0]
+            self.assertFalse(source["ready"])
+            self.assertEqual(source["readiness"]["replica_count"], 0)
+            self.assertFalse(source["readiness"]["replicas_present"])
+            self.assertFalse(source["readiness"]["replicas_ready"])
+
     def test_legacy_profile_import_relinks_source_destinations_for_imported_projects(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"
