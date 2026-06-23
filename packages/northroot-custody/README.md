@@ -335,6 +335,15 @@ Executed delegated operations are guarded by `steward-operation.lock.json` in
 the steward state directory. A stale lock blocks later execution with
 `delegated-operation-locked`; run `steward recover-operation --state ...` to
 record `delegated-interrupted-recovered` and clear the lock before retrying.
+When the lock is registry-bound, it records the registry digest and public-safe
+registry/topology context observed before execution. Recovery re-reads the
+registry and records `registry_changed_since_lock` plus a `resume_state` such as
+`registry-unchanged-after-operation-lock`,
+`registry-changed-after-operation-lock`, or `registry-change-unknown`. Because a
+delegated backup or restore may have partially mutated external storage before
+the interruption, recovery also records `side_effect_state` as
+`unknown-after-interrupted-delegated-operation` and requires a fresh preflight,
+authorization, and topology check before retry.
 Unreadable or partially written operation locks also fail closed; recovery
 records `delegated-invalid-lock-recovered` with the lock digest/error before
 clearing the lock.
