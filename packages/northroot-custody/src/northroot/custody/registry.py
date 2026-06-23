@@ -629,6 +629,14 @@ def registry_topology_report(
     source_destinations_by_id = _items_by_id(service_registry.get("source_destinations"), "source_destination_id")
     replicas = [replica for replica in service_registry.get("replicas", []) if isinstance(replica, dict)]
     permissions_by_id = _items_by_id(service_registry.get("permissions"), "permission_set_id")
+    object_permission_ids_by_object_id: dict[str, list[str]] = {}
+    for permission in service_registry.get("permissions", []):
+        if not isinstance(permission, dict) or permission.get("scope") != "object":
+            continue
+        object_id = permission.get("object_id")
+        permission_set_id = permission.get("permission_set_id")
+        if isinstance(object_id, str) and isinstance(permission_set_id, str):
+            object_permission_ids_by_object_id.setdefault(object_id, []).append(permission_set_id)
     resume_policy = service_registry.get("resume_policy") if isinstance(service_registry.get("resume_policy"), dict) else {}
     partial_run_handling = resume_policy.get("partial_run_handling")
     fail_closed_storage = resume_policy.get("on_disconnected_storage") == "fail-closed-record-summary"
@@ -739,7 +747,33 @@ def registry_topology_report(
                 }
             )
         project_permission = permissions_by_id.get(str(project.get("permission_set_ref")))
-        project_ready = bool(source_reports) and all(bool(source["ready"]) for source in source_reports)
+        project_object_reports: list[dict[str, Any]] = []
+        sensitive_objects_without_permission: list[str] = []
+        for object_id in sorted(project_object_ids):
+            custody_object = objects_by_id.get(object_id, {})
+            visibility = custody_object.get("visibility")
+            object_permission_ids = object_permission_ids_by_object_id.get(object_id, [])
+            sensitive_object = visibility in {"secret", "regulated"}
+            if sensitive_object and not object_permission_ids:
+                sensitive_objects_without_permission.append(object_id)
+            project_object_reports.append(
+                {
+                    "object_id": object_id,
+                    "object_type": custody_object.get("object_type"),
+                    "visibility": visibility,
+                    "restore_class": custody_object.get("restore_class"),
+                    "sensitive": sensitive_object,
+                    "object_permission_set_ids": object_permission_ids,
+                    "object_permission_required": sensitive_object,
+                    "object_permission_present": bool(object_permission_ids),
+                }
+            )
+        sensitive_object_permissions_ready = not sensitive_objects_without_permission
+        project_ready = (
+            bool(source_reports)
+            and all(bool(source["ready"]) for source in source_reports)
+            and sensitive_object_permissions_ready
+        )
         if not project_ready:
             issue_count += 1
         project_reports.append(
@@ -750,9 +784,16 @@ def registry_topology_report(
                 "permission_set_ref": project.get("permission_set_ref"),
                 "permission_set": project_permission,
                 "object_ids": project.get("object_ids", []),
+                "objects": project_object_reports,
                 "schedule_ref": project.get("schedule_ref"),
                 "source_destinations": source_reports,
                 "ready": project_ready,
+                "readiness": {
+                    "source_destinations_ready": bool(source_reports)
+                    and all(bool(source["ready"]) for source in source_reports),
+                    "sensitive_object_permissions_ready": sensitive_object_permissions_ready,
+                    "sensitive_objects_without_permission": sensitive_objects_without_permission,
+                },
             }
         )
 
@@ -875,6 +916,19 @@ def authorize_operation(
 
     matched_permission_sets = [str(project_permission.get("permission_set_id"))]
     object_permissions = _object_permissions(service_registry, object_id) if object_id is not None else []
+    if object_id is not None:
+        custody_object = _items_by_id(service_registry.get("objects"), "object_id").get(object_id)
+        if (
+            custody_object
+            and custody_object.get("visibility") in {"secret", "regulated"}
+            and not object_permissions
+        ):
+            return {
+                **base,
+                "decision": "missing-object-permission",
+                "reason": f"sensitive object requires an object permission set: {object_id}",
+                "matched_permission_sets": matched_permission_sets,
+            }
     matched_permission_sets.extend(str(permission["permission_set_id"]) for permission in object_permissions)
 
     permissions = [project_permission, *object_permissions]

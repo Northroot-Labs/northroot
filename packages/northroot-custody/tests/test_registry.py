@@ -507,6 +507,43 @@ class RegistryTests(unittest.TestCase):
             readiness = topology["projects"][0]["source_destinations"][0]["readiness"]
             self.assertFalse(readiness["objects_in_project"])
 
+    def test_sensitive_objects_require_object_permission_for_authorization_and_topology(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            service_registry = model.load_json(EXAMPLES / "service-registry.example.json")
+            service_registry["permissions"] = [
+                permission
+                for permission in service_registry["permissions"]
+                if permission.get("permission_set_id") != "perm/object-secrets"
+            ]
+            self.assertEqual(model.validate_service_registry(service_registry, public_safe=True), [])
+            registry.initialize_registry(state_dir, service_registry, public_safe=True)
+
+            authorization = registry.authorize_operation(
+                state_dir,
+                operation="preflight",
+                project_id="project/example",
+                object_id="secrets/restic-env",
+                public_safe=True,
+            )
+            self.assertFalse(authorization["allowed"])
+            self.assertEqual(authorization["decision"], "missing-object-permission")
+            self.assertEqual(authorization["matched_permission_sets"], ["perm/project-example"])
+
+            topology = registry.registry_topology_report(
+                state_dir,
+                project_id="project/example",
+                public_safe=True,
+            )
+            self.assertFalse(topology["ready"])
+            self.assertEqual(topology["decision"], "topology-incomplete")
+            project = topology["projects"][0]
+            self.assertFalse(project["readiness"]["sensitive_object_permissions_ready"])
+            self.assertEqual(project["readiness"]["sensitive_objects_without_permission"], ["secrets/restic-env"])
+            secret_object = next(item for item in project["objects"] if item["object_id"] == "secrets/restic-env")
+            self.assertTrue(secret_object["object_permission_required"])
+            self.assertFalse(secret_object["object_permission_present"])
+
     def test_registry_recover_handles_interrupted_initialization(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"
