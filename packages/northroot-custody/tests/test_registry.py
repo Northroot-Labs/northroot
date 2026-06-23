@@ -112,6 +112,7 @@ class RegistryTests(unittest.TestCase):
             self.assertTrue(initialized["initialized"])
             self.assertTrue((state_dir / "service-registry.json").exists())
             self.assertTrue(Path(str(initialized["operation_summary_path"])).exists())
+            self.assertFalse((state_dir / "service-registry.lock.json").exists())
 
             status = registry.registry_status(state_dir, public_safe=True)
             self.assertTrue(status["ready"])
@@ -271,6 +272,72 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(recovered["resume_state"], "registry-unchanged-after-lock")
             self.assertFalse(recovered["registry_changed_since_lock"])
             self.assertFalse((state_dir / "service-registry.lock.json").exists())
+            self.assertTrue(registry.registry_status(state_dir, public_safe=True)["ready"])
+
+    def test_registry_recover_handles_interrupted_initialization(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            state_dir.mkdir()
+            service_registry = model.load_json(EXAMPLES / "service-registry.example.json")
+            lock = {
+                "schema_version": "northroot.steward.registry-operation-lock.v0",
+                "operation_id": "interrupted-init",
+                "operation": "registry.init",
+                "started_at": "2026-06-22T00:00:00Z",
+                "pid": 123,
+                "registry_path": str(registry.registry_path(state_dir)),
+                "before_sha256": None,
+                "failure_policy": "fail-closed-record-summary",
+            }
+            write_json(registry.lock_path(state_dir), lock)
+            write_json(registry.registry_path(state_dir), service_registry)
+
+            locked_status = registry.registry_status(state_dir, public_safe=True)
+            self.assertFalse(locked_status["ready"])
+            self.assertTrue(locked_status["resume_required"])
+
+            recovered = registry.recover_registry(state_dir, public_safe=True)
+
+            self.assertTrue(recovered["recovered"])
+            self.assertFalse(recovered["resume_required"])
+            self.assertEqual(recovered["resume_state"], "registry-change-unknown")
+            self.assertFalse(registry.lock_path(state_dir).exists())
+            recovered_summary = model.load_json(Path(str(recovered["operation_summary_path"])))
+            self.assertEqual(recovered_summary["status"], "recovered-after-interruption")
+            self.assertEqual(recovered_summary["resume_state"], "registry-change-unknown")
+            recovered_status = registry.registry_status(state_dir, public_safe=True)
+            self.assertTrue(recovered_status["ready"])
+            self.assertTrue(recovered_status["protected_state_ok"])
+
+    def test_registry_recover_clears_interrupted_initialization_before_registry_write(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            state_dir.mkdir()
+            lock = {
+                "schema_version": "northroot.steward.registry-operation-lock.v0",
+                "operation_id": "interrupted-init-before-write",
+                "operation": "registry.init",
+                "started_at": "2026-06-22T00:00:00Z",
+                "pid": 123,
+                "registry_path": str(registry.registry_path(state_dir)),
+                "before_sha256": None,
+                "failure_policy": "fail-closed-record-summary",
+            }
+            write_json(registry.lock_path(state_dir), lock)
+
+            recovered = registry.recover_registry(state_dir, public_safe=True)
+
+            self.assertTrue(recovered["recovered"])
+            self.assertEqual(recovered["resume_state"], "registry-missing-after-lock")
+            self.assertFalse(registry.lock_path(state_dir).exists())
+            missing_status = registry.registry_status(state_dir, public_safe=True)
+            self.assertFalse(missing_status["configured"])
+            initialized = registry.initialize_registry(
+                state_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            self.assertTrue(initialized["initialized"])
             self.assertTrue(registry.registry_status(state_dir, public_safe=True)["ready"])
 
     def test_registry_recovery_records_landed_interrupted_write(self) -> None:
