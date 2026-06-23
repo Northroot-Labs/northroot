@@ -295,6 +295,9 @@ topology. A project permission set that allows `run` is not enough if the
 project has no usable source destination or replica wiring. `schedule status`,
 `schedule uninstall`, and `schedule delete` remain available for inspection and
 cleanup when topology is broken.
+The service-level `create_schedule` API applies the same registry gate before
+writing scheduler templates, so direct package callers cannot bypass object or
+project permission policy by skipping the CLI.
 
 `steward registry import-legacy-profile` applies a sanitized legacy migration
 bundle such as `examples/legacy-profile-import.redacted.example.json` as one

@@ -38,6 +38,7 @@ from .model import (
     validate_workspace_inventory,
 )
 from .steward import (
+    ScheduleRegistryGateError,
     StewardInstallation,
     create_schedule,
     delete_schedule,
@@ -57,6 +58,7 @@ from .steward import (
     render_resticprofile_config,
     render_state_verification,
     render_status,
+    schedule_registry_gate,
     schedule_status,
     uninstall_schedule,
 )
@@ -107,6 +109,7 @@ __all__ = [
     "STORAGE_BINDING_PREFIXES",
     "VISIBILITY_CLASSES",
     "VERIFICATION_RESULT_SCHEMA",
+    "ScheduleRegistryGateError",
     "StewardInstallation",
     "RegistryIntegrityError",
     "RegistryLockedError",
@@ -149,6 +152,7 @@ __all__ = [
     "render_status",
     "registry_status",
     "registry_topology_report",
+    "schedule_registry_gate",
     "schedule_status",
     "set_destination",
     "set_legacy_import",

@@ -1296,6 +1296,27 @@ class StewardTests(unittest.TestCase):
             self.assertIn("--project-id project/example", service_text)
             self.assertEqual(schedule["registry_state"], str(registry_dir))
             self.assertEqual(schedule["project_id"], "project/example")
+
+            denied_schedule_output_dir = Path(temp_dir) / "steward-denied-schedule"
+            steward.init_steward(
+                inventory_path=EXAMPLES / "workspace-inventory.example.json",
+                policy_path=EXAMPLES / "custody-policy.example.json",
+                output_dir=denied_schedule_output_dir,
+                secret_bindings_path=EXAMPLES / "secret-bindings.redacted.example.json",
+                repository_bindings_path=EXAMPLES / "repository-bindings.redacted.example.json",
+            )
+            with self.assertRaises(steward.ScheduleRegistryGateError) as denied_schedule:
+                steward.create_schedule(
+                    output_dir=denied_schedule_output_dir,
+                    scheduler="launchd",
+                    every_minutes=60,
+                    registry_state=registry_dir,
+                    project_id="project/example",
+                    object_id="secrets/restic-env",
+                )
+            self.assertEqual(denied_schedule.exception.gate["decision"], "not-allowed")
+            self.assertFalse((denied_schedule_output_dir / "schedules").exists())
+
             deleted = steward.delete_schedule(output_dir)
             self.assertTrue(deleted["configured_before_delete"])
             self.assertTrue(deleted["deleted"])
@@ -1314,7 +1335,8 @@ class StewardTests(unittest.TestCase):
                 scheduler="launchd",
                 every_minutes=60,
                 registry_state=registry_dir,
-                project_id="project/release",
+                project_id="project/example",
+                object_id="state/sqlite",
             )
             self.assertNotEqual(
                 first_project_schedule["schedule_scope_id"],
@@ -1345,7 +1367,8 @@ class StewardTests(unittest.TestCase):
             second_delete = steward.delete_schedule(
                 output_dir,
                 registry_state=registry_dir,
-                project_id="project/release",
+                project_id="project/example",
+                object_id="state/sqlite",
             )
             self.assertTrue(second_delete["deleted"])
 
