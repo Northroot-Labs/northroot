@@ -151,6 +151,14 @@ class CustodyModelTests(unittest.TestCase):
 
         self.assertIn("unknown_replica_source_destination", {finding.code for finding in findings})
 
+    def test_service_registry_rejects_destination_role_binding_mismatch(self) -> None:
+        registry = load_example("service-registry.example.json")
+        registry["destinations"][0]["storage_binding"] = "receipt://primary-not-a-repository"
+
+        findings = model.validate_service_registry(registry)
+
+        self.assertIn("invalid_destination_storage_binding", {finding.code for finding in findings})
+
     def test_service_registry_rejects_unsafe_resume_policy(self) -> None:
         registry = load_example("service-registry.example.json")
         registry["resume_policy"]["on_disconnected_storage"] = "continue"
@@ -180,6 +188,12 @@ class CustodyModelTests(unittest.TestCase):
 
         self.assertIn("invalid_symbolic_ref", {finding.code for finding in findings})
         self.assertIn("public_private_binding", {finding.code for finding in findings})
+
+        legacy_import = load_example("legacy-profile-import.redacted.example.json")
+        legacy_import["destinations"][1]["storage_binding"] = "receipt://replica-not-a-repository"
+        findings = model.validate_legacy_profile_import(legacy_import, public_safe=True)
+
+        self.assertIn("invalid_destination_storage_binding", {finding.code for finding in findings})
 
     def test_legacy_run_import_validates_sanitized_run_summaries(self) -> None:
         legacy_import = load_example("legacy-run-import.redacted.example.json")

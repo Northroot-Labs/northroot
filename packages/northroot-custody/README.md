@@ -294,6 +294,10 @@ custody says they are `ephemeral`, `never-export`, `excluded`, or
 require `verified_offsite_copy` evidence. Each source binding must have at least
 one ready replica, so a project cannot be marked ready with only a primary
 destination.
+Registry and legacy import validation require `primary`, `source`, and
+`replica` destinations to use `repository://...` storage bindings, while
+`receipt-log` destinations must use `receipt://...`, so symbolic bindings still
+match the destination role before topology can pass.
 Source binding mutations keep that membership exclusive by removing stale
 references to the same source binding from other projects in the protected
 registry mutation.
@@ -315,12 +319,12 @@ cannot bypass object or project permission policy by skipping the CLI.
 bundle such as `examples/legacy-profile-import.redacted.example.json` as one
 atomic registry mutation. The bundle must contain symbolic refs and redacted
 object custody entries, not raw LaunchAgent paths, machine-local state paths,
-volume names, secret values, or private receipts. Replaying an identical import
-skips existing entries; conflicting entries fail closed without changing the
-registry. Imported source-destination bindings are linked back to their
-referenced project inside the same protected mutation, so migrated projects do
-not require a manual `project.source_destination_ids` repair before topology
-verification.
+volume names, secret values, or private receipts, and destination bindings must
+match their declared role. Replaying an identical import skips existing entries;
+conflicting entries fail closed without changing the registry. Imported
+source-destination bindings are linked back to their referenced project inside
+the same protected mutation, so migrated projects do not require a manual
+`project.source_destination_ids` repair before topology verification.
 
 `steward import-legacy-runs` imports sanitized historical run summaries from a
 legacy profile into the steward state's `run-summaries/` directory. It accepts

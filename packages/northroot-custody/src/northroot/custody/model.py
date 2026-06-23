@@ -76,6 +76,12 @@ SERVICE_REF_PREFIXES = STORAGE_BINDING_PREFIXES + (
     "state://",
 )
 SERVICE_DESTINATION_ROLES = {"primary", "replica", "source", "receipt-log"}
+SERVICE_DESTINATION_STORAGE_BINDING_PREFIXES = {
+    "primary": ("repository://",),
+    "source": ("repository://",),
+    "replica": ("repository://",),
+    "receipt-log": ("receipt://",),
+}
 SERVICE_ADAPTERS = ADAPTERS | {"external-delegated", "filesystem", "provider-native"}
 SERVICE_PERMISSION_SCOPES = {"project", "object"}
 SERVICE_PERMISSION_OPERATIONS = {
@@ -309,6 +315,23 @@ def _validate_permission_operations(value: Any, *, path: str) -> list[Finding]:
                 )
             )
     return findings
+
+
+def _validate_service_destination_storage_binding(destination: dict[str, Any], *, path: str) -> list[Finding]:
+    role = destination.get("role")
+    storage_binding = destination.get("storage_binding")
+    allowed_prefixes = SERVICE_DESTINATION_STORAGE_BINDING_PREFIXES.get(str(role))
+    if not allowed_prefixes or not _is_string(storage_binding):
+        return []
+    if str(storage_binding).startswith(allowed_prefixes):
+        return []
+    return [
+        _finding(
+            "invalid_destination_storage_binding",
+            f"{path}.storage_binding",
+            f"{role} destination storage_binding must use one of {allowed_prefixes}",
+        )
+    ]
 
 
 def find_public_private_bindings(payload: Any, path: str = "$") -> list[Finding]:
@@ -1164,6 +1187,7 @@ def validate_service_registry(payload: dict[str, Any], *, public_safe: bool = Fa
                     name="storage_binding",
                 )
             )
+            findings.extend(_validate_service_destination_storage_binding(destination, path=dest_path))
             if destination.get("visibility") not in VISIBILITY_CLASSES:
                 findings.append(
                     _finding(
@@ -1689,6 +1713,7 @@ def validate_legacy_profile_import(payload: dict[str, Any], *, public_safe: bool
                 name="storage_binding",
             )
         )
+        findings.extend(_validate_service_destination_storage_binding(destination, path=dest_path))
         if destination.get("visibility") not in VISIBILITY_CLASSES:
             findings.append(
                 _finding(
