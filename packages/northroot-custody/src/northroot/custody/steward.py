@@ -36,7 +36,11 @@ SCHEDULE_INDEX_SCHEMA = "northroot.steward.schedule-index.v0"
 SCHEDULE_CONTEXT_DIRNAME = "contexts"
 SCHEDULE_OPERATIONS = {"run", "verify", "restore-drill"}
 OPERATIONS = {"run", "verify", "restore", "restore-drill"}
-RECOVERABLE_OPERATION_SUMMARY_OPERATIONS = OPERATIONS | {"legacy-run-import"}
+RECOVERABLE_OPERATION_SUMMARY_OPERATIONS = OPERATIONS | {
+    "legacy-run-import",
+    "schedule.install",
+    "schedule.uninstall",
+}
 REGISTRY_TOPOLOGY_REQUIRED_OPERATIONS = OPERATIONS | {"schedule.create", "schedule.install"}
 COMMAND_PLAN_OPERATIONS = {
     "status",
@@ -2544,6 +2548,7 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
                 "mutates_backup_repository": False,
                 "writes_run_summary": False,
                 "requires_preflight": True,
+                "uses_operation_lock": True,
             },
             {
                 "name": "schedule.uninstall",
@@ -2552,6 +2557,7 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
                 "mutates_backup_repository": False,
                 "writes_run_summary": False,
                 "requires_preflight": False,
+                "uses_operation_lock": True,
             },
             {
                 "name": "schedule.delete",
@@ -4554,6 +4560,71 @@ def _run_command_sequence(commands: list[list[str]]) -> tuple[bool, int | None, 
     return True, 0, None
 
 
+def _schedule_operation_lock_command_args(operation: str, commands: list[list[str]]) -> list[str]:
+    return ["/bin/sh", "-lc", " && ".join(_command_string(command) for command in commands) or operation]
+
+
+def _blocked_by_existing_operation_lock_result(
+    *,
+    output_dir: Path,
+    schema_version: str,
+    status: dict[str, Any],
+    execute: bool,
+    commands: list[list[str]],
+    preflight_required: bool | None = None,
+    preflight: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    lock_path = operation_lock_path(output_dir)
+    lock_status = _operation_lock_status(output_dir)
+    lock_error = lock_status.get("error") if isinstance(lock_status.get("error"), str) else None
+    operation_lock = (
+        _unreadable_operation_lock(lock_path, lock_error)
+        if lock_error is not None
+        else lock_status.get("lock")
+    )
+    result = {
+        "schema_version": schema_version,
+        "scheduler": status.get("scheduler"),
+        "execute_requested": execute,
+        "executed": False,
+        "installed": bool(status.get("installed")),
+        "return_code": 75,
+        "failed_command": None,
+        "commands": [_command_string(command) for command in commands],
+        "failure_stage": "operation-lock",
+        "operation_lock": operation_lock,
+        "operation_lock_path": str(lock_path),
+        "error": "delegated operation lock is unreadable; run steward recover-operation before retrying"
+        if lock_error is not None
+        else "delegated operation lock exists; run steward recover-operation before retrying",
+    }
+    if preflight_required is not None:
+        result["preflight_required"] = preflight_required
+        result["preflight"] = preflight
+    return result
+
+
+def _schedule_operation_lock(
+    *,
+    output_dir: Path,
+    operation: str,
+    commands: list[list[str]],
+    registry_state: Path | None,
+    project_id: str | None,
+    object_id: str | None,
+) -> dict[str, Any]:
+    return _operation_lock_payload(
+        output_dir=output_dir,
+        operation=operation,
+        command_args=_schedule_operation_lock_command_args(operation, commands),
+        snapshot_id=None,
+        restore_target=None,
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+    )
+
+
 def install_schedule(
     output_dir: Path,
     *,
@@ -4592,7 +4663,19 @@ def install_schedule(
     return_code = None
     failed_command = None
     preflight_result = None
+    operation_lock = None
+    acquired_lock_path = None
     if execute:
+        if operation_lock_path(output_dir).exists():
+            return _blocked_by_existing_operation_lock_result(
+                output_dir=output_dir,
+                schema_version="northroot.steward.schedule-install.v0",
+                status=status,
+                execute=execute,
+                commands=commands,
+                preflight_required=require_preflight,
+                preflight=None,
+            )
         if require_preflight:
             preflight_result = render_preflight(
                 output_dir,
@@ -4614,6 +4697,16 @@ def install_schedule(
                     "preflight": preflight_result,
                     "error": "preflight failed",
                 }
+        operation_lock = _schedule_operation_lock(
+            output_dir=output_dir,
+            operation="schedule.install",
+            commands=commands,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
+        acquired_lock_path = operation_lock_path(output_dir)
+        _atomic_write_json(acquired_lock_path, operation_lock)
         executed = True
         ok, return_code, failed_command = _run_command_sequence(commands)
         status["installed"] = ok
@@ -4622,6 +4715,10 @@ def install_schedule(
         persisted.pop("configured", None)
         persisted.pop("schedule_integrity", None)
         _write_schedule_manifest(output_dir, persisted)
+        _clear_operation_lock(
+            acquired_lock_path,
+            expected_operation_id=str(operation_lock.get("operation_id")) if operation_lock.get("operation_id") else None,
+        )
     return {
         "schema_version": "northroot.steward.schedule-install.v0",
         "scheduler": status.get("scheduler"),
@@ -4633,6 +4730,8 @@ def install_schedule(
         "commands": [_command_string(command) for command in commands],
         "preflight_required": require_preflight,
         "preflight": preflight_result,
+        "operation_lock": operation_lock,
+        "operation_lock_path": str(operation_lock_path(output_dir)) if execute else None,
         "error": None if return_code in (None, 0) else "schedule install command failed",
     }
 
@@ -4670,7 +4769,27 @@ def uninstall_schedule(
     executed = False
     return_code = None
     failed_command = None
+    operation_lock = None
+    acquired_lock_path = None
     if execute:
+        if operation_lock_path(output_dir).exists():
+            return _blocked_by_existing_operation_lock_result(
+                output_dir=output_dir,
+                schema_version="northroot.steward.schedule-uninstall.v0",
+                status=status,
+                execute=execute,
+                commands=commands,
+            )
+        operation_lock = _schedule_operation_lock(
+            output_dir=output_dir,
+            operation="schedule.uninstall",
+            commands=commands,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
+        acquired_lock_path = operation_lock_path(output_dir)
+        _atomic_write_json(acquired_lock_path, operation_lock)
         executed = True
         ok, return_code, failed_command = _run_command_sequence(commands)
         if ok:
@@ -4680,6 +4799,10 @@ def uninstall_schedule(
             persisted.pop("configured", None)
             persisted.pop("schedule_integrity", None)
             _write_schedule_manifest(output_dir, persisted)
+        _clear_operation_lock(
+            acquired_lock_path,
+            expected_operation_id=str(operation_lock.get("operation_id")) if operation_lock.get("operation_id") else None,
+        )
     return {
         "schema_version": "northroot.steward.schedule-uninstall.v0",
         "scheduler": status.get("scheduler"),
@@ -4689,6 +4812,9 @@ def uninstall_schedule(
         "return_code": return_code,
         "failed_command": failed_command,
         "commands": [_command_string(command) for command in commands],
+        "failure_stage": None,
+        "operation_lock": operation_lock,
+        "operation_lock_path": str(operation_lock_path(output_dir)) if execute else None,
     }
 
 

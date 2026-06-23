@@ -299,10 +299,10 @@ and `schedule install` require both permission authorization and ready project
 topology. A project permission set that allows `run` is not enough if the
 project has no usable source destination or replica wiring. `schedule status`,
 `schedule uninstall`, and `schedule delete` remain available for inspection and
-cleanup when topology is broken.
-The service-level `create_schedule` API applies the same registry gate before
-writing scheduler templates, so direct package callers cannot bypass object or
-project permission policy by skipping the CLI.
+cleanup when topology is broken. The service-level schedule APIs apply the same
+registry gate before creating templates, mutating platform scheduler
+registration, or deleting generated schedule state, so direct package callers
+cannot bypass object or project permission policy by skipping the CLI.
 
 `steward registry import-legacy-profile` applies a sanitized legacy migration
 bundle such as `examples/legacy-profile-import.redacted.example.json` as one
@@ -382,8 +382,11 @@ Scheduled templates call the selected operation with `--execute`. `--operation`
 can be `run`, `verify`, or `restore-drill`. `schedule create` only renders
 templates; `schedule install --execute` delegates installation to `launchctl` or
 `systemctl --user` after preflight passes; `schedule uninstall --execute`
-removes the platform registration; `schedule delete` removes generated template
-files only when the schedule is not marked installed. `schedule create`,
+removes the platform registration. Executed install and uninstall operations use
+the steward operation lock, so an interrupted platform scheduler mutation must be
+recorded with `steward recover-operation` before retry. `schedule delete`
+removes generated template files only when the schedule is not marked installed.
+`schedule create`,
 `schedule status`, `schedule install`, `schedule uninstall`, and
 `schedule delete` accept `--registry-state`, `--project-id`, and optional
 `--object-id`; when present, registry authorization runs before schedule state
