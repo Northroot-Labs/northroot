@@ -1910,6 +1910,48 @@ def schedule_registry_gate(
     return topology_gate
 
 
+def _schedule_registry_context_from_status(
+    *,
+    registry_state: Path | None,
+    project_id: str | None,
+    object_id: str | None,
+    status: dict[str, Any],
+) -> tuple[Path | None, str | None, str | None]:
+    trusted_status = status if status.get("schedule_integrity", {}).get("ok") else {}
+    if registry_state is None and trusted_status.get("registry_state"):
+        registry_state = Path(str(trusted_status["registry_state"]))
+    if project_id is None and trusted_status.get("project_id"):
+        project_id = str(trusted_status["project_id"])
+    if object_id is None and trusted_status.get("object_id"):
+        object_id = str(trusted_status["object_id"])
+    return registry_state, project_id, object_id
+
+
+def _raise_for_schedule_registry_gate(
+    *,
+    operation: str,
+    registry_state: Path | None,
+    project_id: str | None,
+    object_id: str | None,
+    status: dict[str, Any],
+) -> tuple[Path | None, str | None, str | None]:
+    registry_state, project_id, object_id = _schedule_registry_context_from_status(
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+        status=status,
+    )
+    gate = schedule_registry_gate(
+        registry_state,
+        operation=operation,
+        project_id=project_id,
+        object_id=object_id,
+    )
+    if gate is not None:
+        raise ScheduleRegistryGateError(operation, gate)
+    return registry_state, project_id, object_id
+
+
 def render_command_plan(
     output_dir: Path,
     *,
@@ -4538,6 +4580,13 @@ def install_schedule(
         result["preflight_required"] = require_preflight
         result["preflight"] = None
         return result
+    registry_state, project_id, object_id = _raise_for_schedule_registry_gate(
+        operation="schedule.install",
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+        status=status,
+    )
     commands = _schedule_install_commands(status)
     executed = False
     return_code = None
@@ -4610,6 +4659,13 @@ def uninstall_schedule(
             status=status,
             execute=execute,
         )
+    _raise_for_schedule_registry_gate(
+        operation="schedule.uninstall",
+        registry_state=registry_state,
+        project_id=project_id,
+        object_id=object_id,
+        status=status,
+    )
     commands = _schedule_uninstall_commands(status)
     executed = False
     return_code = None
@@ -4662,6 +4718,23 @@ def delete_schedule(
             status=status,
             force=force,
         )
+    if status.get("schedule_integrity", {}).get("ok"):
+        _raise_for_schedule_registry_gate(
+            operation="schedule.delete",
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+            status=status,
+        )
+    else:
+        gate = schedule_registry_gate(
+            registry_state,
+            operation="schedule.delete",
+            project_id=project_id,
+            object_id=object_id,
+        )
+        if gate is not None:
+            raise ScheduleRegistryGateError("schedule.delete", gate)
     installed = bool(status.get("installed"))
     if installed and not force:
         return {
