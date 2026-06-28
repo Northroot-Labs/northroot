@@ -388,37 +388,17 @@ class StewardTests(unittest.TestCase):
                 model.VERIFICATION_RESULT_SCHEMA,
             )
             self.assertEqual(
-                capabilities["agent_contract"]["schema_version"],
-                "northroot.steward.agent-contract.v0",
+                capabilities["command_plan_contract"]["schema_version"],
+                "northroot.steward.command-plan-contract.v0",
             )
-            self.assertFalse(capabilities["agent_contract"]["invocation"]["shell_required"])
-            self.assertTrue(capabilities["agent_contract"]["invocation"]["template_placeholders_must_be_bound"])
+            self.assertEqual(capabilities["command_plan_contract"]["scope"], "custody-operations-only")
+            self.assertFalse(capabilities["command_plan_contract"]["shell_required"])
+            self.assertTrue(capabilities["command_plan_contract"]["template_placeholders_must_be_bound"])
             self.assertEqual(
-                capabilities["agent_contract"]["invocation"]["command_plan_schema"],
+                capabilities["command_plan_contract"]["command_plan_schema"],
                 "northroot.steward.command-plan.v0",
             )
-            self.assertFalse(capabilities["agent_contract"]["secret_handling"]["secret_values_returned"])
-            self.assertEqual(
-                model.validate_agent_delegation_policy(
-                    capabilities["agent_contract"]["default_dogfood_policy"],
-                    public_safe=True,
-                ),
-                [],
-            )
-            self.assertEqual(
-                capabilities["agent_contract"]["default_dogfood_policy"]["registered_agents"][0]["agent_id"],
-                "agent:codex",
-            )
-            self.assertTrue(
-                capabilities["agent_contract"]["default_policy_resolution"][
-                    "registered_agents_use_default_dogfood_policy"
-                ]
-            )
-            self.assertFalse(
-                capabilities["agent_contract"]["default_policy_resolution"][
-                    "policy_file_required_for_dogfood_agent_workflow"
-                ]
-            )
+            self.assertFalse(capabilities["command_plan_contract"]["secret_values_returned"])
             operations = {operation["name"]: operation for operation in capabilities["allowed_operations"]}
             operation_contracts = {
                 operation["name"]: operation for operation in capabilities["operation_contracts"]
@@ -448,7 +428,9 @@ class StewardTests(unittest.TestCase):
                 operation_contracts["import-legacy-runs"]["success_schema"],
                 "northroot.steward.legacy-run-import-result.v0",
             )
-            self.assertTrue(operations["branch.create"]["governed_by_default_dogfood_policy"])
+            self.assertNotIn("branch.create", operations)
+            self.assertNotIn("push.branch", operations)
+            self.assertNotIn("pr.draft.open", operations)
             self.assertTrue(operations["import-legacy-runs"]["uses_operation_lock"])
             self.assertTrue(operations["schedule.install"]["uses_operation_lock"])
             self.assertTrue(operations["schedule.uninstall"]["uses_operation_lock"])
@@ -523,72 +505,17 @@ class StewardTests(unittest.TestCase):
             self.assertFalse(missing_legacy_import_plan["ok"])
             self.assertIn("json", missing_legacy_import_plan["missing_inputs"])
 
-            agent_branch_plan = steward.render_command_plan(
+            unsupported_git_plan = steward.render_command_plan(
                 output_dir,
                 operation="branch.create",
-                branch="codex/steward-dogfood-policy",
             )
-            self.assertTrue(agent_branch_plan["ok"])
-            self.assertEqual(
-                agent_branch_plan["argv"],
-                ["git", "switch", "-c", "codex/steward-dogfood-policy", "main"],
-            )
-            self.assertEqual(agent_branch_plan["agent_authorization"]["agent_id"], "agent:codex")
-            self.assertEqual(agent_branch_plan["agent_provenance"]["policy_id"], "agent-delegation/dogfood-default")
-            self.assertEqual(model.validate_command_plan(agent_branch_plan), [])
-
-            agent_commit_plan = steward.render_command_plan(
-                output_dir,
-                operation="commit.create",
-                branch="codex/steward-dogfood-policy",
-                commit_message="Checkpoint steward dogfood policy",
-                detail="focused tests passed",
-            )
-            self.assertTrue(agent_commit_plan["ok"])
-            self.assertIn("--trailer", agent_commit_plan["argv"])
-            self.assertIn("Agent-Id=agent:codex", agent_commit_plan["argv"])
-            self.assertEqual(
-                agent_commit_plan["agent_provenance"]["required_commit_trailers"]["Agent-Coauthorship"],
-                "agent-authored",
-            )
-
-            agent_push_plan = steward.render_command_plan(
-                output_dir,
-                operation="push.branch",
-                branch="codex/steward-dogfood-policy",
-            )
-            self.assertTrue(agent_push_plan["ok"])
-            self.assertEqual(
-                agent_push_plan["argv"],
-                ["git", "push", "-u", "origin", "codex/steward-dogfood-policy"],
-            )
-            self.assertTrue(
-                agent_push_plan["agent_guidance"]["default_dogfood_policy_selected_without_policy_file"]
-            )
-            self.assertEqual(model.validate_command_plan(agent_push_plan), [])
-
-            agent_draft_pr_plan = steward.render_command_plan(
-                output_dir,
-                operation="pr.draft.open",
-                branch="codex/steward-dogfood-policy",
-                pr_title="Draft steward dogfood policy",
-            )
-            self.assertTrue(agent_draft_pr_plan["ok"])
-            self.assertIn("--draft", agent_draft_pr_plan["argv"])
-            self.assertEqual(agent_draft_pr_plan["agent_authorization"]["policy_id"], "agent-delegation/dogfood-default")
-            self.assertTrue(agent_draft_pr_plan["side_effects"]["opens_or_updates_draft_pr"])
-            self.assertEqual(model.validate_command_plan(agent_draft_pr_plan), [])
-
-            protected_agent_plan = steward.render_command_plan(
-                output_dir,
-                operation="push.branch",
-                branch="main",
-            )
-            self.assertFalse(protected_agent_plan["ok"])
+            self.assertFalse(unsupported_git_plan["ok"])
+            self.assertIsNone(unsupported_git_plan["argv"])
             self.assertIn(
-                "branch is outside delegated agent prefixes or protected: main",
-                protected_agent_plan["refused_reasons"],
+                "unsupported steward operation: branch.create",
+                unsupported_git_plan["refused_reasons"],
             )
+            self.assertEqual(model.validate_command_plan(unsupported_git_plan), [])
 
             refused_restore_plan = steward.render_command_plan(
                 output_dir,

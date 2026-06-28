@@ -23,9 +23,6 @@ INSTALLATION_INDEX_FILENAME = "steward-installation-index.json"
 INSTALLATION_INDEX_SCHEMA = "northroot.steward.installation-index.v0"
 DEFAULT_PROFILE_NAME = "steward"
 DEFAULT_RUNNER_COMMAND = "nr steward"
-DEFAULT_DOGFOOD_AGENT_ID = "agent:codex"
-DEFAULT_DOGFOOD_POLICY_ID = "agent-delegation/dogfood-default"
-DEFAULT_DOGFOOD_REPOSITORY_REF = "repository://northroot"
 RESTORE_DRILL_DIR = "restore-drills"
 OPERATION_LOCK_FILENAME = "steward-operation.lock.json"
 RUN_SUMMARY_INDEX_FILENAME = "index.json"
@@ -62,7 +59,6 @@ COMMAND_PLAN_OPERATIONS = {
     "evidence.record",
     "offsite.report",
     "import-legacy-runs",
-    *model.AGENT_DELEGATION_OPERATIONS,
 }
 
 
@@ -1271,7 +1267,7 @@ def render_status(output_dir: Path) -> dict[str, Any]:
     }
 
 
-def _agent_operation_contracts(output_dir: Path) -> list[dict[str, Any]]:
+def _custody_operation_contracts(output_dir: Path) -> list[dict[str, Any]]:
     state = str(output_dir)
     return [
         {
@@ -1321,13 +1317,6 @@ def _agent_operation_contracts(output_dir: Path) -> list[dict[str, Any]]:
                 "force",
                 "use_recorded_evidence",
                 "skip_preflight",
-                "agent_id",
-                "branch",
-                "base_branch",
-                "commit_message",
-                "pr_title",
-                "pr_body",
-                "remote",
             ],
             "side_effects": [],
             "requires_preflight": False,
@@ -1568,218 +1557,7 @@ def _agent_operation_contracts(output_dir: Path) -> list[dict[str, Any]]:
             "requires_preflight": False,
             "success_schema": "northroot.steward.legacy-run-import-result.v0",
         },
-    ] + _agent_workflow_operation_contracts()
-
-
-def default_dogfood_agent_delegation_policy() -> dict[str, Any]:
-    return {
-        "schema_version": model.AGENT_DELEGATION_POLICY_SCHEMA,
-        "policy_id": DEFAULT_DOGFOOD_POLICY_ID,
-        "default_for_dogfood": True,
-        "scope": {
-            "repository_ref": DEFAULT_DOGFOOD_REPOSITORY_REF,
-            "protected_base_branch": "main",
-            "delegated_branch_prefixes": ["codex/", "agent/"],
-        },
-        "registered_agents": [
-            {
-                "agent_id": DEFAULT_DOGFOOD_AGENT_ID,
-                "display_name": "Codex",
-                "branch_prefixes": ["codex/"],
-                "allowed_operations": [
-                    "branch.checkout",
-                    "branch.create",
-                    "commit.create",
-                    "commit.verify",
-                    "push.branch",
-                    "pr.draft.open",
-                    "pr.draft.update",
-                    "pr.comment.follow-up",
-                    "pr.check.verify",
-                ],
-                "required_metadata": {
-                    "author_identity": DEFAULT_DOGFOOD_AGENT_ID,
-                    "committer_identity": DEFAULT_DOGFOOD_AGENT_ID,
-                    "coauthorship_policy": "agent-authored",
-                    "provenance_headers": [
-                        "Agent-Id",
-                        "Agent-Policy-Id",
-                        "Agent-Branch",
-                        "Agent-Verification",
-                        "Agent-Coauthorship",
-                    ],
-                    "commit_trailers": {
-                        "Agent-Id": DEFAULT_DOGFOOD_AGENT_ID,
-                        "Agent-Policy-Id": DEFAULT_DOGFOOD_POLICY_ID,
-                        "Agent-Branch": "<delegated-branch>",
-                        "Agent-Verification": "<verification-summary>",
-                        "Agent-Coauthorship": "agent-authored",
-                    },
-                },
-            }
-        ],
-        "draft_pr_policy": {
-            "allow_open_draft_prs": True,
-            "allow_update_draft_prs": True,
-            "allow_ready_for_review_without_clearance": False,
-            "final_human_review_required": True,
-        },
-        "verification_policy": {
-            "required_before_push": [
-                "git status --short --branch",
-                "focused tests for touched surface",
-                "public-safe scan for private deployment strings",
-            ],
-            "record_failed_checks_before_follow_up": True,
-        },
-        "prohibited_operations": [
-            "merge.protected-branch",
-            "push.protected-branch",
-            "modify.branch-protection",
-            "workflow.permission-escalation",
-            "impersonate-human-author",
-            "access.long-lived-signing-key",
-        ],
-    }
-
-
-def _registered_agent(policy: dict[str, Any], agent_id: str) -> dict[str, Any] | None:
-    agents = policy.get("registered_agents")
-    if not isinstance(agents, list):
-        return None
-    for agent in agents:
-        if isinstance(agent, dict) and agent.get("agent_id") == agent_id:
-            return agent
-    return None
-
-
-def _is_protected_branch(branch: str, policy: dict[str, Any]) -> bool:
-    scope = policy.get("scope") if isinstance(policy.get("scope"), dict) else {}
-    protected = str(scope.get("protected_base_branch") or "main")
-    protected_roots = {protected, "main", "master", "release"}
-    return branch in protected_roots or branch.startswith(tuple(f"{root}/" for root in protected_roots))
-
-
-def _agent_branch_allowed(branch: str, *, agent: dict[str, Any], policy: dict[str, Any]) -> bool:
-    scope = policy.get("scope") if isinstance(policy.get("scope"), dict) else {}
-    delegated_prefixes = scope.get("delegated_branch_prefixes")
-    agent_prefixes = agent.get("branch_prefixes")
-    prefixes = [str(item) for item in agent_prefixes if isinstance(item, str)] if isinstance(agent_prefixes, list) else []
-    if not prefixes and isinstance(delegated_prefixes, list):
-        prefixes = [str(item) for item in delegated_prefixes if isinstance(item, str)]
-    return bool(prefixes) and any(branch.startswith(prefix) for prefix in prefixes) and not _is_protected_branch(branch, policy)
-
-
-def _agent_commit_trailers(agent: dict[str, Any], *, branch: str, verification: str | None) -> dict[str, str]:
-    metadata = agent.get("required_metadata") if isinstance(agent.get("required_metadata"), dict) else {}
-    trailers = metadata.get("commit_trailers") if isinstance(metadata.get("commit_trailers"), dict) else {}
-    return {
-        "Agent-Id": str(trailers.get("Agent-Id") or agent.get("agent_id") or DEFAULT_DOGFOOD_AGENT_ID),
-        "Agent-Policy-Id": str(trailers.get("Agent-Policy-Id") or DEFAULT_DOGFOOD_POLICY_ID),
-        "Agent-Branch": branch,
-        "Agent-Verification": verification or "<verification-summary>",
-        "Agent-Coauthorship": str(trailers.get("Agent-Coauthorship") or "agent-authored"),
-    }
-
-
-def _agent_workflow_operation_contracts() -> list[dict[str, Any]]:
-    return [
-        {
-            "name": "branch.create",
-            "argv_template": ["git", "switch", "-c", "{branch}", "{base_branch}"],
-            "required_inputs": ["branch"],
-            "optional_inputs": ["base_branch", "agent_id"],
-            "side_effects": ["mutates_git_worktree"],
-            "requires_preflight": False,
-            "success_schema": "external.git.branch-create",
-        },
-        {
-            "name": "branch.checkout",
-            "argv_template": ["git", "switch", "{branch}"],
-            "required_inputs": ["branch"],
-            "optional_inputs": ["agent_id"],
-            "side_effects": ["mutates_git_worktree"],
-            "requires_preflight": False,
-            "success_schema": "external.git.branch-checkout",
-        },
-        {
-            "name": "commit.create",
-            "argv_template": ["git", "commit", "--message", "{commit_message}", "--trailer", "Agent-Id={agent_id}"],
-            "required_inputs": ["branch", "commit_message"],
-            "optional_inputs": ["verification", "agent_id"],
-            "side_effects": ["writes_git_commit"],
-            "requires_preflight": False,
-            "success_schema": "external.git.commit",
-        },
-        {
-            "name": "commit.verify",
-            "argv_template": ["git", "show", "-s", "--format=%H%n%an%n%ae%n%cn%n%ce%n%B", "HEAD"],
-            "required_inputs": ["branch"],
-            "optional_inputs": ["agent_id"],
-            "side_effects": [],
-            "requires_preflight": False,
-            "success_schema": "external.git.commit-inspection",
-        },
-        {
-            "name": "push.branch",
-            "argv_template": ["git", "push", "-u", "{remote}", "{branch}"],
-            "required_inputs": ["branch"],
-            "optional_inputs": ["remote", "agent_id"],
-            "side_effects": ["pushes_git_remote"],
-            "requires_preflight": False,
-            "success_schema": "external.git.push",
-        },
-        {
-            "name": "pr.draft.open",
-            "argv_template": [
-                "gh",
-                "pr",
-                "create",
-                "--draft",
-                "--base",
-                "{base_branch}",
-                "--head",
-                "{branch}",
-                "--title",
-                "{pr_title}",
-                "--body",
-                "{pr_body}",
-            ],
-            "required_inputs": ["branch", "pr_title"],
-            "optional_inputs": ["base_branch", "pr_body", "agent_id"],
-            "side_effects": ["opens_draft_pull_request"],
-            "requires_preflight": False,
-            "success_schema": "external.github.draft-pr",
-        },
-        {
-            "name": "pr.draft.update",
-            "argv_template": ["gh", "pr", "edit", "{branch}", "--title", "{pr_title}", "--body", "{pr_body}"],
-            "required_inputs": ["branch", "pr_title_or_pr_body"],
-            "optional_inputs": ["pr_title", "pr_body", "agent_id"],
-            "side_effects": ["updates_draft_pull_request"],
-            "requires_preflight": False,
-            "success_schema": "external.github.pr-edit",
-        },
-        {
-            "name": "pr.comment.follow-up",
-            "argv_template": ["gh", "pr", "comment", "{branch}", "--body", "{detail}"],
-            "required_inputs": ["branch", "detail"],
-            "optional_inputs": ["agent_id"],
-            "side_effects": ["writes_pull_request_comment"],
-            "requires_preflight": False,
-            "success_schema": "external.github.pr-comment",
-        },
-        {
-            "name": "pr.check.verify",
-            "argv_template": ["gh", "pr", "checks", "{branch}"],
-            "required_inputs": ["branch"],
-            "optional_inputs": ["agent_id"],
-            "side_effects": [],
-            "requires_preflight": False,
-            "success_schema": "external.github.pr-checks",
-        },
     ]
-
 
 def _append_snapshot(argv: list[str], snapshot_id: str | None) -> None:
     if snapshot_id:
@@ -1823,22 +1601,6 @@ def _unreadable_operation_lock(lock_path: Path, error: str) -> dict[str, Any]:
         "failure_policy": "fail-closed-record-summary-before-retry",
         "resume_hint": "recover-operation will record and clear this unreadable lock before retry",
     }
-
-
-def _dogfood_allowed_operations(output_dir: Path) -> list[dict[str, Any]]:
-    del output_dir
-    return [
-        {
-            "name": contract["name"],
-            "command": " ".join(contract["argv_template"]),
-            "mutates_backup_repository": False,
-            "writes_run_summary": False,
-            "requires_preflight": False,
-            "governed_by_default_dogfood_policy": True,
-        }
-        for contract in _agent_workflow_operation_contracts()
-    ]
-
 
 def registry_topology_gate(
     registry_state: Path | None,
@@ -1978,13 +1740,6 @@ def render_command_plan(
     registry_state: Path | None = None,
     project_id: str | None = None,
     object_id: str | None = None,
-    agent_id: str = DEFAULT_DOGFOOD_AGENT_ID,
-    branch: str | None = None,
-    base_branch: str | None = None,
-    commit_message: str | None = None,
-    pr_title: str | None = None,
-    pr_body: str | None = None,
-    remote: str = "origin",
 ) -> dict[str, Any]:
     state = str(output_dir)
     missing_inputs: list[str] = []
@@ -1998,10 +1753,6 @@ def render_command_plan(
     delegated_platform_mutation = False
     authorization: dict[str, Any] | None = None
     registry_topology: dict[str, Any] | None = None
-    agent_policy = default_dogfood_agent_delegation_policy()
-    agent = _registered_agent(agent_policy, agent_id)
-    agent_authorization: dict[str, Any] | None = None
-    provenance: dict[str, Any] | None = None
 
     if operation not in COMMAND_PLAN_OPERATIONS:
         refused_reasons.append(f"unsupported steward operation: {operation}")
@@ -2184,103 +1935,6 @@ def render_command_plan(
         lock_status = _operation_lock_status(output_dir)
         if lock_status["locked"]:
             refused_reasons.append("steward operation lock requires recover-operation before legacy run import")
-    elif operation in model.AGENT_DELEGATION_OPERATIONS:
-        argv = []
-        if agent is None:
-            refused_reasons.append(f"agent is not registered in default dogfood policy: {agent_id}")
-        else:
-            allowed_operations = set(str(item) for item in agent.get("allowed_operations", []))
-            if operation not in allowed_operations:
-                refused_reasons.append(f"agent operation not allowed by default dogfood policy: {operation}")
-        branch_required = operation in {
-            "branch.checkout",
-            "branch.create",
-            "commit.create",
-            "commit.verify",
-            "push.branch",
-            "pr.draft.open",
-            "pr.draft.update",
-            "pr.comment.follow-up",
-            "pr.check.verify",
-        }
-        if branch_required and not branch:
-            missing_inputs.append("branch")
-        if branch and agent is not None and not _agent_branch_allowed(branch, agent=agent, policy=agent_policy):
-            refused_reasons.append(f"branch is outside delegated agent prefixes or protected: {branch}")
-        base = base_branch or str(agent_policy["scope"]["protected_base_branch"])
-        body = pr_body or "Draft PR opened by registered agent under dogfood delegation policy."
-        verification = detail or "verification pending"
-        if branch and agent is not None:
-            trailers = _agent_commit_trailers(agent, branch=branch, verification=verification)
-            provenance = {
-                "policy_id": agent_policy["policy_id"],
-                "agent_id": agent_id,
-                "author_identity": agent["required_metadata"]["author_identity"],
-                "committer_identity": agent["required_metadata"]["committer_identity"],
-                "coauthorship_policy": agent["required_metadata"]["coauthorship_policy"],
-                "required_commit_trailers": trailers,
-            }
-            agent_authorization = {
-                "allowed": not refused_reasons,
-                "policy_id": agent_policy["policy_id"],
-                "agent_id": agent_id,
-                "operation": operation,
-                "branch": branch,
-            }
-        if operation == "branch.create":
-            if branch:
-                argv = ["git", "switch", "-c", branch, base]
-        elif operation == "branch.checkout":
-            if branch:
-                argv = ["git", "switch", branch]
-        elif operation == "commit.create":
-            if not commit_message:
-                missing_inputs.append("commit_message")
-            if branch and commit_message and provenance:
-                argv = ["git", "commit", "--message", commit_message]
-                for key, value in provenance["required_commit_trailers"].items():
-                    argv.extend(["--trailer", f"{key}={value}"])
-        elif operation == "commit.verify":
-            if branch:
-                argv = ["git", "show", "-s", "--format=%H%n%an%n%ae%n%cn%n%ce%n%B", "HEAD"]
-        elif operation == "push.branch":
-            if branch:
-                argv = ["git", "push", "-u", remote, branch]
-        elif operation == "pr.draft.open":
-            if not pr_title:
-                missing_inputs.append("pr_title")
-            if branch and pr_title:
-                argv = [
-                    "gh",
-                    "pr",
-                    "create",
-                    "--draft",
-                    "--base",
-                    base,
-                    "--head",
-                    branch,
-                    "--title",
-                    pr_title,
-                    "--body",
-                    body,
-                ]
-        elif operation == "pr.draft.update":
-            if not pr_title and not pr_body:
-                missing_inputs.append("pr_title_or_pr_body")
-            if branch and (pr_title or pr_body):
-                argv = ["gh", "pr", "edit", branch]
-                if pr_title:
-                    argv.extend(["--title", pr_title])
-                if pr_body:
-                    argv.extend(["--body", pr_body])
-        elif operation == "pr.comment.follow-up":
-            if not detail:
-                missing_inputs.append("detail")
-            if branch and detail:
-                argv = ["gh", "pr", "comment", branch, "--body", detail]
-        elif operation == "pr.check.verify":
-            if branch:
-                argv = ["gh", "pr", "checks", branch]
 
     if registry_state is not None:
         if not project_id:
@@ -2358,25 +2012,16 @@ def render_command_plan(
         "warnings": warnings,
         "authorization": authorization,
         "registry_topology": registry_topology,
-        "agent_authorization": agent_authorization,
-        "agent_provenance": provenance,
-        "default_agent_policy_id": agent_policy["policy_id"],
         "side_effects": {
             "writes_run_summary": writes_run_summary,
             "mutates_backup_repository": mutates_backup_repository,
             "delegates_platform_scheduler_mutation": delegated_platform_mutation,
-            "mutates_git_repository": operation in {"branch.checkout", "branch.create", "commit.create"},
-            "pushes_git_remote": operation == "push.branch",
-            "opens_or_updates_draft_pr": operation in {"pr.draft.open", "pr.draft.update", "pr.comment.follow-up"},
         },
         "agent_guidance": {
             "execute_requires_explicit_flag": True,
             "bind_placeholders_before_invocation": True,
             "do_not_shell_join_argv": True,
             "do_not_read_or_log_secret_values": True,
-            "registered_agents_use_default_dogfood_policy": True,
-            "default_dogfood_policy_selected_without_policy_file": True,
-            "final_review_clearance_required_before_ready_pr_or_merge": True,
         },
     }
 
@@ -2415,33 +2060,19 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
             "retention_recorded_evidence_is_snapshot_bound": True,
             "snapshot_filtered_reports_ignore_unscoped_operation_evidence": True,
         },
-        "agent_contract": {
-            "schema_version": "northroot.steward.agent-contract.v0",
-            "default_dogfood_policy": default_dogfood_agent_delegation_policy(),
-            "default_policy_resolution": {
-                "registered_agents_use_default_dogfood_policy": True,
-                "policy_file_required_for_dogfood_agent_workflow": False,
-                "registered_agent_operations": sorted(model.AGENT_DELEGATION_OPERATIONS),
-            },
-            "invocation": {
-                "argument_style": "argv",
-                "shell_required": False,
-                "template_placeholders_must_be_bound": True,
-                "execute_requires_explicit_flag": True,
-                "command_plan_schema": "northroot.steward.command-plan.v0",
-                "command_plan_command": f"{DEFAULT_RUNNER_COMMAND} command-plan --state {output_dir} --operation <operation>",
-            },
-            "exit_semantics": {
-                "zero": "JSON output satisfied the command contract",
-                "nonzero": "JSON output describes a blocked or failed command and must not be treated as success",
-            },
-            "secret_handling": {
-                "secret_values_returned": False,
-                "runtime_env_materialized_only_for_child_process": True,
-                "agents_must_not_read_or_log_secret_values": True,
-            },
+        "command_plan_contract": {
+            "schema_version": "northroot.steward.command-plan-contract.v0",
+            "scope": "custody-operations-only",
+            "argument_style": "argv",
+            "shell_required": False,
+            "template_placeholders_must_be_bound": True,
+            "execute_requires_explicit_flag": True,
+            "command_plan_schema": "northroot.steward.command-plan.v0",
+            "command_plan_command": f"{DEFAULT_RUNNER_COMMAND} command-plan --state {output_dir} --operation <operation>",
+            "secret_values_returned": False,
+            "runtime_env_materialized_only_for_child_process": True,
         },
-        "operation_contracts": _agent_operation_contracts(output_dir),
+        "operation_contracts": _custody_operation_contracts(output_dir),
         "allowed_operations": [
             {
                 "name": "status",
@@ -2606,7 +2237,7 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
                 "requires_preflight": False,
                 "uses_operation_lock": True,
             },
-        ] + _dogfood_allowed_operations(output_dir),
+        ],
         "prohibited_operations": [
             "direct restic/resticprofile shell construction outside this manifest",
             "forget/prune without a retention decision that allows it",
@@ -2615,7 +2246,6 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
             "performing recovery restores outside the bounded restore command",
             "assuming additional destinations were copied because the primary backup ran",
             "recording repository-check or restore-drill evidence through external evidence import",
-            "readying or merging agent draft PRs without final review clearance",
         ],
         "contracts": {
             "inventory_schema": model.INVENTORY_SCHEMA,
@@ -2627,7 +2257,6 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
             "run_summary_schema": model.RUN_SUMMARY_SCHEMA,
             "run_summary_index_schema": RUN_SUMMARY_INDEX_SCHEMA,
             "retention_decision_schema": model.RETENTION_DECISION_SCHEMA,
-            "agent_delegation_policy_schema": model.AGENT_DELEGATION_POLICY_SCHEMA,
         },
         "secret_binding_providers": sorted(model.SECRET_BINDING_PROVIDERS),
         "runtime_environment_providers": sorted(model.RUNTIME_ENV_PROVIDERS),

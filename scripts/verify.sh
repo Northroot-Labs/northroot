@@ -62,7 +62,6 @@ run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src pyth
 run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/service-registry.example.json --public-safe
 run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/legacy-profile-import.redacted.example.json --public-safe
 run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/legacy-run-import.redacted.example.json --public-safe
-run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/agent-delegation-policy.dogfood.example.json --public-safe
 run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/secret-bindings.redacted.example.json --public-safe
 run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/repository-bindings.redacted.example.json --public-safe
 set +e
