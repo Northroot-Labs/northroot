@@ -660,7 +660,7 @@ class RegistryTests(unittest.TestCase):
             self.assertTrue(initialized["initialized"])
             self.assertTrue(registry.registry_status(state_dir, public_safe=True)["ready"])
 
-    def test_registry_recovery_records_landed_interrupted_write(self) -> None:
+    def test_registry_recovery_requires_explicit_adoption_for_landed_interrupted_write(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"
             registry.initialize_registry(
@@ -703,13 +703,38 @@ class RegistryTests(unittest.TestCase):
             self.assertFalse(locked_status["ready"])
             self.assertTrue(locked_status["resume_required"])
 
-            recovered = registry.recover_registry(state_dir, public_safe=True)
+            blocked = registry.recover_registry(state_dir, public_safe=True)
+
+            self.assertFalse(blocked["recovered"])
+            self.assertTrue(blocked["resume_required"])
+            self.assertTrue(blocked["adoption_required"])
+            self.assertEqual(blocked["resume_state"], "registry-changed-after-lock")
+            self.assertTrue(blocked["registry_changed_since_lock"])
+            blocked_summary = model.load_json(Path(str(blocked["operation_summary_path"])))
+            self.assertEqual(blocked_summary["status"], "blocked-changed-after-lock")
+            self.assertTrue(blocked_summary["adoption_required"])
+            self.assertFalse(blocked_summary["adopt_landed_write"])
+            self.assertEqual(blocked_summary["resume_state"], "registry-changed-after-lock")
+            self.assertEqual(blocked_summary["interrupted_before_sha256"], before)
+            self.assertNotEqual(blocked_summary["registry_sha256"], before)
+            self.assertTrue(registry.lock_path(state_dir).exists())
+            blocked_status = registry.registry_status(state_dir, public_safe=True)
+            self.assertFalse(blocked_status["ready"])
+            self.assertTrue(blocked_status["resume_required"])
+
+            recovered = registry.recover_registry(
+                state_dir,
+                public_safe=True,
+                adopt_landed_write=True,
+            )
 
             self.assertTrue(recovered["recovered"])
             self.assertEqual(recovered["resume_state"], "registry-changed-after-lock")
             self.assertTrue(recovered["registry_changed_since_lock"])
             summary = model.load_json(Path(str(recovered["operation_summary_path"])))
             self.assertEqual(summary["status"], "recovered-after-interruption")
+            self.assertTrue(summary["adopt_landed_write"])
+            self.assertFalse(summary["adoption_required"])
             self.assertEqual(summary["resume_state"], "registry-changed-after-lock")
             self.assertEqual(summary["interrupted_before_sha256"], before)
             self.assertNotEqual(summary["registry_sha256"], before)

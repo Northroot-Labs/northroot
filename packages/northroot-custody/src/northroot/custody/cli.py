@@ -232,6 +232,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     registry_recover = registry_sub.add_parser("recover")
     registry_recover.add_argument("--state", required=True)
     registry_recover.add_argument("--public-safe", action="store_true")
+    registry_recover.add_argument(
+        "--adopt-landed-write",
+        action="store_true",
+        help="Clear a changed-after-lock registry only after the landed state has been reviewed.",
+    )
     for name in (
         "add-object",
         "set-object",
@@ -695,7 +700,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(authorization)
         return 0 if authorization["allowed"] else 1
     if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "recover":
-        return _write_registry_result(registry.recover_registry(Path(args.state), public_safe=args.public_safe))
+        return _write_registry_result(
+            registry.recover_registry(
+                Path(args.state),
+                public_safe=args.public_safe,
+                adopt_landed_write=args.adopt_landed_write,
+            )
+        )
     if args.command == "steward" and args.steward_command == "registry":
         mutation_map = {
             "add-object": registry.add_object,

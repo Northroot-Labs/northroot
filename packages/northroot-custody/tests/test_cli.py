@@ -275,6 +275,75 @@ class CliTests(unittest.TestCase):
                     ),
                     1,
                 )
+                before_recovery = registry.registry_status(state_dir, public_safe=True)["registry_sha256"]
+                (state_dir / "service-registry.lock.json").write_text(
+                    json.dumps(
+                        {
+                            "schema_version": "northroot.steward.registry-operation-lock.v0",
+                            "operation_id": "interrupted-cli-mutation",
+                            "operation": "registry.object.add",
+                            "started_at": "2026-06-22T00:00:00Z",
+                            "pid": 123,
+                            "registry_path": str(registry.registry_path(state_dir)),
+                            "before_sha256": before_recovery,
+                            "failure_policy": "fail-closed-record-summary",
+                        },
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n",
+                    encoding="utf-8",
+                )
+                landed_registry = registry.load_registry(state_dir)
+                landed_registry["objects"].append(
+                    {
+                        "object_id": "artifact/cli-interrupted-write",
+                        "object_type": "artifact-dir",
+                        "visibility": "private",
+                        "storage_binding": "artifact://cli-interrupted-write",
+                        "custody_policy": {
+                            "backup": "delegated",
+                            "verification": "sample-restore",
+                        },
+                        "redaction_policy": {
+                            "public_summary": "object-id-and-status",
+                        },
+                        "restore_class": "full-restore",
+                    }
+                )
+                registry.registry_path(state_dir).write_text(
+                    json.dumps(landed_registry, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "recover",
+                            "--state",
+                            str(state_dir),
+                            "--public-safe",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertTrue((state_dir / "service-registry.lock.json").exists())
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "recover",
+                            "--state",
+                            str(state_dir),
+                            "--public-safe",
+                            "--adopt-landed-write",
+                        ]
+                    ),
+                    0,
+                )
+                self.assertFalse((state_dir / "service-registry.lock.json").exists())
                 tampered = registry.load_registry(state_dir)
                 tampered["service_id"] = "steward/tampered-through-cli-test"
                 registry.registry_path(state_dir).write_text(
@@ -303,6 +372,8 @@ class CliTests(unittest.TestCase):
             self.assertEqual(cli_object_state["storage_binding"], "artifact://cli-release-bundle-v2")
             self.assertIn('"project_count": 3', stdout.getvalue())
             self.assertIn('"blocked": true', stdout.getvalue())
+            self.assertIn('"adoption_required": true', stdout.getvalue())
+            self.assertIn('"adopt_landed_write": true', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.legacy-profile-import-result.v0"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.registry-topology.v0"', stdout.getvalue())
             self.assertIn('"fail_closed_on_disconnected_storage": true', stdout.getvalue())
