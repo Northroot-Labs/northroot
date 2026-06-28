@@ -271,8 +271,13 @@ exists; recovery records `resume_state` as
 `registry-unchanged-after-lock`, `registry-changed-after-lock`,
 `registry-change-unknown`, or `registry-missing-after-lock` so operators can tell
 whether the interrupted write appears to have landed. Recovery removes the lock
-only when the registry still validates, or when initialization stopped before
-the registry file was written and can be retried cleanly.
+only when the registry still validates and has not changed since the lock, when
+initialization stopped before the registry file was written and can be retried
+cleanly, or when an operator explicitly reruns recovery with
+`--adopt-landed-write` after reviewing a valid `registry-changed-after-lock`
+state. Without that explicit adoption, changed-after-lock recovery writes a
+blocked summary and leaves the lock in place so later mutations cannot bless an
+unknown landed write by accident.
 
 `steward registry bind-source` attaches a source destination to the referenced
 project as part of the same atomic registry mutation. Callers do not need to

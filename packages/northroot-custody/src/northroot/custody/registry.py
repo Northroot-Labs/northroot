@@ -1169,7 +1169,12 @@ def mutate_registry(
         raise
 
 
-def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str, Any]:
+def recover_registry(
+    state_dir: Path,
+    *,
+    public_safe: bool = False,
+    adopt_landed_write: bool = False,
+) -> dict[str, Any]:
     lock = _load_lock(state_dir)
     if lock is None:
         return {
@@ -1202,6 +1207,9 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
         resume_state = "registry-unchanged-after-lock" if current_sha256 == before_sha256 else "registry-changed-after-lock"
     else:
         resume_state = "registry-change-unknown"
+    changed_after_lock = resume_state == "registry-changed-after-lock"
+    if changed_after_lock and not adopt_landed_write and registry_error is None and not errors:
+        status = "blocked-changed-after-lock"
     finding_payloads = [finding.as_dict() for finding in findings]
     if registry_missing:
         finding_payloads.append(
@@ -1231,7 +1239,9 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
         "registry_path": str(registry_path(state_dir)),
         "interrupted_before_sha256": before_sha256 if isinstance(before_sha256, str) else None,
         "registry_sha256": current_sha256,
-        "registry_changed_since_lock": resume_state == "registry-changed-after-lock",
+        "registry_changed_since_lock": changed_after_lock,
+        "adopt_landed_write": adopt_landed_write,
+        "adoption_required": changed_after_lock and not adopt_landed_write,
         "public_safe": public_safe,
         "findings": finding_payloads,
         "completed_at": _utc_stamp(),
@@ -1255,6 +1265,17 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
             "error_count": len(errors),
             "findings": finding_payloads,
         }
+    if changed_after_lock and not adopt_landed_write:
+        return {
+            "recovered": False,
+            "resume_required": True,
+            "operation_summary_path": str(summary_path),
+            "registry_sha256": summary["registry_sha256"],
+            "resume_state": resume_state,
+            "registry_changed_since_lock": True,
+            "adoption_required": True,
+            "detail": "registry changed after the interrupted operation lock; rerun with adopt_landed_write only after reviewing the landed registry state",
+        }
     lock_path(state_dir).unlink(missing_ok=True)
     _fsync_directory(state_dir)
     return {
@@ -1264,6 +1285,8 @@ def recover_registry(state_dir: Path, *, public_safe: bool = False) -> dict[str,
         "registry_sha256": summary["registry_sha256"],
         "resume_state": resume_state,
         "registry_changed_since_lock": summary["registry_changed_since_lock"],
+        "adopt_landed_write": adopt_landed_write,
+        "adoption_required": False,
     }
 
 
