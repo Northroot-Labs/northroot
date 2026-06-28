@@ -94,13 +94,6 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     command_plan.add_argument("--registry-state")
     command_plan.add_argument("--project-id")
     command_plan.add_argument("--object-id")
-    command_plan.add_argument("--agent-id", default=steward.DEFAULT_DOGFOOD_AGENT_ID)
-    command_plan.add_argument("--branch")
-    command_plan.add_argument("--base-branch")
-    command_plan.add_argument("--commit-message")
-    command_plan.add_argument("--pr-title")
-    command_plan.add_argument("--pr-body")
-    command_plan.add_argument("--remote", default="origin")
 
     report = steward_sub.add_parser("report", help="Render a consolidated read-only custody report.")
     report.add_argument("--state", required=True)
@@ -459,13 +452,6 @@ def main(argv: Sequence[str] | None = None) -> int:
             registry_state=Path(args.registry_state) if args.registry_state else None,
             project_id=args.project_id,
             object_id=args.object_id,
-            agent_id=args.agent_id,
-            branch=args.branch,
-            base_branch=args.base_branch,
-            commit_message=args.commit_message,
-            pr_title=args.pr_title,
-            pr_body=args.pr_body,
-            remote=args.remote,
         )
         write_json(plan)
         return 0 if plan["ok"] else 1

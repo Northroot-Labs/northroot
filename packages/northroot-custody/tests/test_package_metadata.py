@@ -21,7 +21,6 @@ class PackageMetadataTests(unittest.TestCase):
 
     def test_public_examples_cover_the_reusable_vocabulary(self) -> None:
         expected_schemas = {
-            model.AGENT_DELEGATION_POLICY_SCHEMA,
             model.INVENTORY_SCHEMA,
             model.POLICY_SCHEMA,
             model.SNAPSHOT_PLAN_SCHEMA,
@@ -42,7 +41,6 @@ class PackageMetadataTests(unittest.TestCase):
             ROOT / "examples" / "service-registry.example.json",
             ROOT / "examples" / "legacy-profile-import.redacted.example.json",
             ROOT / "examples" / "legacy-run-import.redacted.example.json",
-            ROOT / "examples" / "agent-delegation-policy.dogfood.example.json",
         ]
 
         observed_schemas = set()
@@ -53,7 +51,7 @@ class PackageMetadataTests(unittest.TestCase):
 
         self.assertEqual(observed_schemas, expected_schemas)
 
-    def test_public_examples_cover_agent_contracts(self) -> None:
+    def test_public_examples_cover_command_plan_contracts(self) -> None:
         command_plan = json.loads((ROOT / "examples" / "command-plan.example.json").read_text(encoding="utf-8"))
 
         self.assertEqual(command_plan["schema_version"], model.COMMAND_PLAN_SCHEMA)

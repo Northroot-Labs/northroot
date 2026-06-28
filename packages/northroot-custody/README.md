@@ -72,7 +72,6 @@ nr-custody validate examples/command-plan.example.json --public-safe
 nr-custody validate examples/service-registry.example.json --public-safe
 nr-custody validate examples/legacy-profile-import.redacted.example.json --public-safe
 nr-custody validate examples/legacy-run-import.redacted.example.json --public-safe
-nr-custody validate examples/agent-delegation-policy.dogfood.example.json --public-safe
 nr-custody validate examples/secret-bindings.macos-keychain.example.json --public-safe
 nr-custody validate examples/repository-bindings.redacted.example.json --public-safe
 nr-custody render-plan \
@@ -350,22 +349,11 @@ all return non-zero. Project topology also fails closed when a `secret` or
 permission set, so project-level permission cannot silently stand in for
 sensitive object custody policy.
 
-`examples/agent-delegation-policy.dogfood.example.json` is the default dogfood
-delegation policy for current steward work. It registers `agent:codex` for
-`codex/` branches and allows branch checkout/creation, checkpoint commits,
-branch pushes, draft PR open/update, PR follow-up, and verification under
-explicit agent identity metadata. It still prohibits protected-branch pushes,
-protected-branch merges, workflow permission escalation, long-lived signing key
-access, and human-author impersonation.
-
-`steward capabilities` publishes that same default under `agent_contract`, and
-`steward command-plan` can plan those dogfood operations without a separate
-policy argument. For example, a registered Codex agent can request
-`--operation branch.create --branch codex/<topic>`, `--operation commit.create`
-with a commit message and verification summary, `--operation push.branch`, or
-draft PR operations. The returned plan includes required agent provenance
-trailers and still refuses protected branches or unregistered agents. Draft PRs
-remain draft until final human review clearance.
+Agent branch, commit, push, and pull-request workflow policy is intentionally
+outside the steward service. Steward may be called by agents, but it only plans
+custody operations. Agent work delegation and review policy should live in the
+governance or workstream layer that invokes steward, not inside the custody
+package.
 
 Delegated `steward run`, `steward verify`, `steward restore`, and
 `steward restore-drill` accept `--registry-state`, `--project-id`, and optional
@@ -456,17 +444,12 @@ manifest, steward reports `orphaned-artifacts` and requires
 confirmed. Use `schedule delete --force` only for explicit cleanup of stale
 local schedule files after the platform registration has already been handled.
 
-`steward capabilities` is the agent-facing contract. Agents should inspect that
-manifest and call the listed custody operations instead of constructing direct
-`restic` or `resticprofile` shell commands. The manifest includes an
-`agent_contract` and `operation_contracts` list with argv templates, required
-inputs, side effects, success schemas, preflight requirements, and secret
-handling rules. The `agent_contract.default_dogfood_policy` is selected by
-default for registered dogfood agents such as `agent:codex`; branch, commit,
-push, draft-PR, PR follow-up, and PR-check plans do not require a separate
-policy file. Those plans still refuse protected branches and require the
-`Agent-*` provenance trailers that distinguish agent authorship, delegated
-policy, branch, verification, and coauthorship.
+`steward capabilities` is the agent-safe custody contract. Agents should inspect
+that manifest and call the listed custody operations instead of constructing
+direct `restic` or `resticprofile` shell commands. The manifest includes a
+custody-only `command_plan_contract` and `operation_contracts` list with argv
+templates, required inputs, side effects, success schemas, preflight
+requirements, and secret handling rules.
 
 `steward command-plan` is the safer bridge from an agent request to an argv. It
 accepts a constrained operation name plus typed inputs, then returns
@@ -474,9 +457,8 @@ accepts a constrained operation name plus typed inputs, then returns
 warnings, side-effect metadata, and preflight readiness when `--execute` is
 requested. Agent runtimes should prefer this over hand-binding templates. A
 shell is not required for custody operations, and agents must not shell-join the
-returned argv. The operation set includes steward custody operations, sanitized
-legacy run imports, and the default dogfood branch/commit/push/draft-PR
-workflow for registered agents.
+returned argv. The operation set is limited to steward custody operations and
+sanitized legacy run imports.
 
 When `--registry-state` and `--project-id` are supplied, `steward verify-state`
 and `steward report` check both policy authorization and project destination
