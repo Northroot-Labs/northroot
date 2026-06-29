@@ -1214,6 +1214,28 @@ class CliTests(unittest.TestCase):
             self.assertNotIn("/Users/example", json.dumps(runs, sort_keys=True))
             self.assertNotIn("/Volumes/Private", json.dumps(runs, sort_keys=True))
 
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "draft-legacy-import",
+                            "--document",
+                            "runs",
+                            "--run-state-dir",
+                            str(paths["run_state_dir"]),
+                            "--import-id",
+                            profile["import_id"],
+                        ]
+                    ),
+                    0,
+                )
+            runs_without_flag = json.loads(stdout.getvalue())
+            self.assertEqual(model.validate_document(runs_without_flag, public_safe=True), [])
+            self.assertNotIn("/Users/example", json.dumps(runs_without_flag, sort_keys=True))
+            self.assertNotIn("/Volumes/Private", json.dumps(runs_without_flag, sort_keys=True))
+
             steward_state = Path(temp_dir) / "steward"
             self.assertEqual(
                 cli.main(
