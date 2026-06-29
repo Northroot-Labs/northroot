@@ -330,6 +330,34 @@ source-destination bindings are linked back to their referenced project inside
 the same protected mutation, so migrated projects do not require a manual
 `project.source_destination_ids` repair before topology verification.
 
+`steward draft-legacy-import` is the narrow bridge from the old
+machine-durability layout into those sanitized bundles. It reads the legacy
+LaunchAgent plist, machine-node registry, project-node registry, runner state,
+and per-run result directory, then emits either a
+`northroot.steward.legacy-profile-import.v0` profile bundle or a
+`northroot.steward.legacy-run-import.v0` run bundle. Drafting is read-only: it
+does not install schedules, execute backup tooling, probe repositories, copy
+bytes, or preserve machine-local paths. Public-safe drafts are validated before
+they are printed, so real paths, volume names, secret provider references, and
+raw receipt locations must not appear in the output.
+
+```bash
+nr-custody steward draft-legacy-import \
+  --document profile \
+  --launch-agent /path/to/legacy.plist \
+  --machine-node /path/to/machine-node.json \
+  --project-nodes /path/to/project-nodes.json \
+  --runner-state /path/to/runner-state.json \
+  --run-state-dir /path/to/state/machine-durability \
+  --public-safe
+
+nr-custody steward draft-legacy-import \
+  --document runs \
+  --run-state-dir /path/to/state/machine-durability \
+  --import-id legacy/machine-durability-abc123 \
+  --public-safe
+```
+
 `steward import-legacy-runs` imports sanitized historical run summaries from a
 legacy profile into the steward state's `run-summaries/` directory. It accepts
 `northroot.steward.legacy-run-import.v0` bundles, writes each run summary
