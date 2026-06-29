@@ -1214,6 +1214,49 @@ class CliTests(unittest.TestCase):
             self.assertNotIn("/Users/example", json.dumps(runs, sort_keys=True))
             self.assertNotIn("/Volumes/Private", json.dumps(runs, sort_keys=True))
 
+            steward_state = Path(temp_dir) / "steward"
+            self.assertEqual(
+                cli.main(
+                    [
+                        "steward",
+                        "init",
+                        "--inventory",
+                        str(EXAMPLES / "workspace-inventory.example.json"),
+                        "--policy",
+                        str(EXAMPLES / "custody-policy.example.json"),
+                        "--output",
+                        str(steward_state),
+                    ]
+                ),
+                0,
+            )
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "command-plan",
+                            "--state",
+                            str(steward_state),
+                            "--operation",
+                            "draft-legacy-import",
+                            "--document",
+                            "runs",
+                            "--run-state-dir",
+                            str(paths["run_state_dir"]),
+                            "--import-id",
+                            profile["import_id"],
+                        ]
+                    ),
+                    0,
+                )
+            plan = json.loads(stdout.getvalue())
+            self.assertEqual(model.validate_document(plan), [])
+            self.assertIn("draft-legacy-import", plan["argv"])
+            self.assertIn("--public-safe", plan["argv"])
+            self.assertFalse(plan["side_effects"]["writes_run_summary"])
+
 
 if __name__ == "__main__":
     unittest.main()

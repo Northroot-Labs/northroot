@@ -460,6 +460,11 @@ class StewardTests(unittest.TestCase):
             self.assertIn("restore_drill", operation_contracts["restore-drill"]["satisfies_retention_evidence"])
             self.assertEqual(operation_contracts["retention.evaluate"]["success_schema"], model.RETENTION_DECISION_SCHEMA)
             self.assertEqual(operation_contracts["evidence.record"]["allowed_evidence"], ["verified_offsite_copy"])
+            self.assertEqual(operation_contracts["draft-legacy-import"]["success_schema"], "document-specific")
+            self.assertEqual(
+                operation_contracts["draft-legacy-import"]["success_schemas"],
+                [model.LEGACY_PROFILE_IMPORT_SCHEMA, model.LEGACY_RUN_IMPORT_SCHEMA],
+            )
             self.assertEqual(
                 operation_contracts["import-legacy-runs"]["success_schema"],
                 "northroot.steward.legacy-run-import-result.v0",
@@ -468,6 +473,8 @@ class StewardTests(unittest.TestCase):
             self.assertNotIn("push.branch", operations)
             self.assertNotIn("pr.draft.open", operations)
             self.assertTrue(operations["import-legacy-runs"]["uses_operation_lock"])
+            self.assertTrue(operations["draft-legacy-import"]["reads_legacy_local_state"])
+            self.assertTrue(operations["draft-legacy-import"]["outputs_public_safe_import_bundle"])
             self.assertTrue(operations["schedule.install"]["uses_operation_lock"])
             self.assertTrue(operations["schedule.uninstall"]["uses_operation_lock"])
             self.assertIn(
@@ -540,6 +547,45 @@ class StewardTests(unittest.TestCase):
             missing_legacy_import_plan = steward.render_command_plan(output_dir, operation="import-legacy-runs")
             self.assertFalse(missing_legacy_import_plan["ok"])
             self.assertIn("json", missing_legacy_import_plan["missing_inputs"])
+
+            legacy_profile_draft_plan = steward.render_command_plan(
+                output_dir,
+                operation="draft-legacy-import",
+                document="profile",
+                launch_agent_path=Path(temp_dir) / "legacy.plist",
+                machine_node_path=Path(temp_dir) / "machine-node.json",
+                project_nodes_path=Path(temp_dir) / "project-nodes.json",
+                runner_state_path=Path(temp_dir) / "runner-state.json",
+                run_state_dir=Path(temp_dir) / "machine-durability",
+            )
+            self.assertTrue(legacy_profile_draft_plan["ok"])
+            self.assertFalse(legacy_profile_draft_plan["side_effects"]["writes_run_summary"])
+            self.assertFalse(legacy_profile_draft_plan["side_effects"]["mutates_backup_repository"])
+            self.assertIn("draft-legacy-import", legacy_profile_draft_plan["argv"])
+            self.assertIn("--public-safe", legacy_profile_draft_plan["argv"])
+            self.assertEqual(model.validate_command_plan(legacy_profile_draft_plan), [])
+
+            legacy_runs_draft_plan = steward.render_command_plan(
+                output_dir,
+                operation="draft-legacy-import",
+                document="runs",
+                run_state_dir=Path(temp_dir) / "machine-durability",
+                import_id="legacy/example-machine-durability",
+            )
+            self.assertTrue(legacy_runs_draft_plan["ok"])
+            self.assertIn("--import-id", legacy_runs_draft_plan["argv"])
+            self.assertEqual(model.validate_command_plan(legacy_runs_draft_plan), [])
+
+            missing_legacy_draft_plan = steward.render_command_plan(
+                output_dir,
+                operation="draft-legacy-import",
+                document="profile",
+            )
+            self.assertFalse(missing_legacy_draft_plan["ok"])
+            self.assertEqual(
+                missing_legacy_draft_plan["missing_inputs"],
+                ["launch_agent", "machine_node", "project_nodes", "run_state_dir", "runner_state"],
+            )
 
             unsupported_git_plan = steward.render_command_plan(
                 output_dir,
