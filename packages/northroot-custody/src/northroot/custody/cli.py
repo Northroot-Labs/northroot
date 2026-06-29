@@ -85,7 +85,11 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     draft_legacy_import.add_argument("--run-state-dir", required=True)
     draft_legacy_import.add_argument("--import-id")
     draft_legacy_import.add_argument("--legacy-import-ref")
-    draft_legacy_import.add_argument("--public-safe", action="store_true")
+    draft_legacy_import.add_argument(
+        "--public-safe",
+        action="store_true",
+        help="Accepted for command-plan consistency; legacy draft output is always public-safe.",
+    )
 
     command_plan = steward_sub.add_parser("command-plan", help="Plan a constrained agent-safe steward argv.")
     command_plan.add_argument("--state", required=True)
@@ -474,7 +478,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                     runner_state_path=Path(args.runner_state),
                     run_state_dir=Path(args.run_state_dir),
                     import_id=args.import_id,
-                    public_safe=args.public_safe,
+                    public_safe=True,
                 )
             )
             return 0
@@ -485,7 +489,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 run_state_dir=Path(args.run_state_dir),
                 import_id=args.import_id,
                 legacy_import_ref=args.legacy_import_ref,
-                public_safe=args.public_safe,
+                public_safe=True,
             )
         )
         return 0
