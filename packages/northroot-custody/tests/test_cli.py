@@ -1279,6 +1279,47 @@ class CliTests(unittest.TestCase):
             self.assertIn("--public-safe", plan["argv"])
             self.assertFalse(plan["side_effects"]["writes_run_summary"])
 
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "draft-legacy-import",
+                            "--document",
+                            "profile",
+                            "--run-state-dir",
+                            str(paths["run_state_dir"]),
+                        ]
+                    ),
+                    1,
+                )
+            missing_profile = json.loads(stdout.getvalue())
+            self.assertFalse(missing_profile["ok"])
+            self.assertEqual(
+                missing_profile["missing_inputs"],
+                ["launch_agent", "machine_node", "project_nodes", "runner_state"],
+            )
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "draft-legacy-import",
+                            "--document",
+                            "runs",
+                            "--run-state-dir",
+                            str(paths["run_state_dir"]),
+                        ]
+                    ),
+                    1,
+                )
+            missing_runs = json.loads(stdout.getvalue())
+            self.assertFalse(missing_runs["ok"])
+            self.assertEqual(missing_runs["missing_inputs"], ["import_id"])
+
 
 if __name__ == "__main__":
     unittest.main()
