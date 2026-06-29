@@ -26,6 +26,42 @@ def file_sha256(path: Path) -> str:
 
 
 class StewardTests(unittest.TestCase):
+    def test_operation_lock_acquisition_is_exclusive(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_dir = Path(temp_dir) / "steward"
+            first_lock = {
+                "schema_version": "northroot.steward.operation-lock.v0",
+                "operation_id": "first-lock",
+                "operation": "run",
+                "state": str(output_dir),
+                "command": "nr steward run",
+                "command_args": ["nr", "steward", "run"],
+                "pid": 100,
+                "started_at": "2026-06-29T00:00:00Z",
+                "failure_policy": "fail-closed-record-summary-before-retry",
+            }
+            second_lock = {
+                **first_lock,
+                "operation_id": "second-lock",
+                "pid": 200,
+            }
+
+            acquired_path, blocked_status = steward._try_acquire_operation_lock(output_dir, first_lock)
+            self.assertEqual(acquired_path, steward.operation_lock_path(output_dir))
+            self.assertIsNone(blocked_status)
+
+            second_acquired_path, second_blocked_status = steward._try_acquire_operation_lock(output_dir, second_lock)
+
+            self.assertIsNone(second_acquired_path)
+            self.assertIsNotNone(second_blocked_status)
+            if second_blocked_status is None:
+                self.fail("second lock acquisition should return blocked lock status")
+            self.assertTrue(second_blocked_status["locked"])
+            self.assertEqual(second_blocked_status["lock"]["operation_id"], "first-lock")
+            persisted_lock = model.load_json(steward.operation_lock_path(output_dir))
+            self.assertEqual(persisted_lock["operation_id"], "first-lock")
+            self.assertEqual(persisted_lock["pid"], 100)
+
     def test_import_legacy_run_summaries_feeds_evidence_report_safely(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             output_dir = Path(temp_dir) / "steward"

@@ -19,6 +19,33 @@ def clone(payload: dict[str, object]) -> dict[str, object]:
 
 
 class RegistryTests(unittest.TestCase):
+    def test_registry_lock_acquisition_is_exclusive(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            first_lock = {
+                "schema_version": "northroot.steward.registry-operation-lock.v0",
+                "operation_id": "first-lock",
+                "operation": "registry.object.add",
+                "started_at": "2026-06-29T00:00:00Z",
+                "pid": 100,
+                "failure_policy": "fail-closed-record-summary",
+            }
+            second_lock = {
+                **first_lock,
+                "operation_id": "second-lock",
+                "pid": 200,
+            }
+
+            registry._acquire_registry_lock(state_dir, first_lock)
+
+            with self.assertRaises(registry.RegistryLockedError) as raised:
+                registry._acquire_registry_lock(state_dir, second_lock)
+
+            self.assertEqual(raised.exception.lock["operation_id"], "first-lock")
+            persisted_lock = model.load_json(registry.lock_path(state_dir))
+            self.assertEqual(persisted_lock["operation_id"], "first-lock")
+            self.assertEqual(persisted_lock["pid"], 100)
+
     def test_authorize_operation_evaluates_project_and_object_permissions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"

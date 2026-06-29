@@ -106,6 +106,26 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> str:
     return _sha256_bytes(data)
 
 
+def _write_json_create_new(path: Path, payload: dict[str, Any]) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = _json_bytes(payload)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            fd = -1
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except Exception:
+        if fd != -1:
+            os.close(fd)
+        path.unlink(missing_ok=True)
+        _fsync_directory(path.parent)
+        raise
+    _fsync_directory(path.parent)
+    return _sha256_bytes(data)
+
+
 def _read_json(path: Path) -> dict[str, Any]:
     return model.load_json(path)
 
@@ -123,6 +143,31 @@ def _load_lock(state_dir: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
     return _read_json(path)
+
+
+def _unreadable_lock_payload(state_dir: Path, error: str) -> dict[str, Any]:
+    path = lock_path(state_dir)
+    return {
+        "schema_version": "northroot.steward.registry-operation-lock.v0",
+        "unreadable": True,
+        "lock_path": str(path),
+        "lock_sha256": _file_sha256(path),
+        "error": error,
+        "failure_policy": "fail-closed-record-summary",
+        "resume_hint": "run registry recover before applying another initialization or mutation",
+    }
+
+
+def _acquire_registry_lock(state_dir: Path, lock: dict[str, Any]) -> None:
+    path = lock_path(state_dir)
+    try:
+        _write_json_create_new(path, lock)
+    except FileExistsError as exc:
+        try:
+            existing_lock = _load_lock(state_dir)
+        except Exception as lock_exc:  # noqa: BLE001 - unreadable locks still block mutation
+            existing_lock = _unreadable_lock_payload(state_dir, str(lock_exc))
+        raise RegistryLockedError(existing_lock or _unreadable_lock_payload(state_dir, "lock exists but is empty")) from exc
 
 
 def _write_operation_summary(state_dir: Path, summary: dict[str, Any]) -> Path:
@@ -1036,7 +1081,7 @@ def initialize_registry(
         "failure_policy": "fail-closed-record-summary",
         "resume_hint": "run registry recover before applying another initialization or mutation",
     }
-    _atomic_write_json(lock_path(state_dir), lock)
+    _acquire_registry_lock(state_dir, lock)
     try:
         digest = _atomic_write_json(path, registry)
         summary = {
@@ -1121,7 +1166,7 @@ def mutate_registry(
         "failure_policy": "fail-closed-record-summary",
         "resume_hint": "run registry recover before applying another mutation",
     }
-    _atomic_write_json(lock_path(state_dir), lock)
+    _acquire_registry_lock(state_dir, lock)
     try:
         registry = load_registry(state_dir)
         mutator(registry)

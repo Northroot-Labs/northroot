@@ -197,6 +197,26 @@ def _atomic_write_json(path: Path, payload: dict[str, Any]) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def _write_json_create_new(path: Path, payload: dict[str, Any]) -> str:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = _json_bytes(payload)
+    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            fd = -1
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+    except Exception:
+        if fd != -1:
+            os.close(fd)
+        path.unlink(missing_ok=True)
+        _fsync_directory(path.parent)
+        raise
+    _fsync_directory(path.parent)
+    return hashlib.sha256(data).hexdigest()
+
+
 def _atomic_write_text(path: Path, text: str) -> str:
     path.parent.mkdir(parents=True, exist_ok=True)
     data = text.encode("utf-8")
@@ -1589,6 +1609,15 @@ def _operation_lock_status(output_dir: Path) -> dict[str, Any]:
         "lock": lock,
         "error": error,
     }
+
+
+def _try_acquire_operation_lock(output_dir: Path, lock: dict[str, Any]) -> tuple[Path | None, dict[str, Any] | None]:
+    lock_path = operation_lock_path(output_dir)
+    try:
+        _write_json_create_new(lock_path, lock)
+    except FileExistsError:
+        return None, _operation_lock_status(output_dir)
+    return lock_path, None
 
 
 def _unreadable_operation_lock(lock_path: Path, error: str) -> dict[str, Any]:
@@ -3337,8 +3366,19 @@ def render_operation(
     acquired_lock_path = None
     if execute:
         current_lock_path = operation_lock_path(output_dir)
-        if current_lock_path.exists():
-            lock_status = _operation_lock_status(output_dir)
+        operation_lock = _operation_lock_payload(
+            output_dir=output_dir,
+            operation=operation,
+            command_args=command_args,
+            snapshot_id=snapshot_id,
+            restore_target=restore_target,
+            registry_state=registry_state,
+            project_id=project_id,
+            object_id=object_id,
+        )
+        acquired_lock_path, blocked_lock_status = _try_acquire_operation_lock(output_dir, operation_lock)
+        if blocked_lock_status is not None:
+            lock_status = blocked_lock_status
             lock_error = lock_status.get("error") if isinstance(lock_status.get("error"), str) else None
             operation_lock = (
                 _unreadable_operation_lock(current_lock_path, lock_error)
@@ -3352,19 +3392,6 @@ def render_operation(
                 else "delegated operation lock exists; run steward recover-operation before retrying"
             )
             failure_stage = "operation-lock"
-        else:
-            operation_lock = _operation_lock_payload(
-                output_dir=output_dir,
-                operation=operation,
-                command_args=command_args,
-                snapshot_id=snapshot_id,
-                restore_target=restore_target,
-                registry_state=registry_state,
-                project_id=project_id,
-                object_id=object_id,
-            )
-            _atomic_write_json(current_lock_path, operation_lock)
-            acquired_lock_path = current_lock_path
         if return_code is None and registry_state is not None and not project_id:
             return_code = 77
             error = "registry authorization requires --project-id"
@@ -3588,19 +3615,6 @@ def import_legacy_run_summaries(
         raise ValueError(f"invalid legacy run import: {detail}")
 
     installation = load_installation(output_dir)
-    lock_path = operation_lock_path(output_dir)
-    if lock_path.exists():
-        lock_status = _operation_lock_status(output_dir)
-        return {
-            "schema_version": "northroot.steward.legacy-run-import-result.v0",
-            "imported": False,
-            "locked": True,
-            "resume_required": True,
-            "lock": lock_status.get("lock"),
-            "lock_error": lock_status.get("error"),
-            "detail": "steward has an unresolved operation lock; run steward recover-operation first",
-        }
-
     operation_id = f"{_utc_stamp()}-legacy-run-import"
     lock = {
         "schema_version": "northroot.steward.operation-lock.v0",
@@ -3614,7 +3628,17 @@ def import_legacy_run_summaries(
         "failure_policy": "fail-closed-record-summary-before-retry",
         "resume_hint": "run steward recover-operation before retrying legacy run import",
     }
-    _atomic_write_json(lock_path, lock)
+    acquired_lock_path, lock_status = _try_acquire_operation_lock(output_dir, lock)
+    if lock_status is not None:
+        return {
+            "schema_version": "northroot.steward.legacy-run-import-result.v0",
+            "imported": False,
+            "locked": True,
+            "resume_required": True,
+            "lock": lock_status.get("lock"),
+            "lock_error": lock_status.get("error"),
+            "detail": "steward has an unresolved operation lock; run steward recover-operation first",
+        }
     inserted: list[str] = []
     skipped_existing: list[str] = []
     written_paths: list[str] = []
@@ -3681,7 +3705,7 @@ def import_legacy_run_summaries(
             )
             operation_summary_path = _run_summary_path(output_dir, str(import_summary["run_id"]))
             _write_indexed_run_summary(output_dir, import_summary)
-        _clear_operation_lock(lock_path, expected_operation_id=operation_id)
+        _clear_operation_lock(acquired_lock_path, expected_operation_id=operation_id)
         return {
             "schema_version": "northroot.steward.legacy-run-import-result.v0",
             "imported": True,
@@ -3697,7 +3721,7 @@ def import_legacy_run_summaries(
             "operation_summary_path": str(operation_summary_path) if operation_summary_path else None,
         }
     except Exception:
-        _clear_operation_lock(lock_path, expected_operation_id=operation_id)
+        _clear_operation_lock(acquired_lock_path, expected_operation_id=operation_id)
         raise
 
 
@@ -4334,8 +4358,17 @@ def install_schedule(
             project_id=project_id,
             object_id=object_id,
         )
-        acquired_lock_path = operation_lock_path(output_dir)
-        _atomic_write_json(acquired_lock_path, operation_lock)
+        acquired_lock_path, lock_status = _try_acquire_operation_lock(output_dir, operation_lock)
+        if lock_status is not None:
+            return _blocked_by_existing_operation_lock_result(
+                output_dir=output_dir,
+                schema_version="northroot.steward.schedule-install.v0",
+                status=status,
+                execute=execute,
+                commands=commands,
+                preflight_required=require_preflight,
+                preflight=preflight_result,
+            )
         executed = True
         ok, return_code, failed_command = _run_command_sequence(commands)
         status["installed"] = ok
@@ -4417,8 +4450,15 @@ def uninstall_schedule(
             project_id=project_id,
             object_id=object_id,
         )
-        acquired_lock_path = operation_lock_path(output_dir)
-        _atomic_write_json(acquired_lock_path, operation_lock)
+        acquired_lock_path, lock_status = _try_acquire_operation_lock(output_dir, operation_lock)
+        if lock_status is not None:
+            return _blocked_by_existing_operation_lock_result(
+                output_dir=output_dir,
+                schema_version="northroot.steward.schedule-uninstall.v0",
+                status=status,
+                execute=execute,
+                commands=commands,
+            )
         executed = True
         ok, return_code, failed_command = _run_command_sequence(commands)
         if ok:
