@@ -340,6 +340,9 @@ does not install schedules, execute backup tooling, probe repositories, copy
 bytes, or preserve machine-local paths. Public-safe drafts are validated before
 they are printed, so real paths, volume names, secret provider references, and
 raw receipt locations must not appear in the output.
+Agents should request this argv through `steward command-plan --operation
+draft-legacy-import` so required local inputs are explicit and the result stays
+in the same no-shell command-plan contract as the rest of steward.
 
 ```bash
 nr-custody steward draft-legacy-import \

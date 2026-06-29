@@ -102,6 +102,14 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     command_plan.add_argument("--detail")
     command_plan.add_argument("--artifact-ref")
     command_plan.add_argument("--json")
+    command_plan.add_argument("--document", choices=("profile", "runs"))
+    command_plan.add_argument("--launch-agent")
+    command_plan.add_argument("--machine-node")
+    command_plan.add_argument("--project-nodes")
+    command_plan.add_argument("--runner-state")
+    command_plan.add_argument("--run-state-dir")
+    command_plan.add_argument("--import-id")
+    command_plan.add_argument("--legacy-import-ref")
     command_plan.add_argument("--force", action="store_true")
     command_plan.add_argument("--use-recorded-evidence", action="store_true")
     command_plan.add_argument("--skip-preflight", action="store_true")
@@ -497,6 +505,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             detail=args.detail,
             artifact_ref=args.artifact_ref,
             json_path=Path(args.json) if args.json else None,
+            document=args.document,
+            launch_agent_path=Path(args.launch_agent) if args.launch_agent else None,
+            machine_node_path=Path(args.machine_node) if args.machine_node else None,
+            project_nodes_path=Path(args.project_nodes) if args.project_nodes else None,
+            runner_state_path=Path(args.runner_state) if args.runner_state else None,
+            run_state_dir=Path(args.run_state_dir) if args.run_state_dir else None,
+            import_id=args.import_id,
+            legacy_import_ref=args.legacy_import_ref,
             force=args.force,
             use_recorded_evidence=args.use_recorded_evidence,
             skip_preflight=args.skip_preflight,

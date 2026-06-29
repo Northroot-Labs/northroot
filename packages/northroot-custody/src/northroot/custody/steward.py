@@ -58,6 +58,7 @@ COMMAND_PLAN_OPERATIONS = {
     "evidence.report",
     "evidence.record",
     "offsite.report",
+    "draft-legacy-import",
     "import-legacy-runs",
 }
 
@@ -1569,6 +1570,58 @@ def _custody_operation_contracts(output_dir: Path) -> list[dict[str, Any]]:
             "allowed_evidence": sorted(model.EXTERNAL_RETENTION_EVIDENCE),
         },
         {
+            "name": "draft-legacy-import",
+            "argv_template": [
+                "nr",
+                "steward",
+                "draft-legacy-import",
+                "--document",
+                "{profile|runs}",
+                "--public-safe",
+            ],
+            "profile_argv_template": [
+                "nr",
+                "steward",
+                "draft-legacy-import",
+                "--document",
+                "profile",
+                "--launch-agent",
+                "{launch_agent}",
+                "--machine-node",
+                "{machine_node}",
+                "--project-nodes",
+                "{project_nodes}",
+                "--runner-state",
+                "{runner_state}",
+                "--run-state-dir",
+                "{run_state_dir}",
+                "--public-safe",
+            ],
+            "runs_argv_template": [
+                "nr",
+                "steward",
+                "draft-legacy-import",
+                "--document",
+                "runs",
+                "--run-state-dir",
+                "{run_state_dir}",
+                "--import-id",
+                "{import_id}",
+                "--public-safe",
+            ],
+            "required_inputs": ["document", "run_state_dir"],
+            "profile_required_inputs": ["launch_agent", "machine_node", "project_nodes", "runner_state"],
+            "runs_required_inputs": ["import_id"],
+            "optional_inputs": ["legacy_import_ref"],
+            "side_effects": [],
+            "requires_preflight": False,
+            "success_schema": "document-specific",
+            "success_schemas": [
+                model.LEGACY_PROFILE_IMPORT_SCHEMA,
+                model.LEGACY_RUN_IMPORT_SCHEMA,
+            ],
+        },
+        {
             "name": "import-legacy-runs",
             "argv_template": ["nr", "steward", "import-legacy-runs", "--state", state, "--json", "{json}", "--public-safe"],
             "required_inputs": ["json"],
@@ -1763,6 +1816,14 @@ def render_command_plan(
     detail: str | None = None,
     artifact_ref: str | None = None,
     json_path: Path | None = None,
+    document: str | None = None,
+    launch_agent_path: Path | None = None,
+    machine_node_path: Path | None = None,
+    project_nodes_path: Path | None = None,
+    runner_state_path: Path | None = None,
+    run_state_dir: Path | None = None,
+    import_id: str | None = None,
+    legacy_import_ref: str | None = None,
     force: bool = False,
     use_recorded_evidence: bool = False,
     skip_preflight: bool = False,
@@ -1954,6 +2015,38 @@ def render_command_plan(
             missing_inputs.append("snapshot_id")
         else:
             argv.extend(["--snapshot-id", snapshot_id])
+    elif operation == "draft-legacy-import":
+        argv.extend(["draft-legacy-import"])
+        if document not in {"profile", "runs"}:
+            missing_inputs.append("document")
+        else:
+            argv.extend(["--document", document])
+        if document == "profile":
+            for name, value, flag in (
+                ("launch_agent", launch_agent_path, "--launch-agent"),
+                ("machine_node", machine_node_path, "--machine-node"),
+                ("project_nodes", project_nodes_path, "--project-nodes"),
+                ("runner_state", runner_state_path, "--runner-state"),
+                ("run_state_dir", run_state_dir, "--run-state-dir"),
+            ):
+                if value is None:
+                    missing_inputs.append(name)
+                else:
+                    argv.extend([flag, str(value)])
+            if import_id:
+                argv.extend(["--import-id", import_id])
+        elif document == "runs":
+            if run_state_dir is None:
+                missing_inputs.append("run_state_dir")
+            else:
+                argv.extend(["--run-state-dir", str(run_state_dir)])
+            if not import_id:
+                missing_inputs.append("import_id")
+            else:
+                argv.extend(["--import-id", import_id])
+            if legacy_import_ref:
+                argv.extend(["--legacy-import-ref", legacy_import_ref])
+        argv.append("--public-safe")
     elif operation == "import-legacy-runs":
         argv.extend(["import-legacy-runs", "--state", state])
         if json_path is None:
@@ -2257,6 +2350,15 @@ def render_capabilities(output_dir: Path) -> dict[str, Any]:
                 "mutates_backup_repository": False,
                 "writes_run_summary": True,
                 "requires_preflight": False,
+            },
+            {
+                "name": "draft-legacy-import",
+                "command": f"{DEFAULT_RUNNER_COMMAND} draft-legacy-import --document <profile|runs> --public-safe",
+                "mutates_backup_repository": False,
+                "writes_run_summary": False,
+                "requires_preflight": False,
+                "reads_legacy_local_state": True,
+                "outputs_public_safe_import_bundle": True,
             },
             {
                 "name": "import-legacy-runs",
