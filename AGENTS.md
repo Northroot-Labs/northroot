@@ -27,7 +27,8 @@ crates/northroot-governance  policy-record matching over records
 crates/northroot-execution   execution method registry contracts
 crates/northroot-exchange    constrained handoff/result profile
 crates/northroot-ag          sanitized ag-domain example over records
-packages/northroot-durability  Python package: northroot.durability
+packages/northroot-custody     Python package: northroot.custody steward/custody service
+packages/northroot-durability  legacy Python compatibility helpers
 apps/northroot               standalone CLI; not a workspace member
 ```
 
@@ -132,10 +133,18 @@ These layers may structure higher-level facts but must not own private product a
 
 ### Promoted Packages
 
-- `packages/northroot-durability` exposes `northroot.durability`.
+- `packages/northroot-custody` exposes `northroot.custody` for public-safe
+  custody contracts, delegated snapshot plans, retention gates, restore
+  verification, run summaries, and the steward helper layer used by
+  `nr steward`.
+- `packages/northroot-durability` exposes `northroot.durability` as a legacy
+  compatibility boundary for public/private artifact checks and simple copy
+  manifests. Do not add new steward, restore, retention, scheduler, or secret
+  provider vocabulary there.
 - Python package tests are not covered by Cargo; run them with:
 
 ```bash
+PYTHONPATH=packages/northroot-custody/src python3 -m unittest discover packages/northroot-custody/tests
 PYTHONPATH=packages/northroot-durability/src python3 -m unittest discover packages/northroot-durability/tests
 ```
 
