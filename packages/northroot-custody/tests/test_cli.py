@@ -2,12 +2,13 @@ import contextlib
 import io
 import json
 import os
+import plistlib
 import tempfile
 import unittest
 from unittest import mock
 from pathlib import Path
 
-from northroot.custody import cli, registry, steward
+from northroot.custody import cli, model, registry, steward
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -18,6 +19,111 @@ def write_fake_executable(directory: Path, name: str, body: str = "#!/bin/sh\nex
     path = directory / name
     path.write_text(body, encoding="utf-8")
     path.chmod(0o755)
+
+
+def write_legacy_machine_fixture(directory: Path) -> dict[str, Path]:
+    launch_agent = directory / "legacy.plist"
+    machine_node = directory / "machine-node.json"
+    project_nodes = directory / "project-nodes.json"
+    state_dir = directory / "machine-durability"
+    run_dir = state_dir / "20260622T153259Z"
+    runner_state = state_dir / "runner-state.json"
+    run_dir.mkdir(parents=True)
+    launch_agent.write_bytes(
+        plistlib.dumps(
+            {
+                "Label": "com.example.private",
+                "ProgramArguments": [
+                    "/Users/example/private/bin/python3",
+                    "/Users/example/private/tools/machine_node.py",
+                    "run-once",
+                ],
+                "WorkingDirectory": "/Users/example/private/worktree",
+                "StartInterval": 3600,
+                "StandardOutPath": "/tmp/private.out",
+                "StandardErrorPath": "/tmp/private.err",
+            }
+        )
+    )
+    machine_node.write_text(
+        json.dumps(
+            {
+                "schema_version": "legacy.machine-node.v0",
+                "machine_node_id": "private-machine-name",
+                "backup_policy": {"run_interval_seconds": 3600},
+                "backup_targets": [
+                    {
+                        "kind": "restic",
+                        "node_id": "target-one",
+                        "restic_repository_path": "/Volumes/Private/restic",
+                        "secret_reference": "op://Private/restic/password",
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    project_nodes.write_text(
+        json.dumps(
+            {
+                "schema_version": "legacy.project-nodes.v0",
+                "registry_id": "private-project-registry",
+                "machine_node_id": "private-machine-name",
+                "nodes": [
+                    {
+                        "node_id": "private-repo",
+                        "kind": "repo",
+                        "current_path": "/Users/example/private/repo",
+                        "truth_authority": "git",
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    runner_state.write_text(
+        json.dumps(
+            {
+                "schema_version": "legacy.runner-state.v0",
+                "run_id": "private-run",
+                "machine_node_id": "private-machine-name",
+                "status": "failed",
+                "phase": "backup",
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (run_dir / "run-result.json").write_text(
+        json.dumps(
+            {
+                "run_id": "20260622T153259Z",
+                "status": "failed",
+                "state_file": "/Users/example/private/state.json",
+                "receipt_mirror_path": "/Volumes/Private/receipts",
+                "backup_snapshot_id": None,
+            },
+            indent=2,
+            sort_keys=True,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "launch_agent": launch_agent,
+        "machine_node": machine_node,
+        "project_nodes": project_nodes,
+        "runner_state": runner_state,
+        "run_state_dir": state_dir,
+    }
 
 
 class CliTests(unittest.TestCase):
@@ -507,6 +613,7 @@ class CliTests(unittest.TestCase):
                     ),
                     0,
                 )
+
                 self.assertEqual(
                     cli.main(
                         [
@@ -1045,6 +1152,67 @@ class CliTests(unittest.TestCase):
             self.assertIn('"schema_version": "northroot.steward.legacy-run-import-result.v0"', stdout.getvalue())
             self.assertIn('"operation": "schedule.install"', stdout.getvalue())
             self.assertIn('"decision": "human-clearance-required"', stdout.getvalue())
+
+    def test_steward_cli_drafts_public_safe_legacy_imports_from_raw_legacy_shape(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            paths = write_legacy_machine_fixture(Path(temp_dir))
+            stdout = io.StringIO()
+
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "draft-legacy-import",
+                            "--document",
+                            "profile",
+                            "--launch-agent",
+                            str(paths["launch_agent"]),
+                            "--machine-node",
+                            str(paths["machine_node"]),
+                            "--project-nodes",
+                            str(paths["project_nodes"]),
+                            "--runner-state",
+                            str(paths["runner_state"]),
+                            "--run-state-dir",
+                            str(paths["run_state_dir"]),
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+            profile = json.loads(stdout.getvalue())
+            self.assertEqual(model.validate_document(profile, public_safe=True), [])
+            self.assertEqual(profile["source"], "legacy-machine-durability")
+            self.assertEqual(profile["legacy_imports"][0]["observed"]["run_result_count"], 1)
+            self.assertNotIn("/Users/example", json.dumps(profile, sort_keys=True))
+            self.assertNotIn("/Volumes/Private", json.dumps(profile, sort_keys=True))
+            self.assertNotIn("op://Private", json.dumps(profile, sort_keys=True))
+
+            stdout = io.StringIO()
+            with contextlib.redirect_stdout(stdout):
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "draft-legacy-import",
+                            "--document",
+                            "runs",
+                            "--run-state-dir",
+                            str(paths["run_state_dir"]),
+                            "--import-id",
+                            profile["import_id"],
+                            "--public-safe",
+                        ]
+                    ),
+                    0,
+                )
+            runs = json.loads(stdout.getvalue())
+            self.assertEqual(model.validate_document(runs, public_safe=True), [])
+            self.assertEqual(len(runs["run_summaries"]), 1)
+            self.assertEqual(runs["run_summaries"][0]["status"], "legacy-run-imported")
+            self.assertNotIn("/Users/example", json.dumps(runs, sort_keys=True))
+            self.assertNotIn("/Volumes/Private", json.dumps(runs, sort_keys=True))
 
 
 if __name__ == "__main__":

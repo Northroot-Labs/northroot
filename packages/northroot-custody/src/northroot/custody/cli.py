@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Sequence
 
-from . import model, registry, steward
+from . import legacy_machine, model, registry, steward
 
 
 def write_json(payload: object) -> None:
@@ -72,6 +72,20 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
     import_legacy_runs.add_argument("--state", required=True)
     import_legacy_runs.add_argument("--json", required=True)
     import_legacy_runs.add_argument("--public-safe", action="store_true")
+
+    draft_legacy_import = steward_sub.add_parser(
+        "draft-legacy-import",
+        help="Draft sanitized import bundles from legacy machine-durability state.",
+    )
+    draft_legacy_import.add_argument("--document", choices=("profile", "runs"), required=True)
+    draft_legacy_import.add_argument("--launch-agent")
+    draft_legacy_import.add_argument("--machine-node")
+    draft_legacy_import.add_argument("--project-nodes")
+    draft_legacy_import.add_argument("--runner-state")
+    draft_legacy_import.add_argument("--run-state-dir", required=True)
+    draft_legacy_import.add_argument("--import-id")
+    draft_legacy_import.add_argument("--legacy-import-ref")
+    draft_legacy_import.add_argument("--public-safe", action="store_true")
 
     command_plan = steward_sub.add_parser("command-plan", help="Plan a constrained agent-safe steward argv.")
     command_plan.add_argument("--state", required=True)
@@ -430,6 +444,43 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         write_json(result)
         return 1 if result.get("locked") else 0
+    if args.command == "steward" and args.steward_command == "draft-legacy-import":
+        if args.document == "profile":
+            missing = [
+                name
+                for name, value in (
+                    ("--launch-agent", args.launch_agent),
+                    ("--machine-node", args.machine_node),
+                    ("--project-nodes", args.project_nodes),
+                    ("--runner-state", args.runner_state),
+                )
+                if not value
+            ]
+            if missing:
+                raise ValueError(f"profile drafts require {', '.join(missing)}")
+            write_json(
+                legacy_machine.draft_legacy_profile_import(
+                    launch_agent_path=Path(args.launch_agent),
+                    machine_node_path=Path(args.machine_node),
+                    project_nodes_path=Path(args.project_nodes),
+                    runner_state_path=Path(args.runner_state),
+                    run_state_dir=Path(args.run_state_dir),
+                    import_id=args.import_id,
+                    public_safe=args.public_safe,
+                )
+            )
+            return 0
+        if not args.import_id:
+            raise ValueError("run drafts require --import-id")
+        write_json(
+            legacy_machine.draft_legacy_run_import(
+                run_state_dir=Path(args.run_state_dir),
+                import_id=args.import_id,
+                legacy_import_ref=args.legacy_import_ref,
+                public_safe=args.public_safe,
+            )
+        )
+        return 0
     if args.command == "steward" and args.steward_command == "command-plan":
         plan = steward.render_command_plan(
             Path(args.state),
