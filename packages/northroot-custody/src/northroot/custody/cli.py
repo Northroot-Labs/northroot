@@ -288,6 +288,8 @@ def parse_args(argv: Sequence[str]) -> argparse.Namespace:
 
 def _write_registry_result(result: object) -> int:
     write_json(result)
+    if isinstance(result, dict) and result.get("ok") is False:
+        return 1
     if isinstance(result, dict) and result.get("locked"):
         return 1
     if isinstance(result, dict) and result.get("blocked"):
@@ -297,7 +299,23 @@ def _write_registry_result(result: object) -> int:
     return 0
 
 
-def _registry_mutation_result(fn, *, state: str, json_path: str, public_safe: bool) -> dict[str, object]:
+def _registry_failure_result(
+    *,
+    operation: str,
+    detail: str,
+    error_type: str,
+    state: str | None = None,
+) -> dict[str, object]:
+    return {
+        "ok": False,
+        "operation": operation,
+        "state": state,
+        "error_type": error_type,
+        "detail": detail,
+    }
+
+
+def _registry_mutation_result(fn, *, operation: str, state: str, json_path: str, public_safe: bool) -> dict[str, object]:
     try:
         return fn(Path(state), model.load_json(Path(json_path)), public_safe=public_safe)
     except registry.RegistryLockedError as exc:
@@ -318,6 +336,13 @@ def _registry_mutation_result(fn, *, state: str, json_path: str, public_safe: bo
             "integrity": exc.integrity,
             "detail": "service registry protected state is not ready; run steward registry verify and repair before mutating",
         }
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        return _registry_failure_result(
+            operation=operation,
+            state=state,
+            error_type=exc.__class__.__name__,
+            detail=str(exc),
+        )
 
 
 def _legacy_draft_error(*, detail: str, missing_inputs: Sequence[str] | None = None) -> dict[str, object]:
@@ -750,15 +775,34 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(decision)
         return 0 if decision["allowed"] else 1
     if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "init":
-        write_json(
-            registry.initialize_registry(
-                Path(args.state),
-                model.load_json(Path(args.registry)),
-                public_safe=args.public_safe,
-                overwrite=args.overwrite,
+        try:
+            return _write_registry_result(
+                registry.initialize_registry(
+                    Path(args.state),
+                    model.load_json(Path(args.registry)),
+                    public_safe=args.public_safe,
+                    overwrite=args.overwrite,
+                )
             )
-        )
-        return 0
+        except registry.RegistryLockedError as exc:
+            return _write_registry_result(
+                {
+                    "initialized": False,
+                    "locked": True,
+                    "resume_required": True,
+                    "lock": exc.lock,
+                    "detail": "service registry has an unresolved operation lock; run steward registry recover first",
+                }
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            return _write_registry_result(
+                _registry_failure_result(
+                    operation="registry.init",
+                    state=args.state,
+                    error_type=exc.__class__.__name__,
+                    detail=str(exc),
+                )
+            )
     if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "status":
         status = registry.registry_status(Path(args.state), public_safe=args.public_safe)
         write_json(status)
@@ -815,6 +859,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _write_registry_result(
                 _registry_mutation_result(
                     mutation_map[args.registry_command],
+                    operation=f"registry.{args.registry_command}",
                     state=args.state,
                     json_path=args.json,
                     public_safe=args.public_safe,
@@ -853,6 +898,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                         "integrity": exc.integrity,
                         "detail": "service registry protected state is not ready; run steward registry verify and repair before mutating",
                     }
+                )
+            except (OSError, ValueError, json.JSONDecodeError) as exc:
+                return _write_registry_result(
+                    _registry_failure_result(
+                        operation="registry.register-project",
+                        state=args.state,
+                        error_type=exc.__class__.__name__,
+                        detail=str(exc),
+                    )
                 )
     raise AssertionError(args.command)
 

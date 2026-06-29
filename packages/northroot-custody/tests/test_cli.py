@@ -226,6 +226,21 @@ class CliTests(unittest.TestCase):
                         [
                             "steward",
                             "registry",
+                            "init",
+                            "--state",
+                            str(state_dir),
+                            "--registry",
+                            str(EXAMPLES / "service-registry.example.json"),
+                            "--public-safe",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
                             "topology",
                             "--state",
                             str(state_dir),
@@ -299,6 +314,21 @@ class CliTests(unittest.TestCase):
                         ]
                     ),
                     0,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "registry",
+                            "add-object",
+                            "--state",
+                            str(state_dir),
+                            "--json",
+                            str(object_path),
+                            "--public-safe",
+                        ]
+                    ),
+                    1,
                 )
                 self.assertEqual(
                     cli.main(
@@ -485,6 +515,9 @@ class CliTests(unittest.TestCase):
             self.assertIn('"fail_closed_on_disconnected_storage": true', stdout.getvalue())
             self.assertIn('"decision": "allowed"', stdout.getvalue())
             self.assertIn('"decision": "not-allowed"', stdout.getvalue())
+            self.assertIn('"ok": false', stdout.getvalue())
+            self.assertIn('"operation": "registry.init"', stdout.getvalue())
+            self.assertIn('"operation": "registry.add-object"', stdout.getvalue())
             self.assertTrue((state_dir / "registry-operations").exists())
 
     def test_validate_render_plan_and_steward_flow(self) -> None:
