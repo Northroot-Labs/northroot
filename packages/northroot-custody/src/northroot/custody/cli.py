@@ -453,7 +453,7 @@ def _schedule_authorization_denied_result(operation: str, authorization: dict[st
     }
 
 
-def _schedule_error_result(
+def _state_error_result(
     *,
     schema_version: str,
     operation: str,
@@ -511,24 +511,72 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(installation.as_dict())
         return 0
     if args.command == "steward" and args.steward_command == "status":
-        write_json(steward.render_status(Path(args.state)))
+        try:
+            write_json(steward.render_status(Path(args.state)))
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _state_error_result(
+                    schema_version="northroot.steward.status.v0",
+                    operation="status",
+                    state=args.state,
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                )
+            )
+            return 1
         return 0
     if args.command == "steward" and args.steward_command == "preflight":
-        preflight = steward.render_preflight(Path(args.state))
+        try:
+            preflight = steward.render_preflight(Path(args.state))
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _state_error_result(
+                    schema_version="northroot.steward.preflight.v0",
+                    operation="preflight",
+                    state=args.state,
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                )
+            )
+            return 1
         write_json(preflight)
         return 0 if preflight["ready"] else 1
     if args.command == "steward" and args.steward_command == "verify-state":
-        verification = steward.render_state_verification(
-            Path(args.state),
-            snapshot_id=args.snapshot_id,
-            registry_state=Path(args.registry_state) if args.registry_state else None,
-            project_id=args.project_id,
-            object_id=args.object_id,
-        )
+        try:
+            verification = steward.render_state_verification(
+                Path(args.state),
+                snapshot_id=args.snapshot_id,
+                registry_state=Path(args.registry_state) if args.registry_state else None,
+                project_id=args.project_id,
+                object_id=args.object_id,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _state_error_result(
+                    schema_version="northroot.steward.state-verification.v0",
+                    operation="verify-state",
+                    state=args.state,
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                )
+            )
+            return 1
         write_json(verification)
         return 0 if verification["ready"] else 1
     if args.command == "steward" and args.steward_command == "capabilities":
-        write_json(steward.render_capabilities(Path(args.state)))
+        try:
+            write_json(steward.render_capabilities(Path(args.state)))
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _state_error_result(
+                    schema_version="northroot.steward.capabilities.v0",
+                    operation="capabilities",
+                    state=args.state,
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                )
+            )
+            return 1
         return 0
     if args.command == "steward" and args.steward_command == "recover-operation":
         write_json(steward.recover_operation(Path(args.state)))
@@ -636,33 +684,81 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(plan)
         return 0 if plan["ok"] else 1
     if args.command == "steward" and args.steward_command == "report":
-        write_json(
-            steward.render_report(
-                Path(args.state),
-                snapshot_id=args.snapshot_id,
-                registry_state=Path(args.registry_state) if args.registry_state else None,
-                project_id=args.project_id,
-                object_id=args.object_id,
+        try:
+            write_json(
+                steward.render_report(
+                    Path(args.state),
+                    snapshot_id=args.snapshot_id,
+                    registry_state=Path(args.registry_state) if args.registry_state else None,
+                    project_id=args.project_id,
+                    object_id=args.object_id,
+                )
             )
-        )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _state_error_result(
+                    schema_version="northroot.steward.report.v0",
+                    operation="report",
+                    state=args.state,
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                )
+            )
+            return 1
         return 0
     if args.command == "steward" and args.steward_command == "evidence" and args.evidence_command == "report":
-        write_json(steward.render_evidence_report(Path(args.state), snapshot_id=args.snapshot_id))
+        try:
+            write_json(steward.render_evidence_report(Path(args.state), snapshot_id=args.snapshot_id))
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _state_error_result(
+                    schema_version="northroot.steward.evidence-report.v0",
+                    operation="evidence.report",
+                    state=args.state,
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                )
+            )
+            return 1
         return 0
     if args.command == "steward" and args.steward_command == "evidence" and args.evidence_command == "record":
-        write_json(
-            steward.record_external_evidence(
-                Path(args.state),
-                snapshot_id=args.snapshot_id,
-                evidence=list(args.evidence),
-                source=args.source,
-                detail=args.detail,
-                artifact_ref=args.artifact_ref,
+        try:
+            write_json(
+                steward.record_external_evidence(
+                    Path(args.state),
+                    snapshot_id=args.snapshot_id,
+                    evidence=list(args.evidence),
+                    source=args.source,
+                    detail=args.detail,
+                    artifact_ref=args.artifact_ref,
+                )
             )
-        )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _state_error_result(
+                    schema_version="northroot.steward.evidence-record.v0",
+                    operation="evidence.record",
+                    state=args.state,
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                )
+            )
+            return 1
         return 0
     if args.command == "steward" and args.steward_command == "offsite" and args.offsite_command == "report":
-        report = steward.render_offsite_report(Path(args.state), snapshot_id=args.snapshot_id)
+        try:
+            report = steward.render_offsite_report(Path(args.state), snapshot_id=args.snapshot_id)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _state_error_result(
+                    schema_version="northroot.steward.offsite-report.v0",
+                    operation="offsite.report",
+                    state=args.state,
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                )
+            )
+            return 1
         write_json(report)
         return 0 if report["complete"] else 1
     if args.command == "steward" and args.steward_command == "run":
@@ -734,7 +830,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             write_json(
-                _schedule_error_result(
+                    _state_error_result(
                     schema_version="northroot.steward.schedule.v0",
                     operation="schedule.create",
                     detail=str(exc),
@@ -785,7 +881,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             write_json(
-                _schedule_error_result(
+                    _state_error_result(
                     schema_version="northroot.steward.schedule-install.v0",
                     operation="schedule.install",
                     detail=str(exc),
@@ -820,7 +916,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             write_json(
-                _schedule_error_result(
+                    _state_error_result(
                     schema_version="northroot.steward.schedule-uninstall.v0",
                     operation="schedule.uninstall",
                     detail=str(exc),
@@ -855,7 +951,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             write_json(
-                _schedule_error_result(
+                    _state_error_result(
                     schema_version="northroot.steward.schedule-delete.v0",
                     operation="schedule.delete",
                     detail=str(exc),
@@ -869,12 +965,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(result)
         return 0 if result.get("deleted") is True else 1
     if args.command == "steward" and args.steward_command == "retention" and args.retention_command == "evaluate":
-        decision = steward.evaluate_retention(
-            Path(args.state),
-            snapshot_id=args.snapshot_id,
-            available_evidence=list(args.evidence),
-            use_recorded_evidence=args.use_recorded_evidence,
-        )
+        try:
+            decision = steward.evaluate_retention(
+                Path(args.state),
+                snapshot_id=args.snapshot_id,
+                available_evidence=list(args.evidence),
+                use_recorded_evidence=args.use_recorded_evidence,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _state_error_result(
+                    schema_version="northroot.custody.retention-decision.v0",
+                    operation="retention.evaluate",
+                    state=args.state,
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                )
+            )
+            return 1
         write_json(decision)
         return 0 if decision["allowed"] else 1
     if args.command == "steward" and args.steward_command == "registry" and args.registry_command == "init":

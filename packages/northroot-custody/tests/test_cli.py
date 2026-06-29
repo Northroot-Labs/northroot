@@ -611,6 +611,69 @@ class CliTests(unittest.TestCase):
                     ),
                     1,
                 )
+                missing_state = Path(temp_dir) / "missing-steward-state"
+                self.assertEqual(cli.main(["steward", "status", "--state", str(missing_state)]), 1)
+                self.assertEqual(cli.main(["steward", "preflight", "--state", str(missing_state)]), 1)
+                self.assertEqual(cli.main(["steward", "capabilities", "--state", str(missing_state)]), 1)
+                self.assertEqual(
+                    cli.main(["steward", "verify-state", "--state", str(missing_state)]),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(["steward", "report", "--state", str(missing_state), "--snapshot-id", "snap-001"]),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(["steward", "evidence", "report", "--state", str(missing_state)]),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "evidence",
+                            "record",
+                            "--state",
+                            str(missing_state),
+                            "--snapshot-id",
+                            "snap-001",
+                            "--evidence",
+                            "verified_offsite_copy",
+                            "--source",
+                            "external-monitor://missing-state-test",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "offsite",
+                            "report",
+                            "--state",
+                            str(missing_state),
+                            "--snapshot-id",
+                            "snap-001",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "retention",
+                            "evaluate",
+                            "--state",
+                            str(missing_state),
+                            "--snapshot-id",
+                            "snap-001",
+                            "--use-recorded-evidence",
+                        ]
+                    ),
+                    1,
+                )
                 self.assertEqual(
                     cli.main(
                         [
@@ -1256,6 +1319,15 @@ class CliTests(unittest.TestCase):
             self.assertIn('"failure_stage": "registry-topology"', stdout.getvalue())
             self.assertIn('"decision": "topology-incomplete"', stdout.getvalue())
             self.assertIn('"operation": "steward.init"', stdout.getvalue())
+            self.assertIn('"operation": "status"', stdout.getvalue())
+            self.assertIn('"operation": "preflight"', stdout.getvalue())
+            self.assertIn('"operation": "capabilities"', stdout.getvalue())
+            self.assertIn('"operation": "verify-state"', stdout.getvalue())
+            self.assertIn('"operation": "report"', stdout.getvalue())
+            self.assertIn('"operation": "evidence.report"', stdout.getvalue())
+            self.assertIn('"operation": "evidence.record"', stdout.getvalue())
+            self.assertIn('"operation": "offsite.report"', stdout.getvalue())
+            self.assertIn('"operation": "retention.evaluate"', stdout.getvalue())
             self.assertIn('"operation": "import-legacy-runs"', stdout.getvalue())
             self.assertIn('"ok": false', stdout.getvalue())
             self.assertIn('"operation": "schedule.create"', stdout.getvalue())
