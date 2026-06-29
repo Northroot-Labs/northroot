@@ -678,6 +678,60 @@ class CliTests(unittest.TestCase):
                     cli.main(
                         [
                             "steward",
+                            "run",
+                            "--state",
+                            str(missing_state),
+                            "--snapshot-id",
+                            "snap-001",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "verify",
+                            "--state",
+                            str(missing_state),
+                            "--snapshot-id",
+                            "snap-001",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "restore",
+                            "--state",
+                            str(missing_state),
+                            "--snapshot-id",
+                            "snap-001",
+                            "--target",
+                            str(Path(temp_dir) / "missing-restore-target"),
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "restore-drill",
+                            "--state",
+                            str(missing_state),
+                            "--snapshot-id",
+                            "snap-001",
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
                             "init",
                             "--inventory",
                             str(EXAMPLES / "workspace-inventory.example.json"),
@@ -1328,6 +1382,10 @@ class CliTests(unittest.TestCase):
             self.assertIn('"operation": "evidence.record"', stdout.getvalue())
             self.assertIn('"operation": "offsite.report"', stdout.getvalue())
             self.assertIn('"operation": "retention.evaluate"', stdout.getvalue())
+            self.assertIn('"operation": "run"', stdout.getvalue())
+            self.assertIn('"operation": "verify"', stdout.getvalue())
+            self.assertIn('"operation": "restore"', stdout.getvalue())
+            self.assertIn('"operation": "restore-drill"', stdout.getvalue())
             self.assertIn('"operation": "import-legacy-runs"', stdout.getvalue())
             self.assertIn('"ok": false', stdout.getvalue())
             self.assertIn('"operation": "schedule.create"', stdout.getvalue())

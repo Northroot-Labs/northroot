@@ -471,6 +471,38 @@ def _state_error_result(
     }
 
 
+def _write_steward_operation(
+    args: argparse.Namespace,
+    operation: str,
+    *,
+    restore_target: Path | None = None,
+) -> int:
+    try:
+        result = steward.render_operation(
+            Path(args.state),
+            operation,
+            execute=args.execute,
+            restore_target=restore_target,
+            snapshot_id=args.snapshot_id,
+            registry_state=Path(args.registry_state) if args.registry_state else None,
+            project_id=args.project_id,
+            object_id=args.object_id,
+        )
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        write_json(
+            _state_error_result(
+                schema_version="northroot.steward.operation.v0",
+                operation=operation,
+                detail=str(exc),
+                error_type=exc.__class__.__name__,
+                state=args.state,
+            )
+        )
+        return 1
+    write_json(result)
+    return 1 if result.get("return_code") not in (None, 0) else 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(list(argv or sys.argv[1:]))
     if args.command == "validate":
@@ -762,55 +794,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(report)
         return 0 if report["complete"] else 1
     if args.command == "steward" and args.steward_command == "run":
-        operation = steward.render_operation(
-            Path(args.state),
-            "run",
-            execute=args.execute,
-            snapshot_id=args.snapshot_id,
-            registry_state=Path(args.registry_state) if args.registry_state else None,
-            project_id=args.project_id,
-            object_id=args.object_id,
-        )
-        write_json(operation)
-        return 1 if operation.get("return_code") not in (None, 0) else 0
+        return _write_steward_operation(args, "run")
     if args.command == "steward" and args.steward_command == "verify":
-        operation = steward.render_operation(
-            Path(args.state),
-            "verify",
-            execute=args.execute,
-            snapshot_id=args.snapshot_id,
-            registry_state=Path(args.registry_state) if args.registry_state else None,
-            project_id=args.project_id,
-            object_id=args.object_id,
-        )
-        write_json(operation)
-        return 1 if operation.get("return_code") not in (None, 0) else 0
+        return _write_steward_operation(args, "verify")
     if args.command == "steward" and args.steward_command == "restore":
-        operation = steward.render_operation(
-            Path(args.state),
-            "restore",
-            execute=args.execute,
-            restore_target=Path(args.target),
-            snapshot_id=args.snapshot_id,
-            registry_state=Path(args.registry_state) if args.registry_state else None,
-            project_id=args.project_id,
-            object_id=args.object_id,
-        )
-        write_json(operation)
-        return 1 if operation.get("return_code") not in (None, 0) else 0
+        return _write_steward_operation(args, "restore", restore_target=Path(args.target))
     if args.command == "steward" and args.steward_command == "restore-drill":
-        operation = steward.render_operation(
-            Path(args.state),
+        return _write_steward_operation(
+            args,
             "restore-drill",
-            execute=args.execute,
             restore_target=Path(args.target) if args.target else None,
-            snapshot_id=args.snapshot_id,
-            registry_state=Path(args.registry_state) if args.registry_state else None,
-            project_id=args.project_id,
-            object_id=args.object_id,
         )
-        write_json(operation)
-        return 1 if operation.get("return_code") not in (None, 0) else 0
     if args.command == "steward" and args.steward_command == "schedule" and args.schedule_command == "create":
         authorization = _authorize_schedule_context(args, operation="schedule.create")
         if authorization is not None and not authorization["allowed"]:
