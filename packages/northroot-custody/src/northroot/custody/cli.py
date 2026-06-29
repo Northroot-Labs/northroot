@@ -453,6 +453,24 @@ def _schedule_authorization_denied_result(operation: str, authorization: dict[st
     }
 
 
+def _schedule_error_result(
+    *,
+    schema_version: str,
+    operation: str,
+    detail: str,
+    error_type: str,
+    state: str,
+) -> dict[str, object]:
+    return {
+        "schema_version": schema_version,
+        "ok": False,
+        "operation": operation,
+        "state": state,
+        "error_type": error_type,
+        "detail": detail,
+    }
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(list(argv or sys.argv[1:]))
     if args.command == "validate":
@@ -703,16 +721,28 @@ def main(argv: Sequence[str] | None = None) -> int:
             write_json(_schedule_authorization_denied_result("schedule.create", authorization))
             return 1
         registry_state, project_id, object_id = _schedule_registry_context(args)
-        schedule = steward.create_schedule(
-            output_dir=Path(args.state),
-            scheduler=args.scheduler,
-            every_minutes=args.every_minutes,
-            runner_command=args.runner_command,
-            operation=args.operation,
-            registry_state=registry_state,
-            project_id=project_id,
-            object_id=object_id,
-        )
+        try:
+            schedule = steward.create_schedule(
+                output_dir=Path(args.state),
+                scheduler=args.scheduler,
+                every_minutes=args.every_minutes,
+                runner_command=args.runner_command,
+                operation=args.operation,
+                registry_state=registry_state,
+                project_id=project_id,
+                object_id=object_id,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _schedule_error_result(
+                    schema_version="northroot.steward.schedule.v0",
+                    operation="schedule.create",
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                    state=args.state,
+                )
+            )
+            return 1
         if authorization is not None:
             schedule["authorization"] = authorization
         write_json(schedule)
@@ -744,14 +774,26 @@ def main(argv: Sequence[str] | None = None) -> int:
             write_json(_schedule_authorization_denied_result("schedule.install", authorization))
             return 1
         registry_state, project_id, object_id = _schedule_registry_context(args, status=status)
-        result = steward.install_schedule(
-            Path(args.state),
-            execute=args.execute,
-            require_preflight=not args.skip_preflight,
-            registry_state=registry_state,
-            project_id=project_id,
-            object_id=object_id,
-        )
+        try:
+            result = steward.install_schedule(
+                Path(args.state),
+                execute=args.execute,
+                require_preflight=not args.skip_preflight,
+                registry_state=registry_state,
+                project_id=project_id,
+                object_id=object_id,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _schedule_error_result(
+                    schema_version="northroot.steward.schedule-install.v0",
+                    operation="schedule.install",
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                    state=args.state,
+                )
+            )
+            return 1
         if authorization is not None:
             result["authorization"] = authorization
         write_json(result)
@@ -768,13 +810,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             write_json(_schedule_authorization_denied_result("schedule.uninstall", authorization))
             return 1
         registry_state, project_id, object_id = _schedule_registry_context(args, status=status)
-        result = steward.uninstall_schedule(
-            Path(args.state),
-            execute=args.execute,
-            registry_state=registry_state,
-            project_id=project_id,
-            object_id=object_id,
-        )
+        try:
+            result = steward.uninstall_schedule(
+                Path(args.state),
+                execute=args.execute,
+                registry_state=registry_state,
+                project_id=project_id,
+                object_id=object_id,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _schedule_error_result(
+                    schema_version="northroot.steward.schedule-uninstall.v0",
+                    operation="schedule.uninstall",
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                    state=args.state,
+                )
+            )
+            return 1
         if authorization is not None:
             result["authorization"] = authorization
         write_json(result)
@@ -791,13 +845,25 @@ def main(argv: Sequence[str] | None = None) -> int:
             write_json(_schedule_authorization_denied_result("schedule.delete", authorization))
             return 1
         registry_state, project_id, object_id = _schedule_registry_context(args, status=status)
-        result = steward.delete_schedule(
-            Path(args.state),
-            force=args.force,
-            registry_state=registry_state,
-            project_id=project_id,
-            object_id=object_id,
-        )
+        try:
+            result = steward.delete_schedule(
+                Path(args.state),
+                force=args.force,
+                registry_state=registry_state,
+                project_id=project_id,
+                object_id=object_id,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _schedule_error_result(
+                    schema_version="northroot.steward.schedule-delete.v0",
+                    operation="schedule.delete",
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                    state=args.state,
+                )
+            )
+            return 1
         if authorization is not None:
             result["authorization"] = authorization
         write_json(result)
