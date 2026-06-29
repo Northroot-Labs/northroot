@@ -1,0 +1,107 @@
+{
+  "schema_version": "northroot.agent-delegation-policy.dogfood.v0",
+  "policy_id": "agent-delegation/dogfood/codex",
+  "status": "dogfood-default",
+  "scope": {
+    "applies_to": [
+      "unprotected delegated branches",
+      "draft pull requests",
+      "current steward dogfood work"
+    ],
+    "does_not_apply_to": [
+      "protected branch merges",
+      "release approval",
+      "human cryptographic attestation",
+      "organization-wide authority"
+    ]
+  },
+  "registered_agents": [
+    {
+      "principal_id": "agent:codex",
+      "agent_name": "Codex",
+      "branch_prefixes": [
+        "codex/"
+      ],
+      "allowed_pr_states": [
+        "draft"
+      ],
+      "identity_required": true
+    }
+  ],
+  "human_author_policy": {
+    "human_author_must_remain_explicit": true,
+    "agent_must_not_impersonate_human_author": true,
+    "human_clearance_required_for_ready_review": true,
+    "human_signing_policy_ref": "docs/security/signing-policy.md"
+  },
+  "agent_delegation": {
+    "allowed_actions": [
+      "branch.checkout",
+      "branch.create",
+      "commit.checkpoint",
+      "branch.push",
+      "pull_request.open_draft",
+      "pull_request.update_draft",
+      "pull_request.follow_up",
+      "verification.run",
+      "verification.report"
+    ],
+    "prohibited_actions": [
+      "protected_branch.push",
+      "protected_branch.merge",
+      "branch_protection.modify",
+      "workflow_permissions.escalate",
+      "long_lived_signing_key.access",
+      "human_identity.impersonate"
+    ],
+    "token_scope_limit": {
+      "repository_read": true,
+      "delegated_branch_write": true,
+      "pull_request_write": true,
+      "admin": false,
+      "workflow_permission_escalation": false,
+      "direct_main_push": false
+    }
+  },
+  "agent_coauthorship": {
+    "allowed": true,
+    "requires_explicit_metadata": true,
+    "metadata_fields": [
+      "human_author",
+      "agent_actor",
+      "agent_principal_id",
+      "delegation_policy_id",
+      "workstream_ref",
+      "verification_summary"
+    ],
+    "commit_message_trailers": [
+      "Agent-Actor",
+      "Agent-Principal",
+      "Delegation-Policy",
+      "Workstream-Ref"
+    ],
+    "coauthored_by_trailer_allowed": true,
+    "coauthored_by_trailer_must_not_replace_agent_trailers": true
+  },
+  "required_provenance": {
+    "branch": {
+      "prefix_must_match_registered_agent": true,
+      "checkpoint_commits_allowed": true
+    },
+    "commit": {
+      "must_preserve_agent_identity": true,
+      "must_preserve_human_author_when_supplied": true,
+      "must_include_delegation_policy_ref": true
+    },
+    "pull_request": {
+      "must_start_as_draft": true,
+      "must_report_verification": true,
+      "must_request_human_clearance_before_ready_review": true
+    }
+  },
+  "hardening_notes": [
+    "This dogfood policy is intentionally permissive for steward development.",
+    "Promote only after replacing example identities and binding it to the governance layer.",
+    "Steward may consume outputs from this workflow but does not enforce branch, PR, or author policy."
+  ]
+}

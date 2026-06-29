@@ -186,7 +186,7 @@ Agent tokens **must** be scoped to:
 ### Default Dogfood Delegation Policy
 
 For current steward dogfooding, use
-`packages/northroot-custody/examples/agent-delegation-policy.dogfood.example.json`
+`docs/security/agent-delegation-policy.dogfood.example.json`
 as the default agent delegation policy. It registers `agent:codex` for `codex/`
 branches and allows branch checkout/creation, checkpoint commits, branch pushes,
 draft PR open/update, PR follow-up, and verification under explicit agent
