@@ -320,6 +320,15 @@ def _registry_mutation_result(fn, *, state: str, json_path: str, public_safe: bo
         }
 
 
+def _legacy_draft_error(*, detail: str, missing_inputs: Sequence[str] | None = None) -> dict[str, object]:
+    return {
+        "ok": False,
+        "operation": "draft-legacy-import",
+        "missing_inputs": sorted(set(missing_inputs or [])),
+        "detail": detail,
+    }
+
+
 def _schedule_registry_context(
     args: argparse.Namespace,
     *,
@@ -461,37 +470,57 @@ def main(argv: Sequence[str] | None = None) -> int:
             missing = [
                 name
                 for name, value in (
-                    ("--launch-agent", args.launch_agent),
-                    ("--machine-node", args.machine_node),
-                    ("--project-nodes", args.project_nodes),
-                    ("--runner-state", args.runner_state),
+                    ("launch_agent", args.launch_agent),
+                    ("machine_node", args.machine_node),
+                    ("project_nodes", args.project_nodes),
+                    ("runner_state", args.runner_state),
                 )
                 if not value
             ]
             if missing:
-                raise ValueError(f"profile drafts require {', '.join(missing)}")
+                write_json(
+                    _legacy_draft_error(
+                        detail="profile drafts require launch_agent, machine_node, project_nodes, and runner_state",
+                        missing_inputs=missing,
+                    )
+                )
+                return 1
+            try:
+                write_json(
+                    legacy_machine.draft_legacy_profile_import(
+                        launch_agent_path=Path(args.launch_agent),
+                        machine_node_path=Path(args.machine_node),
+                        project_nodes_path=Path(args.project_nodes),
+                        runner_state_path=Path(args.runner_state),
+                        run_state_dir=Path(args.run_state_dir),
+                        import_id=args.import_id,
+                        public_safe=True,
+                    )
+                )
+            except (OSError, ValueError) as exc:
+                write_json(_legacy_draft_error(detail=str(exc)))
+                return 1
+            return 0
+        if not args.import_id:
             write_json(
-                legacy_machine.draft_legacy_profile_import(
-                    launch_agent_path=Path(args.launch_agent),
-                    machine_node_path=Path(args.machine_node),
-                    project_nodes_path=Path(args.project_nodes),
-                    runner_state_path=Path(args.runner_state),
+                _legacy_draft_error(
+                    detail="run drafts require import_id",
+                    missing_inputs=["import_id"],
+                )
+            )
+            return 1
+        try:
+            write_json(
+                legacy_machine.draft_legacy_run_import(
                     run_state_dir=Path(args.run_state_dir),
                     import_id=args.import_id,
+                    legacy_import_ref=args.legacy_import_ref,
                     public_safe=True,
                 )
             )
-            return 0
-        if not args.import_id:
-            raise ValueError("run drafts require --import-id")
-        write_json(
-            legacy_machine.draft_legacy_run_import(
-                run_state_dir=Path(args.run_state_dir),
-                import_id=args.import_id,
-                legacy_import_ref=args.legacy_import_ref,
-                public_safe=True,
-            )
-        )
+        except (OSError, ValueError) as exc:
+            write_json(_legacy_draft_error(detail=str(exc)))
+            return 1
         return 0
     if args.command == "steward" and args.steward_command == "command-plan":
         plan = steward.render_command_plan(
