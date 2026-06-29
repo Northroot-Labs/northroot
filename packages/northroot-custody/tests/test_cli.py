@@ -602,6 +602,21 @@ class CliTests(unittest.TestCase):
                             "steward",
                             "init",
                             "--inventory",
+                            str(Path(temp_dir) / "missing-inventory.json"),
+                            "--policy",
+                            str(EXAMPLES / "custody-policy.example.json"),
+                            "--output",
+                            str(Path(temp_dir) / "missing-input-steward"),
+                        ]
+                    ),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "init",
+                            "--inventory",
                             str(EXAMPLES / "workspace-inventory.example.json"),
                             "--policy",
                             str(EXAMPLES / "custody-policy.example.json"),
@@ -1202,6 +1217,7 @@ class CliTests(unittest.TestCase):
             self.assertIn('"failure_stage": "authorization"', stdout.getvalue())
             self.assertIn('"failure_stage": "registry-topology"', stdout.getvalue())
             self.assertIn('"decision": "topology-incomplete"', stdout.getvalue())
+            self.assertIn('"operation": "steward.init"', stdout.getvalue())
             self.assertIn('"operation": "import-legacy-runs"', stdout.getvalue())
             self.assertIn('"ok": false', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.operation-recovery.v0"', stdout.getvalue())

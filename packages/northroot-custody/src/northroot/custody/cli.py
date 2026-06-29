@@ -367,6 +367,16 @@ def _legacy_run_import_error(*, detail: str, error_type: str) -> dict[str, objec
     }
 
 
+def _steward_init_error(*, detail: str, error_type: str, output: str) -> dict[str, object]:
+    return {
+        "ok": False,
+        "operation": "steward.init",
+        "output": output,
+        "error_type": error_type,
+        "detail": detail,
+    }
+
+
 def _schedule_registry_context(
     args: argparse.Namespace,
     *,
@@ -462,14 +472,24 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(decision)
         return 0 if decision["allowed"] else 1
     if args.command == "steward" and args.steward_command == "init":
-        installation = steward.init_steward(
-            inventory_path=Path(args.inventory),
-            policy_path=Path(args.policy),
-            output_dir=Path(args.output),
-            profile_name=args.profile_name,
-            secret_bindings_path=Path(args.secret_bindings) if args.secret_bindings else None,
-            repository_bindings_path=Path(args.repository_bindings) if args.repository_bindings else None,
-        )
+        try:
+            installation = steward.init_steward(
+                inventory_path=Path(args.inventory),
+                policy_path=Path(args.policy),
+                output_dir=Path(args.output),
+                profile_name=args.profile_name,
+                secret_bindings_path=Path(args.secret_bindings) if args.secret_bindings else None,
+                repository_bindings_path=Path(args.repository_bindings) if args.repository_bindings else None,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(
+                _steward_init_error(
+                    detail=str(exc),
+                    error_type=exc.__class__.__name__,
+                    output=args.output,
+                )
+            )
+            return 1
         write_json(installation.as_dict())
         return 0
     if args.command == "steward" and args.steward_command == "status":
