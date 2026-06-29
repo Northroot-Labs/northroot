@@ -142,7 +142,10 @@ def _load_lock(state_dir: Path) -> dict[str, Any] | None:
     path = lock_path(state_dir)
     if not path.is_file():
         return None
-    return _read_json(path)
+    try:
+        return _read_json(path)
+    except (OSError, ValueError, json.JSONDecodeError) as err:
+        return _unreadable_lock_payload(state_dir, str(err))
 
 
 def _unreadable_lock_payload(state_dir: Path, error: str) -> dict[str, Any]:
@@ -163,10 +166,7 @@ def _acquire_registry_lock(state_dir: Path, lock: dict[str, Any]) -> None:
     try:
         _write_json_create_new(path, lock)
     except FileExistsError as exc:
-        try:
-            existing_lock = _load_lock(state_dir)
-        except Exception as lock_exc:  # noqa: BLE001 - unreadable locks still block mutation
-            existing_lock = _unreadable_lock_payload(state_dir, str(lock_exc))
+        existing_lock = _load_lock(state_dir)
         raise RegistryLockedError(existing_lock or _unreadable_lock_payload(state_dir, "lock exists but is empty")) from exc
 
 
