@@ -46,6 +46,49 @@ class RegistryTests(unittest.TestCase):
             self.assertEqual(persisted_lock["operation_id"], "first-lock")
             self.assertEqual(persisted_lock["pid"], 100)
 
+    def test_unreadable_registry_lock_blocks_mutation_and_can_recover(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_dir = Path(temp_dir) / "registry-state"
+            registry.initialize_registry(
+                state_dir,
+                model.load_json(EXAMPLES / "service-registry.example.json"),
+                public_safe=True,
+            )
+            registry.lock_path(state_dir).write_text("{not-json\n", encoding="utf-8")
+
+            status = registry.registry_status(state_dir, public_safe=True)
+            self.assertFalse(status["ready"])
+            self.assertTrue(status["resume_required"])
+            self.assertTrue(status["lock"]["unreadable"])
+
+            blocked_object = {
+                "object_id": "artifact/blocked-by-unreadable-lock",
+                "object_type": "artifact-dir",
+                "visibility": "private",
+                "storage_binding": "artifact://blocked-by-unreadable-lock",
+                "custody_policy": {
+                    "backup": "delegated",
+                    "verification": "sample-restore",
+                },
+                "redaction_policy": {
+                    "public_summary": "object-id-and-status",
+                },
+                "restore_class": "full-restore",
+            }
+            with self.assertRaises(registry.RegistryLockedError) as raised:
+                registry.add_object(state_dir, blocked_object, public_safe=True)
+            self.assertTrue(raised.exception.lock["unreadable"])
+
+            recovered = registry.recover_registry(state_dir, public_safe=True)
+
+            self.assertTrue(recovered["recovered"])
+            self.assertEqual(recovered["resume_state"], "registry-change-unknown")
+            self.assertFalse(registry.lock_path(state_dir).exists())
+            summary = model.load_json(Path(str(recovered["operation_summary_path"])))
+            self.assertTrue(summary["interrupted_operation_lock"]["unreadable"])
+            self.assertEqual(summary["status"], "recovered-after-interruption")
+            self.assertTrue(registry.registry_status(state_dir, public_safe=True)["ready"])
+
     def test_authorize_operation_evaluates_project_and_object_permissions(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             state_dir = Path(temp_dir) / "registry-state"
