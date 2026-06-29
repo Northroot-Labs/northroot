@@ -354,6 +354,19 @@ def _legacy_draft_error(*, detail: str, missing_inputs: Sequence[str] | None = N
     }
 
 
+def _legacy_run_import_error(*, detail: str, error_type: str) -> dict[str, object]:
+    return {
+        "schema_version": "northroot.steward.legacy-run-import-result.v0",
+        "ok": False,
+        "operation": "import-legacy-runs",
+        "imported": False,
+        "locked": False,
+        "resume_required": False,
+        "error_type": error_type,
+        "detail": detail,
+    }
+
+
 def _schedule_registry_context(
     args: argparse.Namespace,
     *,
@@ -483,13 +496,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         write_json(steward.recover_operation(Path(args.state)))
         return 0
     if args.command == "steward" and args.steward_command == "import-legacy-runs":
-        result = steward.import_legacy_run_summaries(
-            Path(args.state),
-            model.load_json(Path(args.json)),
-            public_safe=args.public_safe,
-        )
+        try:
+            result = steward.import_legacy_run_summaries(
+                Path(args.state),
+                model.load_json(Path(args.json)),
+                public_safe=args.public_safe,
+            )
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            write_json(_legacy_run_import_error(detail=str(exc), error_type=exc.__class__.__name__))
+            return 1
         write_json(result)
-        return 1 if result.get("locked") else 0
+        return 1 if result.get("locked") or result.get("ok") is False else 0
     if args.command == "steward" and args.steward_command == "draft-legacy-import":
         if args.document == "profile":
             missing = [

@@ -629,6 +629,27 @@ class CliTests(unittest.TestCase):
                     ),
                     0,
                 )
+                conflicting_legacy_run_import = model.load_json(EXAMPLES / "legacy-run-import.redacted.example.json")
+                conflicting_legacy_run_import["run_summaries"][0]["status"] = "delegated-failed"
+                conflicting_legacy_run_import_path = Path(temp_dir) / "conflicting-legacy-run-import.json"
+                conflicting_legacy_run_import_path.write_text(
+                    json.dumps(conflicting_legacy_run_import, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "import-legacy-runs",
+                            "--state",
+                            str(output_dir),
+                            "--json",
+                            str(conflicting_legacy_run_import_path),
+                            "--public-safe",
+                        ]
+                    ),
+                    1,
+                )
                 self.assertEqual(cli.main(["steward", "status", "--state", str(output_dir)]), 0)
                 self.assertEqual(cli.main(["steward", "capabilities", "--state", str(output_dir)]), 0)
                 self.assertEqual(
@@ -1181,6 +1202,8 @@ class CliTests(unittest.TestCase):
             self.assertIn('"failure_stage": "authorization"', stdout.getvalue())
             self.assertIn('"failure_stage": "registry-topology"', stdout.getvalue())
             self.assertIn('"decision": "topology-incomplete"', stdout.getvalue())
+            self.assertIn('"operation": "import-legacy-runs"', stdout.getvalue())
+            self.assertIn('"ok": false', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.operation-recovery.v0"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.legacy-run-import-result.v0"', stdout.getvalue())
             self.assertIn('"operation": "schedule.install"', stdout.getvalue())
