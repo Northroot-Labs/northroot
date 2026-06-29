@@ -64,6 +64,7 @@ run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src pyth
 run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/legacy-profile-import.redacted.example.json --public-safe
 run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/legacy-run-import.redacted.example.json --public-safe
 run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/secret-bindings.redacted.example.json --public-safe
+run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/secret-bindings.macos-keychain.example.json --public-safe
 run env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/repository-bindings.redacted.example.json --public-safe
 set +e
 env PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli validate packages/northroot-custody/examples/private-bindings.blocked.example.json --public-safe >/tmp/northroot-custody-private-binding-check.out
