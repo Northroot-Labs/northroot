@@ -1096,6 +1096,44 @@ class CliTests(unittest.TestCase):
                 )
                 self.assertEqual(cli.main(["steward", "recover-operation", "--state", str(output_dir)]), 0)
                 self.assertFalse((output_dir / steward.OPERATION_LOCK_FILENAME).exists())
+                empty_schedule_output_dir = Path(temp_dir) / "steward-empty-schedule"
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "init",
+                            "--inventory",
+                            str(EXAMPLES / "workspace-inventory.example.json"),
+                            "--policy",
+                            str(EXAMPLES / "custody-policy.example.json"),
+                            "--output",
+                            str(empty_schedule_output_dir),
+                        ]
+                    ),
+                    0,
+                )
+                self.assertEqual(
+                    cli.main(["steward", "schedule", "install", "--state", str(empty_schedule_output_dir)]),
+                    1,
+                )
+                self.assertEqual(
+                    cli.main(
+                        [
+                            "steward",
+                            "schedule",
+                            "create",
+                            "--state",
+                            str(output_dir),
+                            "--scheduler",
+                            "launchd",
+                            "--operation",
+                            "verify",
+                            "--every-minutes",
+                            "0",
+                        ]
+                    ),
+                    1,
+                )
                 self.assertEqual(
                     cli.main(
                         [
@@ -1220,6 +1258,8 @@ class CliTests(unittest.TestCase):
             self.assertIn('"operation": "steward.init"', stdout.getvalue())
             self.assertIn('"operation": "import-legacy-runs"', stdout.getvalue())
             self.assertIn('"ok": false', stdout.getvalue())
+            self.assertIn('"operation": "schedule.create"', stdout.getvalue())
+            self.assertIn('"operation": "schedule.install"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.operation-recovery.v0"', stdout.getvalue())
             self.assertIn('"schema_version": "northroot.steward.legacy-run-import-result.v0"', stdout.getvalue())
             self.assertIn('"operation": "schedule.install"', stdout.getvalue())
