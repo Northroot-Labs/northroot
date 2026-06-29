@@ -774,6 +774,18 @@ class StewardTests(unittest.TestCase):
                 },
                 public_safe=True,
             )
+            blocked_render = steward.render_operation(output_dir, "verify")
+            self.assertFalse(blocked_render["executed"])
+            self.assertEqual(blocked_render["return_code"], 75)
+            self.assertEqual(blocked_render["failure_stage"], "operation-lock")
+            self.assertIsNone(blocked_render["preflight"])
+            self.assertEqual(
+                blocked_render["operation_lock"]["operation_id"],
+                "test-stale-operation",
+            )
+            blocked_render_summary = model.load_json(Path(str(blocked_render["run_summary_path"])))
+            self.assertEqual(blocked_render_summary["status"], "delegated-operation-locked")
+
             blocked_by_lock = steward.render_operation(output_dir, "verify", execute=True)
             self.assertFalse(blocked_by_lock["executed"])
             self.assertEqual(blocked_by_lock["return_code"], 75)
@@ -799,6 +811,12 @@ class StewardTests(unittest.TestCase):
             self.assertIn(
                 "steward operation lock requires recover-operation before execute",
                 locked_execute_plan["refused_reasons"],
+            )
+            locked_render_plan = steward.render_command_plan(output_dir, operation="verify")
+            self.assertFalse(locked_render_plan["ok"])
+            self.assertIn(
+                "steward operation lock requires recover-operation before delegated operation planning",
+                locked_render_plan["refused_reasons"],
             )
             locked_import_plan = steward.render_command_plan(
                 output_dir,

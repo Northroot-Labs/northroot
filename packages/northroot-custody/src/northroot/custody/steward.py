@@ -2112,8 +2112,13 @@ def render_command_plan(
         ]
         if not preflight_ready:
             refused_reasons.append("preflight is not ready for schedule install")
-    if execute and operation in OPERATIONS and _operation_lock_status(output_dir)["locked"]:
-        refused_reasons.append("steward operation lock requires recover-operation before execute")
+    if operation in OPERATIONS and _operation_lock_status(output_dir)["locked"]:
+        if execute:
+            refused_reasons.append("steward operation lock requires recover-operation before execute")
+        else:
+            refused_reasons.append(
+                "steward operation lock requires recover-operation before delegated operation planning"
+            )
 
     ok = not missing_inputs and not refused_reasons
     return {
@@ -3466,8 +3471,23 @@ def render_operation(
     registry_topology = None
     operation_lock = None
     acquired_lock_path = None
+    current_lock_path = operation_lock_path(output_dir)
+    lock_status = _operation_lock_status(output_dir)
+    if lock_status["locked"]:
+        lock_error = lock_status.get("error") if isinstance(lock_status.get("error"), str) else None
+        operation_lock = (
+            _unreadable_operation_lock(current_lock_path, lock_error)
+            if lock_error is not None
+            else lock_status.get("lock")
+        )
+        return_code = 75
+        error = (
+            "delegated operation lock is unreadable; run steward recover-operation before retrying"
+            if lock_error is not None
+            else "delegated operation lock exists; run steward recover-operation before retrying"
+        )
+        failure_stage = "operation-lock"
     if execute:
-        current_lock_path = operation_lock_path(output_dir)
         operation_lock = _operation_lock_payload(
             output_dir=output_dir,
             operation=operation,
@@ -3623,7 +3643,7 @@ def render_operation(
         "authorization": authorization,
         "registry_topology": registry_topology,
         "operation_lock": operation_lock,
-        "operation_lock_path": str(operation_lock_path(output_dir)) if execute else None,
+        "operation_lock_path": str(operation_lock_path(output_dir)) if execute or operation_lock is not None else None,
     }
     summary_path = write_operation_summary(
         output_dir=output_dir,
@@ -3846,7 +3866,7 @@ def write_operation_summary(*, output_dir: Path, operation_payload: dict[str, An
         and restore_observation
         and restore_observation.get("verified")
     )
-    if execute_requested and not executed and operation_payload.get("failure_stage") == "operation-lock":
+    if not executed and operation_payload.get("failure_stage") == "operation-lock":
         status = "delegated-operation-locked"
     elif execute_requested and not executed and operation_payload.get("failure_stage") == "interrupted-operation-lock":
         status = "delegated-interrupted-recovered"
