@@ -1,5 +1,7 @@
 """Northroot custody contracts and steward profile helpers."""
 
+__version__ = "0.1.0"
+
 from .model import (
     COMMAND_PLAN_SCHEMA,
     INVENTORY_SCHEMA,
@@ -89,6 +91,7 @@ from .registry import (
 )
 
 __all__ = [
+    "__version__",
     "Finding",
     "COMMAND_PLAN_SCHEMA",
     "INVENTORY_SCHEMA",

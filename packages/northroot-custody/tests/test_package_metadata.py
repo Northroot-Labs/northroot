@@ -3,7 +3,7 @@ import tomllib
 import unittest
 from pathlib import Path
 
-from northroot.custody import model
+from northroot.custody import __version__, model
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -13,6 +13,7 @@ class PackageMetadataTests(unittest.TestCase):
     def test_package_declares_installed_cli_entrypoint(self) -> None:
         pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
         self.assertEqual(pyproject["project"]["name"], "northroot-custody")
+        self.assertEqual(pyproject["project"]["version"], __version__)
         self.assertEqual(
             pyproject["project"]["scripts"]["nr-custody"],
             "northroot.custody.cli:main",
