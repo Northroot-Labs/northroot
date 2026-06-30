@@ -3,6 +3,7 @@ import io
 import json
 import os
 import plistlib
+import re
 import tempfile
 import unittest
 from unittest import mock
@@ -127,6 +128,14 @@ def write_legacy_machine_fixture(directory: Path) -> dict[str, Path]:
 
 
 class CliTests(unittest.TestCase):
+    def test_top_level_version_matches_package_version(self) -> None:
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout), self.assertRaises(SystemExit) as raised:
+            cli.parse_args(["--version"])
+
+        self.assertEqual(raised.exception.code, 0)
+        self.assertRegex(stdout.getvalue(), re.compile(r"^nr-custody 0\.1\.0\n$"))
+
     def test_steward_registry_cli_manages_service_registry_state(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
