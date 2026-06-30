@@ -47,7 +47,7 @@
       "install_methods": [
         {
           "kind": "pip-git-subdirectory",
-          "ref": "northroot-custody @ git+https://github.com/Northroot-Labs/northroot.git@d4a08338#subdirectory=packages/northroot-custody"
+          "ref": "northroot-custody @ git+https://github.com/Northroot-Labs/northroot.git@3e911988#subdirectory=packages/northroot-custody"
         },
         {
           "kind": "local-editable",
@@ -57,7 +57,7 @@
       "layer": "promoted-package",
       "name": "northroot-custody",
       "source_ref": {
-        "commit": "d4a08338",
+        "commit": "3e911988",
         "repo": "Northroot-Labs/northroot",
         "subdirectory": "packages/northroot-custody"
       },
