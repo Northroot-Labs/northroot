@@ -826,7 +826,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             write_json(
-                    _state_error_result(
+                _state_error_result(
                     schema_version="northroot.steward.schedule.v0",
                     operation="schedule.create",
                     detail=str(exc),
@@ -877,7 +877,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             write_json(
-                    _state_error_result(
+                _state_error_result(
                     schema_version="northroot.steward.schedule-install.v0",
                     operation="schedule.install",
                     detail=str(exc),
@@ -912,7 +912,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             write_json(
-                    _state_error_result(
+                _state_error_result(
                     schema_version="northroot.steward.schedule-uninstall.v0",
                     operation="schedule.uninstall",
                     detail=str(exc),
@@ -947,7 +947,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             write_json(
-                    _state_error_result(
+                _state_error_result(
                     schema_version="northroot.steward.schedule-delete.v0",
                     operation="schedule.delete",
                     detail=str(exc),
