@@ -1,0 +1,84 @@
+{
+  "capabilities": [
+    {
+      "boundaries": {
+        "does_not_own": [
+          "agent runtime",
+          "backup storage transport",
+          "custom backup engine",
+          "governance decisions",
+          "secret management",
+          "work queues",
+          "workstream lifecycle"
+        ],
+        "owns": [
+          "custody contracts",
+          "delegated backup command plans",
+          "object-level custody state",
+          "operation locks and recovery summaries",
+          "retention evidence gates",
+          "steward service registry",
+          "steward state verification"
+        ]
+      },
+      "capability_id": "northroot.custody",
+      "contracts": [
+        "northroot.custody.workspace-inventory.v0",
+        "northroot.custody.policy.v0",
+        "northroot.custody.snapshot-plan.v0",
+        "northroot.custody.verification-result.v0",
+        "northroot.custody.retention-decision.v0",
+        "northroot.custody.run-summary.v0",
+        "northroot.steward.service-registry.v0",
+        "northroot.steward.command-plan.v0",
+        "northroot.steward.state-verification.v0",
+        "northroot.steward.report.v0"
+      ],
+      "current_version": "0.1.0",
+      "description": "Custody contracts and steward helpers for delegated backups, restore evidence, retention gates, and service-registry state.",
+      "exports": {
+        "commands": [
+          "nr-custody"
+        ],
+        "python_imports": [
+          "northroot.custody"
+        ]
+      },
+      "install_methods": [
+        {
+          "kind": "pip-git-subdirectory",
+          "ref": "northroot-custody @ git+https://github.com/Northroot-Labs/northroot.git@d4a08338#subdirectory=packages/northroot-custody"
+        },
+        {
+          "kind": "local-editable",
+          "path": "packages/northroot-custody"
+        }
+      ],
+      "layer": "promoted-package",
+      "name": "northroot-custody",
+      "source_ref": {
+        "commit": "d4a08338",
+        "repo": "Northroot-Labs/northroot",
+        "subdirectory": "packages/northroot-custody"
+      },
+      "status": "usable-dogfood",
+      "use_cases": [
+        "initialize steward state from a project inventory and custody policy",
+        "render delegated resticprofile backup, verify, restore, and restore-drill command plans",
+        "record indexed run summaries and external evidence for retention gates",
+        "protect object-level backup state with registry integrity checks",
+        "provide downstream projects with a custody-only backup service surface"
+      ],
+      "verification": {
+        "commands": [
+          "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m unittest discover packages/northroot-custody/tests",
+          "PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli --version",
+          "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=packages/northroot-custody/src python3 -m northroot.custody.cli render-plan --inventory packages/northroot-custody/examples/workspace-inventory.example.json --policy packages/northroot-custody/examples/custody-policy.example.json"
+        ]
+      },
+      "visibility": "public-safe"
+    }
+  ],
+  "generated_state_policy": "private projects may generate private indexes outside git or under ignored capabilities/private*.json",
+  "schema_version": "northroot.capability-index.v0"
+}

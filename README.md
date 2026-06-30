@@ -20,6 +20,8 @@ The repository is intentionally split by layer:
   ag-domain examples.
 - **Promoted packages**: importable non-Rust capabilities such as
   `northroot.custody`.
+- **Capability index**: a public-safe seed registry in `capabilities/` for
+  absorbing promoted packages without taking all of Northroot as an app.
 - **Standalone CLI**: operator-facing commands in `apps/northroot`.
 
 The public kernel proves what was recorded and whether it verifies. It does not
@@ -172,6 +174,23 @@ Current packages:
   `northroot.durability` for public/private boundary checks and simple copy
   manifests. New backup, restore, scheduling, and disaster-recovery workflows
   should use `northroot-custody` and `nr steward`.
+
+## Capability Index
+
+`capabilities/index.public.json` is a static, public-safe capability catalog.
+It records reusable Northroot capabilities, install refs, exported commands and
+imports, verification commands, and ownership boundaries. It exists so another
+project can absorb a package such as `northroot-custody` without depending on
+the entire Northroot repository as an application.
+
+Validate it with:
+
+```bash
+python3 scripts/validate_capability_index.py capabilities/index.public.json
+```
+
+Private downstream projects may keep local indexes under the ignored
+`capabilities/private*.json` pattern or outside this repo.
 
 ## License
 

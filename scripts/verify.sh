@@ -25,6 +25,7 @@ run cargo test --workspace --doc
 run cargo test --manifest-path apps/northroot/Cargo.toml
 run python3 scripts/validate_schemas.py
 run python3 scripts/validate_kernel_boundary.py
+run python3 scripts/validate_capability_index.py capabilities/index.public.json
 run python3 scripts/validate_nrj_fixtures.py
 run python3 scripts/validate_state_recovery_invariants.py
 run python3 scripts/validate_receipt_boundaries.py
