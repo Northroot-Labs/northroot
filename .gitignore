@@ -75,6 +75,7 @@ Thumbs.db
 
 # config
 config.json
+capabilities/private*.json
 
 # IDE
 .vscode
@@ -97,4 +98,3 @@ fixtures/event-id/
 fixtures/nrj/
 
 !fixtures/nrj/*.nrj
-

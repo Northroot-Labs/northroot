@@ -1,0 +1,207 @@
+{
+  "$id": "https://northroot.dev/schemas/capability/v0/capability-index.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "capabilities": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "boundaries": {
+            "additionalProperties": false,
+            "properties": {
+              "does_not_own": {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              },
+              "owns": {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "required": [
+              "owns",
+              "does_not_own"
+            ],
+            "type": "object"
+          },
+          "capability_id": {
+            "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9-]*)+$",
+            "type": "string"
+          },
+          "contracts": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "current_version": {
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "exports": {
+            "additionalProperties": false,
+            "properties": {
+              "commands": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "python_imports": {
+                "items": {
+                  "pattern": "^[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$",
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "python_imports",
+              "commands"
+            ],
+            "type": "object"
+          },
+          "install_methods": {
+            "items": {
+              "additionalProperties": {
+                "type": "string"
+              },
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "local-editable",
+                    "pip-git-subdirectory",
+                    "wheel"
+                  ],
+                  "type": "string"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "type": "object"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "layer": {
+            "enum": [
+              "stable-kernel",
+              "record-substrate",
+              "capability-crate",
+              "promoted-package",
+              "private-adapter"
+            ],
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "source_ref": {
+            "additionalProperties": false,
+            "properties": {
+              "commit": {
+                "pattern": "^[0-9a-f]{7,40}$",
+                "type": "string"
+              },
+              "repo": {
+                "type": "string"
+              },
+              "subdirectory": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "repo",
+              "commit",
+              "subdirectory"
+            ],
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "incubating",
+              "usable-dogfood",
+              "promoted",
+              "stable",
+              "deprecated"
+            ],
+            "type": "string"
+          },
+          "use_cases": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "verification": {
+            "additionalProperties": false,
+            "properties": {
+              "commands": {
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "type": "array"
+              }
+            },
+            "required": [
+              "commands"
+            ],
+            "type": "object"
+          },
+          "visibility": {
+            "enum": [
+              "public-safe",
+              "private",
+              "secret"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "capability_id",
+          "name",
+          "layer",
+          "status",
+          "visibility",
+          "current_version",
+          "source_ref",
+          "install_methods",
+          "exports",
+          "contracts",
+          "verification",
+          "boundaries",
+          "use_cases"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "generated_state_policy": {
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "northroot.capability-index.v0"
+    }
+  },
+  "required": [
+    "schema_version",
+    "capabilities"
+  ],
+  "title": "Northroot Capability Index",
+  "type": "object"
+}
